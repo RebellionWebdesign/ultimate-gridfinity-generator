@@ -246,3 +246,23 @@ select {
   line-height: 16px;
   font-variant-numeric: tabular-nums;
 }
+
+/* Scrollbars: thin, in the surface tokens */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+::-webkit-scrollbar {
+  width: var(--space-2);
+  height: var(--space-2);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: var(--radius-round);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-3);
+}
