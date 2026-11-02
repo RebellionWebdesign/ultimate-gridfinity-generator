@@ -6,6 +6,7 @@
   import ParamsPanel from "./lib/ParamsPanel.svelte";
   import PreviewStage from "./lib/PreviewStage.svelte";
   import Segmented from "./lib/Segmented.svelte";
+  import { ISSUES_URL, PART_NAME } from "./lib/parts";
   import { editor } from "./lib/store.svelte";
 
   type Theme = "light" | "dark";
@@ -33,7 +34,6 @@
     document.documentElement.dataset.theme = theme;
   });
 
-  let part = $state<"lid" | "bin" | "baseplate">("lid");
   let exportDialog: HTMLDialogElement;
   let openInput: HTMLInputElement;
   let dragging = $state(false);
@@ -164,7 +164,7 @@
       <Segmented
         label="Part type"
         hideLabel
-        bind:value={part}
+        bind:value={editor.part}
         options={[
           { value: "lid", label: "Lid" },
           {
@@ -176,7 +176,7 @@
           },
           {
             value: "baseplate",
-            label: "Baseplate",
+            label: PART_NAME.baseplate,
             note: "Later",
             disabled: true,
             title: "Baseplates come in a later version",
@@ -197,6 +197,9 @@
       <button type="button" class="ghost" onclick={() => openInput.click()}>
         <Icon name="folder-open" /><span class="long">Open</span>
       </button>
+      <a class="ghost" href={ISSUES_URL} target="_blank" rel="noopener">
+        <Icon name="bug" /><span class="long">Report bug</span>
+      </a>
       <button
         type="button"
         class="ghost export-btn"
@@ -205,7 +208,7 @@
         <Icon name="download" /><span class="long">Export</span>
       </button>
       <button type="button" class="ghost" onclick={() => (licences = true)}>
-        <Icon name="info" /><span class="long">Licences</span>
+        <Icon name="info" /><span class="long">Licenses</span>
       </button>
       <input
         bind:this={openInput}
@@ -346,6 +349,9 @@
     gap: var(--space-1);
   }
   .ghost {
+    color: inherit;
+    text-decoration: none;
+    white-space: nowrap;
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);

@@ -1,4 +1,5 @@
 // Lucide icons (ISC licence), paths unchanged, stroke from currentColor.
+import bug from "lucide-static/icons/bug.svg?raw";
 import download from "lucide-static/icons/download.svg?raw";
 import upload from "lucide-static/icons/upload.svg?raw";
 import save from "lucide-static/icons/save.svg?raw";
@@ -22,6 +23,7 @@ import sun from "lucide-static/icons/sun.svg?raw";
 import moon from "lucide-static/icons/moon.svg?raw";
 
 export const icons = {
+  bug: bug,
   download: download,
   upload: upload,
   save: save,

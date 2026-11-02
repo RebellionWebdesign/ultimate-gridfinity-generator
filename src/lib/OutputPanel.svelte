@@ -1,6 +1,7 @@
 <script lang="ts">
   import Icon from "./Icon.svelte";
   import { PRINTERS } from "./printers";
+  import { PART_NAME } from "./parts";
   import { editor } from "./store.svelte";
   import {
     buildFile,
@@ -33,7 +34,13 @@
     busy = true;
     failure = "";
     try {
-      const blob = await buildFile(format, editor.model, colours, editor.name);
+      const blob = await buildFile(
+        format,
+        editor.model,
+        colours,
+        editor.name,
+        PART_NAME[editor.part],
+      );
       await saveBlob(
         blob,
         `${editor.fileName}.${format}`,
@@ -104,7 +111,7 @@
     </div>
     <p class="t-caption">
       {format === "3mf"
-        ? "Plate, text and symbol stay separate objects, each with its colour. Your slicer assigns the filaments."
+        ? "Lid, text and symbol stay separate parts of one object, each with its colour. Your slicer may ask which filament each colour gets."
         : "Geometry only: no colours, all parts in one file."}
     </p>
     <label class="t-label" for="file-name">File name</label>

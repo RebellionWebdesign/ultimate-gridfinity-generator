@@ -12,6 +12,7 @@
   import ParamGroup from "./ParamGroup.svelte";
   import Segmented from "./Segmented.svelte";
   import Switch from "./Switch.svelte";
+  import { PART_NAME } from "./parts";
   import { editor } from "./store.svelte";
 
   const p = editor.params;
@@ -374,7 +375,7 @@
   {/if}
 
   <ParamGroup name="Colours" open={false} summary={p.plate_color}>
-    <Field label="Plate" kind="color" bind:value={p.plate_color} />
+    <Field label={PART_NAME[editor.part]} kind="color" bind:value={p.plate_color} />
     {#if textOn}<Field label="Text" kind="color" bind:value={p.text_color} />{/if}
     {#if symbolOn}
       <Field

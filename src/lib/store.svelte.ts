@@ -4,6 +4,7 @@ import { parseSvg, SvgError, type SvgShapes } from "../geometry/svg";
 import { DEFAULT_LID, validateLid, type LidParams } from "../model/lidParams";
 import { parseModel, serializeModel, type ModelFile } from "../model/modelFile";
 import { GeometryClient, InputBuildError } from "../worker/client";
+import type { PartType } from "./parts";
 import { PRINTERS, checkBed } from "./printers";
 
 const STORAGE_KEY = "ugg.models";
@@ -36,6 +37,8 @@ const slug = (name: string): string =>
 export type Status = "computing" | "ready" | "needs-fix" | "worker-error";
 
 class Editor {
+  /** the part type being edited; only the lid exists in this version */
+  part = $state<PartType>("lid");
   params = $state<LidParams>({ ...DEFAULT_LID });
   name = $state("Lid 1 × 1");
   model = $state.raw<ModelMesh | null>(null);
