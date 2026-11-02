@@ -1,3 +1,6 @@
+// Label cases use flush_gap 0: the app puts raised and flush labels directly on the plate
+// (owner, 2 November 2026). Hollow foot with magnets is not compared: the app does not route the
+// hollow around the pockets, the script does.
 // Cases compared with the reference script, at or above the spec minimum (skills/reference-oracle).
 // Keys are script parameter names. Text cases are left out: the script's fonts are those installed
 // where it runs, the app bundles its own (the symbol cases cover the label code).
@@ -37,25 +40,15 @@ export const ORACLE_CASES = {
   hollow_1x1: { foot_hollow: "open" },
   hollow_2x2: { foot_hollow: "open", units_x: 2, units_y: 2 },
   hollow_wall_2_5: { foot_hollow: "open", foot_wall: 2.5 },
-  hollow_magnets_1x1: { foot_hollow: "open", corner_magnets: true },
-  hollow_magnets_3x2_per_cell: {
-    foot_hollow: "open",
-    corner_magnets: true,
-    units_x: 3,
-    units_y: 2,
-    foot_layout: "per_cell",
+  symbol_raised: { flush_gap: 0, symbol_mode: "raised", symbol_icon: "tools_wrench" },
+  symbol_engraved: {
+    flush_gap: 0,
+    symbol_mode: "engraved",
+    symbol_icon: "tools_wrench",
   },
-  hollow_magnets_stackable_2x2: {
-    foot_hollow: "open",
-    corner_magnets: true,
-    variant: "stackable",
-    units_x: 2,
-    units_y: 2,
-  },
-  symbol_raised: { symbol_mode: "raised", symbol_icon: "tools_wrench" },
-  symbol_engraved: { symbol_mode: "engraved", symbol_icon: "tools_wrench" },
-  symbol_flush: { symbol_mode: "flush", symbol_icon: "tools_wrench" },
+  symbol_flush: { flush_gap: 0, symbol_mode: "flush", symbol_icon: "tools_wrench" },
   symbol_raised_scaled_rotated: {
+    flush_gap: 0,
     symbol_mode: "raised",
     symbol_icon: "safety_hard-hat",
     icon_size: 20,
@@ -65,6 +58,7 @@ export const ORACLE_CASES = {
     symbol_offset_y: -2,
   },
   symbol_upside_down_raised: {
+    flush_gap: 0,
     symbol_mode: "raised",
     symbol_icon: "tools_bolt",
     print_orientation: "upside_down",

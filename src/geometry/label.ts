@@ -344,23 +344,12 @@ export const buildLabel = (
         extrude(shape, plateTop - p.emboss_depth, p.emboss_depth + 0.01),
       );
     } else if (mode === "flush") {
+      // pocket in the plate, and an inlay of exactly the same shape: a separate body
       result.cuts.push(extrude(shape, plateTop - p.flush_depth, p.flush_depth + 0.01));
-      // inlay: shrunk and lifted off the pocket floor, so it stays a separate body
-      const inlay = scope.add(shape.offset(-p.flush_gap, "Miter", 2));
-      if (!inlay.isEmpty()) {
-        result[name] = extrude(
-          inlay,
-          plateTop - p.flush_depth + p.flush_gap,
-          p.flush_depth - p.flush_gap,
-        );
-      }
+      result[name] = extrude(shape, plateTop - p.flush_depth, p.flush_depth);
     } else if (mode === "raised") {
-      // lifted off the plate by flush_gap, top at plateTop + emboss_depth
-      result[name] = extrude(
-        shape,
-        plateTop + p.flush_gap,
-        p.emboss_depth - p.flush_gap,
-      );
+      // stands on the plate; a separate body, top at plateTop + emboss_depth
+      result[name] = extrude(shape, plateTop, p.emboss_depth);
     }
   }
   return result;

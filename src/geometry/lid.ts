@@ -109,25 +109,7 @@ const buildFoot = (kernel: Kernel, scope: Scope, p: LidParams, foot: FootSpec) =
 
   const wall = p.foot_wall;
   const cavity = scope.add(loft(kernel, cavityLayers(wall, foot.extraX, foot.extraY)));
-  // solid column around each top-side pocket: the hollow is routed around it
-  const half = cellHalf();
-  const columns = p.corner_magnets
-    ? lidMagnetPoints(p)
-        .map(([x, y]): [number, number] => [x - foot.cx, y - foot.cy])
-        .filter(
-          ([x, y]) =>
-            Math.abs(x) < half + foot.extraX && Math.abs(y) < half + foot.extraY,
-        )
-        .map(([x, y]) =>
-          cylinderAt(kernel, scope, p.corner_magnet_d + 2 * wall, {
-            x,
-            y,
-            z: -1,
-            h: 6.5,
-          }),
-        )
-    : [];
-  const hollow = scope.add(kernel.Manifold.difference([cavity, ...columns]));
+  const hollow = cavity;
   return scope.add(kernel.Manifold.difference(solid, hollow));
 };
 
@@ -259,18 +241,7 @@ export const buildLid = (
         h: depth + 1,
       }),
     );
-    // screw hole (3 mm) punched through the pocket centre, down through the foot
-    const holes = p.screw_holes
-      ? lidMagnetPoints(p).map(([x, y]) =>
-          cylinderAt(kernel, scope, c("screwHoleDiameter"), {
-            x,
-            y,
-            z: -0.5,
-            h: plateTop + 1,
-          }),
-        )
-      : [];
-    body = scope.add(kernel.Manifold.difference([body, ...pockets, ...holes]));
+    body = scope.add(kernel.Manifold.difference([body, ...pockets]));
   }
 
   const label = buildLabel(kernel, scope, p, assets, plateTop, [w / 2, h / 2]);

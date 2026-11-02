@@ -10,7 +10,9 @@ export type PlateThicknessMode = "auto" | "manual";
 export type PrintOrientation = "foot_down" | "upside_down";
 export type FootHollow = "none" | "open";
 export type LabelMode = "none" | "raised" | "engraved" | "flush";
-export type FontChoice = "Inter" | "IBM Plex Mono" | "IBM Plex Sans SemiBold";
+export type BundledFont = "Inter" | "IBM Plex Mono" | "IBM Plex Sans SemiBold";
+/** a bundled font, or `upload`: the user's own font file (`font_data`) */
+export type FontChoice = BundledFont | "upload";
 export type SymbolSource = "lucide" | "upload";
 export type LabelArrange = "icon_left" | "icon_right" | "icon_above" | "icon_below";
 export type LabelAlign = "center" | "start" | "end";
@@ -29,14 +31,16 @@ export interface LidParams {
   corner_magnets: boolean;
   corner_magnet_d: number;
   corner_magnet_h: number;
-  /** 3 mm hole through the centre of each corner pocket (needs corner_magnets) */
-  screw_holes: boolean;
   foot_hollow: FootHollow;
   foot_wall: number;
   text_string: string;
   text_mode: LabelMode;
   text_size: number;
   font_choice: FontChoice;
+  /** name of the uploaded font file */
+  font_name: string;
+  /** the uploaded font file, base64 (the user is responsible for its licence) */
+  font_data: string;
   symbol_mode: LabelMode;
   symbol_source: SymbolSource;
   symbol_icon: string;
@@ -57,7 +61,6 @@ export interface LidParams {
   symbol_offset_y: number;
   symbol_rotation: number;
   flush_depth: number;
-  flush_gap: number;
   plate_color: string;
   text_color: string;
   symbol_color: string;
@@ -160,13 +163,6 @@ export const LID_LIMITS = {
     why: "0.4 mm is two layers; 1.2 mm is the script's limit",
     nonSpec: true,
   },
-  flush_gap: {
-    min: 0.05,
-    max: 0.2,
-    step: 0.01,
-    why: "0.2 mm is the script's limit",
-    nonSpec: true,
-  },
   text_rotation: {
     min: -180,
     max: 180,
@@ -202,13 +198,14 @@ export const DEFAULT_LID: LidParams = {
   corner_magnets: false,
   corner_magnet_d: LID_LIMITS.corner_magnet_d.min,
   corner_magnet_h: LID_LIMITS.corner_magnet_h.min,
-  screw_holes: false,
   foot_hollow: "none",
   foot_wall: LID_LIMITS.foot_wall.min,
   text_string: "Text",
   text_mode: "none",
   text_size: LID_LIMITS.text_size.min,
   font_choice: "Inter",
+  font_name: "",
+  font_data: "",
   symbol_mode: "none",
   symbol_source: "lucide",
   symbol_icon: "safety_hard-hat",
@@ -228,7 +225,6 @@ export const DEFAULT_LID: LidParams = {
   symbol_offset_y: 0,
   symbol_rotation: 0,
   flush_depth: LID_LIMITS.flush_depth.min,
-  flush_gap: LID_LIMITS.flush_gap.min,
   plate_color: STONE,
   text_color: BLACK,
   symbol_color: BLACK,
@@ -268,9 +264,6 @@ export const validateLid = (p: LidParams): string[] => {
   ] as const) {
     if (!/^#[0-9a-fA-F]{6}$/.test(p[key]))
       errors.push(`${key} must be a #rrggbb colour.`);
-  }
-  if (p.flush_gap >= p.flush_depth / 2 || p.flush_gap >= p.emboss_depth / 2) {
-    errors.push("flush_gap must be less than half of flush_depth and of emboss_depth.");
   }
   const plate = plateThicknessOf(p);
   const cut = Math.max(

@@ -206,11 +206,14 @@ describe("B-06 stackable, hollow foot, top-side corner magnets", () => {
     expect(columnVolume({})).toBeCloseTo(1, 3);
   });
 
-  it("hollow foot: the hollow is routed around the pocket (material kept)", () => {
-    expect(columnVolume({ foot_hollow: "open" })).toBeCloseTo(1, 3);
-    expect(columnVolume({ foot_hollow: "open", corner_magnet_d: 8.1 })).toBeCloseTo(
+  it("hollow foot: no column around the pocket, the cavity runs straight under it", () => {
+    // owner decision, 2 November 2026: the hollow is not routed around the pocket
+    expect(columnVolume({ foot_hollow: "open" })).toBeLessThan(0.5);
+    const hollow = measure({ foot_hollow: "open" });
+    const withPockets = measure({ foot_hollow: "open", corner_magnets: true });
+    expect(hollow.volume - withPockets.volume).toBeCloseTo(
+      4 * pocketVolume(6.1, 2.1),
       1,
-      3,
     );
   });
 
@@ -246,16 +249,5 @@ describe("B-06 stackable, hollow foot, top-side corner magnets", () => {
         expect(r.closed, `${n}x${n} ${layout}`).toBe(true);
       }
     }
-  });
-});
-
-describe("screw holes", () => {
-  it("punch a 3 mm hole through each pocket and the foot", () => {
-    const withMagnets = measure({ corner_magnets: true });
-    const withScrews = measure({ corner_magnets: true, screw_holes: true });
-    // hole below the pocket floor: 3 mm circle through 4.9 mm of material, four times
-    const hole = 0.5 * 40 * 1.5 ** 2 * Math.sin((2 * Math.PI) / 40) * 4.9;
-    expect(withMagnets.volume - withScrews.volume).toBeCloseTo(4 * hole, 0);
-    expect(withScrews.closed).toBe(true);
   });
 });

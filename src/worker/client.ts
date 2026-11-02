@@ -5,6 +5,9 @@ import type { SvgShapes } from "../geometry/svg";
 import type { LidParams } from "../model/lidParams";
 import type { BuildRequest, BuildResponse } from "./protocol";
 
+/** The user's input is wrong (a font or SVG file): a fix to show, not a crash. */
+export class InputBuildError extends Error {}
+
 export class GeometryClient {
   private worker: Worker;
   private counter = 0;
@@ -23,6 +26,7 @@ export class GeometryClient {
       if (!waiting) return;
       this.pending.delete(reply.id);
       if (reply.ok) waiting.resolve(reply.model);
+      else if (reply.input) waiting.reject(new InputBuildError(reply.message));
       else waiting.reject(new Error(reply.message));
     };
     this.worker.onerror = (event) => {

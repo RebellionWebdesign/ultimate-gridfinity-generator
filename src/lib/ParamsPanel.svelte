@@ -42,7 +42,27 @@
     { value: "Inter", label: "Inter" },
     { value: "IBM Plex Mono", label: "IBM Plex Mono" },
     { value: "IBM Plex Sans SemiBold", label: "IBM Plex Sans SemiBold" },
+    { value: "upload", label: "Your font file" },
   ];
+
+  const MAX_FONT_BYTES = 2 * 1024 * 1024;
+  let fontError = $state("");
+  const readFont = async (file: File | undefined) => {
+    if (!file) return;
+    if (file.size > MAX_FONT_BYTES) {
+      fontError = `${file.name} is larger than 2 MB. Use a smaller font file, for example one weight of the family.`;
+      return;
+    }
+    fontError = "";
+    const url = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+    p.font_data = url.slice(url.indexOf(",") + 1);
+    p.font_name = file.name;
+  };
 
   let dragging = $state(false);
   const readFile = async (file: File | undefined) => {
@@ -198,11 +218,6 @@
         "mm",
         "Gridfinity magnet 2 mm plus 0.1 mm clearance",
       )}
-      <Switch
-        label="Screw holes, 3 mm"
-        bind:checked={p.screw_holes}
-        hint="Punched through the centre of each corner pocket."
-      />
     {/if}
     <Segmented
       label="Foot"
@@ -222,6 +237,25 @@
     {#if textOn}
       <Field label="Text" kind="text" bind:value={p.text_string} maxlength={40} />
       <Field label="Font" kind="select" bind:value={p.font_choice} options={fonts} />
+      {#if p.font_choice === "upload"}
+        <div class="drop">
+          <Icon name="upload" size={20} />
+          <label class="t-label" for="font-file">
+            {p.font_data ? p.font_name : "Choose a .ttf, .otf or .woff file"}
+          </label>
+          <input
+            id="font-file"
+            type="file"
+            accept=".ttf,.otf,.woff,font/ttf,font/otf,font/woff"
+            onchange={(event) => void readFont(event.currentTarget.files?.[0])}
+          />
+        </div>
+        {#if fontError}<p class="t-caption error" role="alert">{fontError}</p>{/if}
+        <p class="t-caption">
+          The font is saved inside the model file. Use only fonts you may embed and
+          print.
+        </p>
+      {/if}
       {@render num("text_size", "Text height", "mm")}
     {/if}
     <Segmented label="Symbol" bind:value={p.symbol_mode} options={[...modes]} />
@@ -361,14 +395,6 @@
           bind:value={p.lip_color}
         />{/if}
     {/if}
-  </ParamGroup>
-
-  <ParamGroup name="Advanced" nonSpec open={false} summary="gap {p.flush_gap} mm">
-    {@render num("flush_gap", "Gap between label and plate", "mm")}
-    <p class="t-caption">
-      Raised and flush labels stay this far off the plate, so they remain separate
-      bodies in the file.
-    </p>
   </ParamGroup>
 </div>
 

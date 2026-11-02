@@ -3,7 +3,7 @@ import type { ModelMesh } from "../geometry/model";
 import { parseSvg, SvgError, type SvgShapes } from "../geometry/svg";
 import { DEFAULT_LID, validateLid, type LidParams } from "../model/lidParams";
 import { parseModel, serializeModel, type ModelFile } from "../model/modelFile";
-import { GeometryClient } from "../worker/client";
+import { GeometryClient, InputBuildError } from "../worker/client";
 import { PRINTERS, checkBed } from "./printers";
 
 const STORAGE_KEY = "ugg.models";
@@ -136,7 +136,7 @@ class Editor {
       },
       (error: Error) => {
         if (id !== this.latest) return;
-        this.status = "worker-error";
+        this.status = error instanceof InputBuildError ? "needs-fix" : "worker-error";
         this.message = error.message;
       },
     );

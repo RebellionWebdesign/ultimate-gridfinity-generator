@@ -11,4 +11,5 @@ export interface BuildRequest {
 
 export type BuildResponse =
   | { id: number; ok: true; model: ModelMesh }
-  | { id: number; ok: false; message: string };
+  /** `input`: the user's file or setting is wrong (shown as a fix), not a crash */
+  | { id: number; ok: false; message: string; input: boolean };

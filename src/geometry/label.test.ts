@@ -4,18 +4,18 @@ import lucideIcons from "../data/lucideLidIcons.json";
 import {
   DEFAULT_LID,
   validateLid,
-  type FontChoice,
+  type BundledFont,
   type LabelMode,
   type LidParams,
 } from "../model/lidParams";
-import { prepareAssets, type AssetLoaders } from "./assets";
+import { InputError, prepareAssets, type AssetLoaders } from "./assets";
 import { labelPositions } from "./label";
 import { initKernel, Scope, type Kernel } from "./kernel";
 import { buildLid } from "./lid";
 import { isClosed, sizeOf } from "./mesh";
 import { parseTransform, pathToContours, type SvgShapes } from "./svg";
 
-const fontFiles: Record<FontChoice, string> = {
+const fontFiles: Record<BundledFont, string> = {
   Inter: "Inter-Regular.otf",
   "IBM Plex Mono": "IBMPlexMono-Regular.woff",
   "IBM Plex Sans SemiBold": "IBMPlexSans-SemiBold.woff",
@@ -88,9 +88,9 @@ describe("B-07 text", () => {
     expect(r.sizes.plate.z).toBeCloseTo(7, 4);
   });
 
-  it("raised text stands emboss_depth above the plate, lifted flush_gap off it", async () => {
+  it("raised text stands on the plate and ends emboss_depth above it", async () => {
     const r = await build({ text_mode: "raised", text_string: "M3" });
-    expect(r.textZ[0]).toBeCloseTo(7 + 0.05, 4);
+    expect(r.textZ[0]).toBeCloseTo(7, 4);
     expect(r.textZ[1]).toBeCloseTo(7 + 0.6, 4);
     expect(r.plateMax).toBeCloseTo(7, 4);
     expect(r.plateVolume).toBeCloseTo((await base()).plateVolume, 4);
@@ -99,7 +99,7 @@ describe("B-07 text", () => {
   it("flush text fills its pocket up to the plate top", async () => {
     const r = await build({ text_mode: "flush", text_string: "M3" });
     expect(r.textZ[1]).toBeCloseTo(7, 4);
-    expect(r.textZ[0]).toBeCloseTo(7 - 0.4 + 0.05, 4);
+    expect(r.textZ[0]).toBeCloseTo(7 - 0.4, 4);
   });
 
   it("text is 8 mm high at the minimum size and centred on the plate", async () => {
@@ -118,7 +118,7 @@ describe("B-07 text", () => {
     expect(r.textZ[0]).toBeGreaterThan(-1e-6);
   });
 
-  it.each(["Inter", "IBM Plex Mono", "IBM Plex Sans SemiBold"] as FontChoice[])(
+  it.each(["Inter", "IBM Plex Mono", "IBM Plex Sans SemiBold"] as BundledFont[])(
     "font %s produces a closed text body",
     async (font) => {
       const r = await build({
@@ -129,6 +129,41 @@ describe("B-07 text", () => {
       expect(r.closed.text).toBe(true);
     },
   );
+});
+
+describe("B-07 uploaded font", () => {
+  const fontBase64 = () =>
+    readFileSync(
+      new URL("../fonts/IBMPlexSans-SemiBold.woff", import.meta.url),
+    ).toString("base64");
+
+  it("text from the user's own font file is a closed body", async () => {
+    const r = await build({
+      text_mode: "raised",
+      text_string: "Own",
+      font_choice: "upload",
+      font_name: "Plex.woff",
+      font_data: fontBase64(),
+    });
+    expect(r.closed.text).toBe(true);
+  });
+
+  it("a file that is not a font is an input error that says what to do", async () => {
+    const p = {
+      ...DEFAULT_LID,
+      text_mode: "raised",
+      font_choice: "upload",
+      font_name: "notes.txt",
+      font_data: Buffer.from("not a font").toString("base64"),
+    } as LidParams;
+    await expect(prepareAssets(p, loaders)).rejects.toThrow(InputError);
+    await expect(prepareAssets(p, loaders)).rejects.toThrow(
+      /notes.txt could not be read/,
+    );
+    await expect(prepareAssets({ ...p, font_data: "" }, loaders)).rejects.toThrow(
+      /Upload a font file/,
+    );
+  });
 });
 
 describe("B-07 symbol", () => {
@@ -167,7 +202,7 @@ describe("B-07 symbol", () => {
     expect(r.closed.symbol).toBe(true);
     const mm = 10 * (25.4 / 96);
     const area = mm * mm - ((4 * 25.4) / 96 ** 1) * ((4 * 25.4) / 96);
-    expect(r.symbolVolume).toBeCloseTo(area * (0.6 - 0.05), 3);
+    expect(r.symbolVolume).toBeCloseTo(area * 0.6, 3);
   });
 
   it("text and symbol together are two separate bodies", async () => {

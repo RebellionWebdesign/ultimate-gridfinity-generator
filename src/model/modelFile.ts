@@ -31,7 +31,7 @@ const ENUMS: Partial<Record<keyof LidParams, readonly string[]>> = {
   foot_hollow: ["none", "open"],
   text_mode: ["none", "raised", "engraved", "flush"],
   symbol_mode: ["none", "raised", "engraved", "flush"],
-  font_choice: ["Inter", "IBM Plex Mono", "IBM Plex Sans SemiBold"],
+  font_choice: ["Inter", "IBM Plex Mono", "IBM Plex Sans SemiBold", "upload"],
   symbol_source: ["lucide", "upload"],
   label_arrange: ["icon_left", "icon_right", "icon_above", "icon_below"],
   label_align: ["center", "start", "end"],
