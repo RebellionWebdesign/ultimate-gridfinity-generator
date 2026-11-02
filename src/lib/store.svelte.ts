@@ -27,7 +27,7 @@ const readStored = (): StoredModel[] => {
   }
 };
 
-const slug = (name: string): string =>
+export const slug = (name: string): string =>
   name
     .toLowerCase()
     .replace(/\s*×\s*/g, "x")
@@ -50,6 +50,8 @@ class Editor {
   /** null: the bed check is switched off */
   bedCheck = $state(true);
   startedAt = $state(0);
+  /** computing for longer than 150 ms: only then the preview dims and a progress shows */
+  slow = $state(false);
   fileName = $state("lid-1x1");
   modelId: string = crypto.randomUUID();
   stored = $state<StoredModel[]>(readStored());
@@ -61,6 +63,7 @@ class Editor {
   private client: GeometryClient | undefined;
   private svgShapes: SvgShapes | undefined;
   private latest = 0;
+  private slowTimer: ReturnType<typeof setTimeout> | undefined;
   private timer: ReturnType<typeof setTimeout> | undefined;
 
   errors = $derived(validateLid(this.params));
@@ -145,17 +148,26 @@ class Editor {
     this.client ??= new GeometryClient();
     this.status = "computing";
     this.startedAt = Date.now();
+    this.slow = false;
+    clearTimeout(this.slowTimer);
+    this.slowTimer = setTimeout(() => {
+      if (this.status === "computing") this.slow = true;
+    }, 150);
     const { id, result } = this.client.build(params, this.svgShapes);
     this.latest = id;
     result.then(
       (model) => {
         if (id !== this.latest) return;
+        clearTimeout(this.slowTimer);
+        this.slow = false;
         this.model = model;
         this.status = "ready";
         this.message = "";
       },
       (error: Error) => {
         if (id !== this.latest) return;
+        clearTimeout(this.slowTimer);
+        this.slow = false;
         this.status = error instanceof InputBuildError ? "needs-fix" : "worker-error";
         this.message = error.message;
       },
@@ -203,6 +215,16 @@ class Editor {
       this.storageFailed = true;
     }
     this.stored = list;
+  }
+
+  /** Removes every model from this browser's storage (the user asked for it). */
+  clearStored(): void {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // nothing to clear when storage is blocked
+    }
+    this.stored = [];
   }
 
   /** The model as a file's text, for "Save file". */

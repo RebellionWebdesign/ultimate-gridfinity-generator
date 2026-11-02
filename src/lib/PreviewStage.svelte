@@ -201,7 +201,8 @@
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
-      draw();
+      // setSize clears the canvas: draw in the same frame, or the preview flashes
+      renderer.render(scene, camera);
     };
     const observer = new ResizeObserver(resize);
     observer.observe(host);

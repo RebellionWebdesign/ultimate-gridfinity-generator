@@ -53,7 +53,7 @@
   });
 
   $effect(() => {
-    if (editor.status !== "computing") return;
+    if (!editor.slow) return;
     const timer = setInterval(() => (now = Date.now()), 200);
     return () => clearInterval(timer);
   });
@@ -237,19 +237,21 @@
         model={editor.model}
         {colours}
         units={[editor.params.units_x, editor.params.units_y]}
-        dimmed={editor.status === "computing" && !!editor.model}
+        dimmed={editor.slow && !!editor.model}
         {theme}
       />
       <p class="pill readout n-s">{readout}</p>
-      <p class="pill status n-s" aria-live="polite">
-        {#if editor.status === "computing"}
-          <Icon name="loader-circle" size={16} /> Computing… {elapsed} s
-        {:else if editor.status === "ready"}
-          <span class="dot"></span> Up to date
-        {:else}
-          <Icon name="triangle-alert" size={16} /> Needs a fix
+      <div class="live" aria-live="polite">
+        {#if editor.slow}
+          <p class="pill status n-s">
+            <Icon name="loader-circle" size={16} /> Computing… {elapsed} s
+          </p>
+        {:else if editor.status === "needs-fix" || editor.status === "worker-error"}
+          <p class="pill status n-s">
+            <Icon name="triangle-alert" size={16} /> Needs a fix
+          </p>
         {/if}
-      </p>
+      </div>
       {#if editor.status === "needs-fix"}
         <div class="alert top" role="alert">
           <Icon name="triangle-alert" />
@@ -302,7 +304,7 @@
           </div>
         </div>
       {/if}
-      {#if editor.status === "computing"}<div class="sweep"></div>{/if}
+      {#if editor.slow}<div class="sweep"></div>{/if}
     </section>
 
     <aside class="output" aria-label="Output">
@@ -429,14 +431,11 @@
   .readout {
     left: var(--space-4);
   }
+  .live {
+    display: contents;
+  }
   .status {
     right: var(--space-4);
-  }
-  .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: var(--radius-round);
-    background: var(--success);
   }
   .alert {
     position: absolute;
