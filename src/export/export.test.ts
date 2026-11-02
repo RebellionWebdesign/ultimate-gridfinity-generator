@@ -136,7 +136,7 @@ describe("B-08 3MF", () => {
     symbol_icon: "tools_bolt",
   };
 
-  it("keeps plate, lip, text and symbol as four separate closed objects", async () => {
+  it("is one object with four separate closed parts, never merged", async () => {
     const m = await model(withLabel);
     expect(m.parts.map((p) => p.name)).toEqual(["plate", "lip", "text", "symbol"]);
     for (const part of m.parts) expect(edgesAreClosed(part), part.name).toBe(true);
@@ -144,47 +144,85 @@ describe("B-08 3MF", () => {
     const files = unzip(await write3mf(m.parts, colours));
     expect(Object.keys(files).sort()).toEqual([
       "3D/3dmodel.model",
+      "3D/Objects/object_1.model",
+      "3D/Objects/object_2.model",
+      "3D/Objects/object_3.model",
+      "3D/Objects/object_4.model",
+      "3D/_rels/3dmodel.model.rels",
+      "Metadata/model_settings.config",
+      "Metadata/project_settings.config",
       "[Content_Types].xml",
       "_rels/.rels",
     ]);
-    const xml = files["3D/3dmodel.model"]!;
-    expect(xml.match(/<object /g)).toHaveLength(4);
-    expect(xml.match(/<item /g)).toHaveLength(4);
-    // each object has its own vertex list: no shared vertices, no merged body
-    const counts = [...xml.matchAll(/<vertices>(.*?)<\/vertices>/g)].map(
-      (v) => v[1]!.match(/<vertex /g)!.length,
-    );
-    expect(counts).toEqual(m.parts.map((p) => p.positions.length / 3));
+    const root = files["3D/3dmodel.model"]!;
+    expect(root.match(/<object /g)).toHaveLength(1);
+    expect(root.match(/<component /g)).toHaveLength(4);
+    expect(root.match(/<item /g)).toHaveLength(1);
+    // each part has its own vertex list
+    m.parts.forEach((part, i) => {
+      const xml = files[`3D/Objects/object_${i + 1}.model`]!;
+      expect(xml.match(/<vertex /g)).toHaveLength(part.positions.length / 3);
+      expect(xml.match(/<triangle /g)).toHaveLength(part.indices.length / 3);
+    });
   });
 
-  it("carries the colours as base materials, referenced by each object", async () => {
+  it("assigns a filament per part and writes the colours as Bambu Studio reads them", async () => {
     const m = await model(withLabel);
-    const xml = unzip(await write3mf(m.parts, colours))["3D/3dmodel.model"]!;
-    const bases = [
-      ...xml.matchAll(/<base name="([^"]+)" displaycolor="(#[0-9A-F]{8})"/g),
-    ];
-    expect(bases.map((b) => [b[1], b[2]])).toEqual([
-      ["Plate", "#9DA39AFF"],
-      ["Stacking lip", "#336699FF"],
-      ["Text", "#000000FF"],
-      ["Symbol", "#112233FF"],
+    const files = unzip(await write3mf(m.parts, colours));
+    const settings = files["Metadata/model_settings.config"]!;
+    expect([...settings.matchAll(/<part id="(\d)"/g)].map((x) => x[1])).toEqual([
+      "1",
+      "2",
+      "3",
+      "4",
     ]);
-    const refs = [...xml.matchAll(/<object id="(\d+)"[^>]*pid="1" pindex="(\d+)"/g)];
-    expect(refs.map((r) => Number(r[2]))).toEqual([0, 1, 2, 3]);
+    const extruders = [
+      ...settings.matchAll(/<metadata key="extruder" value="(\d)"\/>/g),
+    ].map((x) => Number(x[1]));
+    // object first, then plate, lip, text, symbol: four different colours, four filaments
+    expect(extruders).toEqual([1, 1, 2, 3, 4]);
+    const project = JSON.parse(files["Metadata/project_settings.config"]!);
+    expect(project.filament_colour).toEqual([
+      "#9DA39A",
+      "#336699",
+      "#000000",
+      "#112233",
+    ]);
   });
 
-  it("a lid without a label has exactly one object", async () => {
+  it("parts with the same colour share one filament", async () => {
+    const m = await model(withLabel);
+    const same = { ...colours, lip: colours.plate, symbol: colours.text };
+    const files = unzip(await write3mf(m.parts, same));
+    const project = JSON.parse(files["Metadata/project_settings.config"]!);
+    expect(project.filament_colour).toEqual(["#9DA39A", "#000000"]);
+    expect(files["Metadata/model_settings.config"]).toContain('value="2"');
+  });
+
+  it("also carries the colours as standard base materials", async () => {
+    const m = await model(withLabel);
+    const files = unzip(await write3mf(m.parts, colours));
+    const found = [1, 2, 3, 4].map(
+      (i) =>
+        files[`3D/Objects/object_${i}.model`]!.match(
+          /displaycolor="(#[0-9A-F]{8})"/,
+        )![1],
+    );
+    expect(found).toEqual(["#9DA39AFF", "#336699FF", "#000000FF", "#112233FF"]);
+  });
+
+  it("a lid without a label has exactly one part", async () => {
     const m = await model({});
-    const xml = unzip(await write3mf(m.parts, colours))["3D/3dmodel.model"]!;
-    expect(xml.match(/<object /g)).toHaveLength(1);
+    const files = unzip(await write3mf(m.parts, colours));
+    expect(files["3D/3dmodel.model"]!.match(/<component /g)).toHaveLength(1);
   });
 
-  it("text and plate volumes do not overlap (separate bodies)", async () => {
+  it("text sits on the plate: touching, not overlapping", async () => {
     const m = await model({ text_mode: "raised", text_string: "M3" });
     const plate = m.parts.find((p) => p.name === "plate")!;
     const text = m.parts.find((p) => p.name === "text")!;
     const plateTop = Math.max(...plate.positions.filter((_, i) => i % 3 === 2));
     const textBottom = Math.min(...text.positions.filter((_, i) => i % 3 === 2));
-    expect(textBottom).toBeGreaterThan(plateTop);
+    expect(textBottom).toBeCloseTo(plateTop, 4);
   });
 });
