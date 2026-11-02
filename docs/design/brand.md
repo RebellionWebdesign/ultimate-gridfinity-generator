@@ -14,7 +14,7 @@ Calm, precise, quietly pleasant. Between Extrudo (too playful) and SolidCraft (a
 ## 2. Name, logo, app icon
 - Name: Ultimate Gridfinity Generator.
 - Logo mark (approved): a rounded square divided into a 2 × 2 grid, the top-right cell filled with the accent. Stroke in `--text`, fill in `--accent`. Drawn in a 40 × 40 viewBox (stroke 2.5 at 40 px and above, 3 at 24 px). The mark is the only hand-drawn graphic besides the part drawings.
-- PWA icon: the mark in dark colours (`#ECEDE8` strokes, `#C2DB57` cell) on a `#111210` tile.
+- PWA icon and favicon: the mark on a transparent background (owner, 2 November 2026). The SVG favicon follows the light or dark scheme (`--text` strokes, `--accent` cell); the PNG icons use mid-tone colours (`#6B6E66` strokes, `#8FAA2A` cell) that read on light and dark launchers. No maskable icon (it needs an opaque background).
 
 ## 3. Colour tokens
 Light and dark are both complete. The app follows `prefers-color-scheme`; a toggle in the header overrides it (`data-theme="light|dark"` on the root, remembered per browser).
@@ -155,8 +155,8 @@ Examples:
 - No save picker: "This browser saves straight to your Downloads folder; it cannot ask where. Chrome and Edge can."
 
 ## 8. Open points (owner)
-1. Decided (owner, 2 November 2026): `text_size` default 8 and minimum 8 (2 mm is too small). Still open: script defaults above their minimum: `icon_size` 14 (min 4), `label_gap` 3 (min 0), `symbol_scale` 1 (min 0.05), bin `height_units` 3 (min 1). Shown with a "default" mark on the rail until decided.
-2. Signed values (offsets, rotations, `fit_x`, `fit_y`): the min = default rule cannot apply. Offsets have no limit in the script; the design uses ± half the lid size as a placeholder.
+1. Decided (owner, 2 November 2026): `text_size` default 8 and minimum 8 (2 mm is too small). Still open: script defaults above their minimum: `icon_size` 14 (min 4), `label_gap` 3 (min 0), `symbol_scale` 1 (min 0.05), bin `height_units` 3 (min 1). Decided (owner, 2 November 2026): these defaults stay.
+2. Signed values (offsets, rotations, `fit_x`, `fit_y`): the min = default rule cannot apply. Offsets have no limit in the script; ± half the lid size stays (owner, 2 November 2026).
 3. Decided (owner, 2 November 2026): until the user chooses a colour, the parts stay Stone `#9DA39A`; the text is black as a placeholder (instead of `#F7F7F3`).
 4. A separate symbol colour does not exist in the script (one `text_color` for text and symbol).
 5. Plate thickness default: Auto (spec) versus Manual (script).
