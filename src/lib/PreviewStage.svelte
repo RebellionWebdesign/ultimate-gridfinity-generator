@@ -11,12 +11,14 @@
     EdgesGeometry,
     Group,
     LineBasicMaterial,
+    LineLoop,
     LineSegments,
     Mesh,
     MeshBasicMaterial,
     MeshStandardMaterial,
     NearestFilter,
     Path,
+    PlaneGeometry,
     PerspectiveCamera,
     Quaternion,
     RepeatWrapping,
@@ -38,6 +40,7 @@
     model,
     colours,
     labelArea,
+    bed,
     units,
     dimmed = false,
     theme,
@@ -46,6 +49,8 @@
     colours: Record<PartName, string>;
     /** the plate area labels may use; the margin is drawn hatched when a label crosses it */
     labelArea?: LabelArea;
+    /** the printable area of the chosen printer, drawn as the floor (none: plain grid) */
+    bed?: { x: number; y: number; exclude?: [number, number] };
     units: [number, number];
     dimmed?: boolean;
     theme: string;
@@ -254,29 +259,85 @@
   const rebuildGrid = () => {
     for (const child of [...gridGroup.children]) {
       gridGroup.remove(child);
-      (child as LineSegments).geometry.dispose();
+      const item = child as Mesh | LineSegments | LineLoop;
+      item.geometry.dispose();
+      (item.material as LineBasicMaterial | MeshBasicMaterial).dispose();
     }
-    if (!showGrid) return draw();
-    // the 42 mm grid passes through the origin: the lid centre is on X0 Y0
-    const [nx, ny] = units;
-    const span = Math.max(nx, ny) + 3;
-    const reach = span * 42;
-    const points: number[] = [];
-    for (let k = -span; k <= span; k++) {
-      points.push(42 * k, -reach, -0.05, 42 * k, reach, -0.05);
-      points.push(-reach, 42 * k, -0.05, reach, 42 * k, -0.05);
+    const flat = (x1: number, y1: number, x2: number, y2: number, z: number) => [
+      x1,
+      y1,
+      z,
+      x2,
+      y2,
+      z,
+    ];
+    const lineGeometry = (points: number[]) => {
+      const geometry = new BufferGeometry();
+      geometry.setAttribute(
+        "position",
+        new BufferAttribute(Float32Array.from(points), 3),
+      );
+      return geometry;
+    };
+
+    // the print bed of the chosen printer, centred on the origin (the lid centre is X0 Y0)
+    if (bed) {
+      const [hx, hy] = [bed.x / 2, bed.y / 2];
+      const fill = new Mesh(
+        new PlaneGeometry(bed.x, bed.y),
+        new MeshBasicMaterial({ color: new Color(css("--surface-2") || "#ededE9") }),
+      );
+      fill.position.z = -0.1;
+      gridGroup.add(fill);
+      if (bed.exclude) {
+        // area the printer keeps free (front left), no logo or label
+        const [ex, ey] = bed.exclude;
+        const zone = new Mesh(
+          new PlaneGeometry(ex, ey),
+          new MeshBasicMaterial({
+            color: new Color(css("--line-strong") || "#c4c4bc"),
+            transparent: true,
+            opacity: 0.6,
+          }),
+        );
+        zone.position.set(-hx + ex / 2, -hy + ey / 2, -0.07);
+        gridGroup.add(zone);
+      }
+      const outline = [
+        ...flat(-hx, -hy, hx, -hy, -0.04),
+        ...flat(hx, -hy, hx, hy, -0.04),
+        ...flat(hx, hy, -hx, hy, -0.04),
+        ...flat(-hx, hy, -hx, -hy, -0.04),
+      ];
+      gridGroup.add(
+        new LineSegments(
+          lineGeometry(outline),
+          new LineBasicMaterial({
+            color: new Color(css("--line-strong") || "#c4c4bc"),
+          }),
+        ),
+      );
     }
-    const geometry = new BufferGeometry();
-    geometry.setAttribute(
-      "position",
-      new BufferAttribute(Float32Array.from(points), 3),
-    );
-    gridGroup.add(
-      new LineSegments(
-        geometry,
-        new LineBasicMaterial({ color: css("--stage-grid") || "#dadad3" }),
-      ),
-    );
+
+    if (showGrid) {
+      // the 42 mm grid passes through the origin; on a bed it stays inside the bed
+      const [nx, ny] = units;
+      const span = Math.max(nx, ny) + 3;
+      const [reachX, reachY] = bed ? [bed.x / 2, bed.y / 2] : [span * 42, span * 42];
+      const points: number[] = [];
+      for (let k = -Math.floor(reachX / 42); k <= Math.floor(reachX / 42); k++) {
+        points.push(...flat(42 * k, -reachY, 42 * k, reachY, -0.05));
+      }
+      for (let k = -Math.floor(reachY / 42); k <= Math.floor(reachY / 42); k++) {
+        points.push(...flat(-reachX, 42 * k, reachX, 42 * k, -0.05));
+      }
+      gridGroup.add(
+        new LineSegments(
+          lineGeometry(points),
+          new LineBasicMaterial({ color: css("--stage-grid") || "#dadad3" }),
+        ),
+      );
+    }
     draw();
   };
 
@@ -329,7 +390,15 @@
     if (renderer && deps.length > 0) rebuildBand();
   });
   $effect(() => {
-    const deps = [showGrid, units[0], units[1], theme];
+    const deps = [
+      showGrid,
+      units[0],
+      units[1],
+      theme,
+      bed?.x,
+      bed?.y,
+      bed?.exclude?.[0],
+    ];
     if (renderer && deps.length > 0) rebuildGrid();
   });
 

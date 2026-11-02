@@ -237,6 +237,13 @@
         model={editor.model}
         {colours}
         labelArea={editor.model?.labelArea}
+        bed={editor.bedCheck
+          ? {
+              x: editor.bed[0],
+              y: editor.bed[1],
+              exclude: editor.printerInfo.exclude,
+            }
+          : undefined}
         units={[editor.params.units_x, editor.params.units_y]}
         dimmed={editor.slow && !!editor.model}
         {theme}
