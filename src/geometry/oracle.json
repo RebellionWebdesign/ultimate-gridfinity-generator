@@ -140,36 +140,6 @@
     "size": [41.5, 41.5, 7],
     "min": [-20.75, -20.75, 0]
   },
-  "hollow_1x1": {
-    "params": {
-      "foot_hollow": "open"
-    },
-    "triangles": 526,
-    "volume": 4672.269242173379,
-    "size": [41.5, 41.5, 7],
-    "min": [-20.75, -20.75, 0]
-  },
-  "hollow_2x2": {
-    "params": {
-      "foot_hollow": "open",
-      "units_x": 2,
-      "units_y": 2
-    },
-    "triangles": 508,
-    "volume": 17442.366896265656,
-    "size": [83.5, 83.5, 7],
-    "min": [-41.75, -41.75, 0]
-  },
-  "hollow_wall_2_5": {
-    "params": {
-      "foot_hollow": "open",
-      "foot_wall": 2.5
-    },
-    "triangles": 526,
-    "volume": 5516.66819057105,
-    "size": [41.5, 41.5, 7],
-    "min": [-20.75, -20.75, 0]
-  },
   "symbol_raised": {
     "params": {
       "flush_gap": 0,

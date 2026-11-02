@@ -33,12 +33,6 @@ export const footRadius = (z: number): number => {
   return c("footRadiusMid") + (z - z2);
 };
 
-/** Heights of the profile breaks between z0 and z1 (script `zs`). */
-export const profileHeights = (z0: number, z1: number): number[] => {
-  const breaks = [c("footLowerSlope"), c("footLowerSlope") + c("footVertical")];
-  return [z0, ...breaks.filter((b) => b > z0 + 0.01 && b < z1 - 0.01), z1];
-};
-
 export const footLayers = (extraX = 0, extraY = 0): Layer[] => {
   const h = c("footHeight");
   const top = cellHalf();

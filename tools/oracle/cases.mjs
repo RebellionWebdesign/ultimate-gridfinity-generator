@@ -1,6 +1,7 @@
 // Label cases use flush_gap 0: the app puts raised and flush labels directly on the plate
-// (owner, 2 November 2026). Hollow foot with magnets is not compared: the app pads only 0.8 mm under
-// each pocket, the script keeps a full-height column.
+// (owner, 2 November 2026). Hollow foot is not compared: the app cuts one straight cavity (no profile
+// steps, owner 2 November 2026) and pads 0.8 mm under pockets; the script follows the foot
+// profile and keeps full-height columns.
 // Cases compared with the reference script, at or above the spec minimum (skills/reference-oracle).
 // Keys are script parameter names. Text cases are left out: the script's fonts are those installed
 // where it runs, the app bundles its own (the symbol cases cover the label code).
@@ -37,9 +38,6 @@ export const ORACLE_CASES = {
     corner_magnet_d: 8.1,
     corner_magnet_h: 3.9,
   },
-  hollow_1x1: { foot_hollow: "open" },
-  hollow_2x2: { foot_hollow: "open", units_x: 2, units_y: 2 },
-  hollow_wall_2_5: { foot_hollow: "open", foot_wall: 2.5 },
   symbol_raised: { flush_gap: 0, symbol_mode: "raised", symbol_icon: "tools_wrench" },
   symbol_engraved: {
     flush_gap: 0,

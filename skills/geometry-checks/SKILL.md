@@ -16,6 +16,6 @@ Checks the spec asks for (section 6.2). They become automated tests once code ex
 - **Minimum values:** the validation rejects every value below its spec minimum (spec section 4, rule of the owner) and accepts the minimum itself and values up to the limit.
 - **Magnet corners:** 1x1 has pockets in all four corners; for larger parts (for example 4x4) pockets exist only in the four outermost corners. Lids have no centre magnet and no pockets in the foot; the pockets are on the top side.
 - **Material under a lid pocket:** at least 0.8 mm below the pocket floor, also with a hollow foot (the hollow is routed around the pocket).
-- **Hollow foot:** the cavity follows the foot profile; magnet pockets keep a wall.
+- **Hollow foot:** the cavity is one straight cut from below up to the plate (the same outline at every height, inset from the foot's bottom edge by the wall); under each magnet pocket a pad keeps 0.8 mm of material.
 
 Report what you measured and with which tool. Do not report a check as passed that was not run.

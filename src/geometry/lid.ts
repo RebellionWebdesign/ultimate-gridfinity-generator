@@ -4,7 +4,7 @@
 import type { Manifold } from "manifold-3d";
 import { CONSTANTS, holeOffset, outerSize } from "../gridfinity/constants";
 import { plateThicknessOf, type LidParams } from "../model/lidParams";
-import { cellHalf, footHalf, footRadius, profileHeights, solidFoot } from "./foot";
+import { cellHalf, footHalf, footRadius, solidFoot } from "./foot";
 import type { Kernel, Scope } from "./kernel";
 import { buildLabel, raisedExtra, type LabelAssets } from "./label";
 import { loft, type Layer } from "./loft";
@@ -83,16 +83,19 @@ const cylinderAt = (
   return move(scope, raw, at.x, at.y, at.z);
 };
 
-/** Cavity of an open hollow foot: follows the foot profile, inset by the wall. */
+/**
+ * Cavity of an open hollow foot: one straight cut from below up to the plate, inset from
+ * the narrowest part of the foot (its bottom edge) by the wall. No profile steps, no lip
+ * inside (owner, 2 November 2026).
+ */
 const cavityLayers = (inset: number, extraX: number, extraY: number): Layer[] => {
   const ring = (z: number): Layer => ({
     z,
-    hx: footHalf(z) - inset + extraX,
-    hy: footHalf(z) - inset + extraY,
-    r: Math.max(footRadius(z) - inset, 0.3),
+    hx: footHalf(0) - inset + extraX,
+    hy: footHalf(0) - inset + extraY,
+    r: Math.max(footRadius(0) - inset, 0.3),
   });
-  const first = ring(0);
-  return [{ ...first, z: -0.5 }, ...profileHeights(0, c("footHeight")).map(ring)];
+  return [ring(-0.5), ring(c("footHeight"))];
 };
 
 interface FootSpec {

@@ -252,13 +252,21 @@ describe("B-06 stackable, hollow foot, top-side corner magnets", () => {
     expect(hollow.size.z).toBeCloseTo(7, 4);
   });
 
-  it("hollow foot cross-section keeps the 1.2 wall at mid height", () => {
+  it("hollow foot: the cavity is one straight cut, the same at every height", () => {
+    // owner, 2 November 2026: no profile steps and no lip inside the open foot
     const scope = new Scope();
-    const { plate } = buildLid(kernel, scope, { ...DEFAULT_LID, foot_hollow: "open" });
-    const section = scope.add(plate.slice(2));
-    // outer 37.2 square (r 1.6) minus inner 34.8 square (r 0.4), polygonal corners
-    const ring = (w: number, r: number) => w * w - (4 - Math.PI) * r * r;
-    expect(section.area()).toBeCloseTo(ring(37.2, 1.6) - ring(34.8, 0.4), 0);
+    const solid = buildLid(kernel, scope, DEFAULT_LID).plate;
+    const hollow = buildLid(kernel, scope, {
+      ...DEFAULT_LID,
+      foot_hollow: "open",
+    }).plate;
+    // inner square: bottom edge half 17.8 minus the 1.2 wall, corner radius 0.3
+    const expected = 33.2 * 33.2 - (4 - Math.PI) * 0.3 * 0.3;
+    for (const z of [0.2, 0.5, 1.5, 2.5, 3.5, 4.5]) {
+      const void_ =
+        scope.add(solid.slice(z)).area() - scope.add(hollow.slice(z)).area();
+      expect(void_, `z = ${z}`).toBeCloseTo(expected, 0);
+    }
     scope.dispose();
   });
 
