@@ -14,7 +14,7 @@ Work: `docs/roadmap.md` (take the first unchecked task whose dependencies are do
 - **Facts and options, not orders.** The owner decides. Do not silently change a spec number; report the deviation.
 - **Compute in the browser.** No server-side geometry, no server storage for STL/3MF files (ADR-0002).
 - **One geometry kernel: Manifold WASM, in a Web Worker** (ADR-0001). Do not add another kernel without a new ADR.
-- **Parts of a model stay separate objects** (plate, text, symbol) in 3MF so the slicer can assign filaments; never merge them into one body (ADR-0003).
+- **Parts of a model stay separate parts** (plate, lip, text, symbol) in 3MF, as components of one object with their own colours (ADR-0003, ADR-0008), so the slicer can assign filaments; never merge them into one body.
 - **Language.** Chat with the owner in German; code, identifiers and repository files in English.
 - **Licences and credits.** No new dependency without asking the owner first. Keep the Gridfinity copyright and licence notice where the spec demands it. Dependencies go against an allow-list; GPL, LGPL and AGPL code is not allowed in the bundle unless the owner decides otherwise in an ADR (`skills/licences-and-credits/SKILL.md`).
 - **The reference `.scad` is the test oracle.** Parameter names, dimensions and volumes are compared against it (`skills/reference-oracle/SKILL.md`). Geometry therefore exists twice (OpenSCAD and TypeScript); that is a deliberate cost.

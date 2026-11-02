@@ -141,7 +141,7 @@ Fixed values (CSS variables cannot be used in media queries):
 ## 6. Icons
 Lucide, package `lucide-static` (ISC licence, https://github.com/lucide-icons/lucide), version 1.66.0 in the design. Paths unchanged, 24 px grid, stroke 2, round caps and joins, `currentColor`, never multicoloured. Drawn at 16, 20 or 24 px (size tokens). Icon-only buttons carry an `aria-label` and a tooltip. No hand-drawn icons; only the part drawings (lid, bin, baseplate) and the logo mark are our own.
 
-Icons in use: `download`, `upload`, `save`, `file`, `folder-open`, `minus`, `plus`, `rotate-ccw`, `chevron-right`, `maximize`, `grid-2x2`, `palette`, `triangle-alert`, `info`, `check`, `x`, `arrow-right`, `loader-circle`, `sun`, `moon`, `laptop`, `wifi-off`. Lucide must be added to the OSS licence list (`skills/licences-and-credits/SKILL.md`).
+Icons in use: `download`, `upload`, `save`, `file`, `folder-open`, `minus`, `plus`, `rotate-ccw`, `chevron-right`, `maximize`, `grid-2x2`, `palette`, `triangle-alert`, `info`, `check`, `x`, `arrow-right`, `loader-circle`, `sun`, `moon`, `laptop`, `wifi-off`, `bug` (Report bug). Lucide must be added to the OSS licence list (`skills/licences-and-credits/SKILL.md`).
 
 ## 7. Voice
 Interface language English. Short, plain, no exclamation marks, no jokes. Say what happened, then how to fix it. Numbers with units and a decimal point.

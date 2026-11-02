@@ -11,7 +11,7 @@ In MakerWorld's Parametric Model Maker, colours arrive only in the 3MF, not in t
 
 - **Export formats:** STL and 3MF only (no STEP for now).
 - **STL:** own binary writer.
-- **3MF:** parts (plate, text, symbol) are **separate objects** with a base-material colour. They must not merge into one body. Manifold ships `lib/export-3mf`; alternative is JSZip (3MF is a ZIP of XML files). Bambu Studio stores its filament assignment in its own metadata (`project_settings.config`), so the mapping of colours is slicer-dependent.
+- **3MF:** parts (plate, text, symbol) are separate meshes, each with its colour (changed by ADR-0008: one object made of components, colours as `m:colorgroup`; originally planned as separate objects with a base-material colour). They must not merge into one body. Manifold ships `lib/export-3mf`; alternative is JSZip (3MF is a ZIP of XML files). Bambu Studio stores its filament assignment in its own metadata (`project_settings.config`), so the mapping of colours is slicer-dependent.
 - **Saved models:** JSON with model type, schema version, parameters, text, colours and the SVG as a string. For now in the browser (localStorage or IndexedDB) and as a file to download and load. Sharing by URL state is possible later.
 
 ## Consequences

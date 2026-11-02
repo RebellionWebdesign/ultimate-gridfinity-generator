@@ -12,7 +12,7 @@ Checks the spec asks for (section 6.2). They become automated tests once code ex
 - **Fit test:** lid and bin (or baseplate) without overlap; gap about 0.25.
 - **Foot bottom edge** 35.6 for 1x1.
 - **Plate thickness:** in automatic mode the total height is a multiple of 7 mm (1u gives a 2.25 plate).
-- **3MF:** plate, text and symbol are separate objects; assert the object count, and assert that colours are carried as base materials.
+- **3MF:** plate, lip, text and symbol are separate parts of one object (ADR-0008); assert the component and mesh count, and assert that each part points to its own colour in an `m:colorgroup`.
 - **Minimum values:** the validation rejects every value below its spec minimum (spec section 4, rule of the owner) and accepts the minimum itself and values up to the limit.
 - **Magnet corners:** 1x1 has pockets in all four corners; for larger parts (for example 4x4) pockets exist only in the four outermost corners. Lids have no centre magnet and no pockets in the foot; the pockets are on the top side.
 - **Material under a lid pocket:** with a solid foot at least 0.8 mm below the pocket floor. With a hollow foot the cavity ends 1.45 mm below the plate (owner, 2 November 2026), so 1.6 mm remain under the default pocket floor.
