@@ -242,6 +242,7 @@
               x: editor.bed[0],
               y: editor.bed[1],
               exclude: editor.printerInfo.exclude,
+              plate: editor.printerInfo.plate,
             }
           : undefined}
         units={[editor.params.units_x, editor.params.units_y]}

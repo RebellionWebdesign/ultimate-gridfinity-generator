@@ -6,18 +6,41 @@
 // X2D): the area one nozzle reaches (`extruder_printable_area` of the profile; for the H2D the
 // single-nozzle volume of Bambu Lab's technical specifications); the wider total needs both
 // nozzles with the same filament. Origin of the bed is its front left corner.
+/**
+ * Outline of the physical build plate where it differs from the printable rectangle: a
+ * handle tab at the back and a lip at the front. Drawn only (the printable area stays the
+ * rectangle). Measured from a picture of the plate, about 1 mm accurate; mm, relative to
+ * the printable area, whose front left corner is the origin.
+ */
+export interface PlateShape {
+  cornerRadius: number;
+  /** centred tab at the back: width of its flat top and of its base, and how far it sticks out */
+  backTab: { top: number; base: number; height: number };
+  /** lip along the front: the 45 degree flank starts this far from the left edge */
+  frontLip: { start: number; chamfer: number; depth: number };
+}
+
 export interface Printer {
   name: string;
   bed: [number, number, number];
   /** reserved rectangle at the front left corner (x and y extent), if any */
   exclude?: [number, number];
+  /** outline of the build plate, when it is not just the printable rectangle */
+  plate?: PlateShape;
 }
+
+/** P2S build plate (owner's picture, 2 November 2026). */
+const P2S_PLATE: PlateShape = {
+  cornerRadius: 6,
+  backTab: { top: 57, base: 70, height: 8 },
+  frontLip: { start: 71, chamfer: 10, depth: 10 },
+};
 
 /** P1P, P1S, X1, X1C and X1E reserve 18 x 28 mm at the front left and print 250 mm high. */
 const CLASSIC_EXCLUDE: [number, number] = [18, 28];
 
 export const PRINTERS: Printer[] = [
-  { name: "Bambu Lab P2S", bed: [256, 256, 256] },
+  { name: "Bambu Lab P2S", bed: [256, 256, 256], plate: P2S_PLATE },
   { name: "Bambu Lab P1S", bed: [256, 256, 250], exclude: CLASSIC_EXCLUDE },
   { name: "Bambu Lab P1P", bed: [256, 256, 250], exclude: CLASSIC_EXCLUDE },
   { name: "Bambu Lab X1", bed: [256, 256, 250], exclude: CLASSIC_EXCLUDE },

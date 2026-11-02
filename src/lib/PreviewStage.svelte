@@ -26,12 +26,14 @@
     Shape,
     ShapeGeometry,
     SRGBColorSpace,
+    Vector2,
     Vector3,
     WebGLRenderer,
   } from "three";
   import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
   import type { LabelArea } from "../geometry/lid";
   import type { ModelMesh, PartName } from "../geometry/model";
+  import type { PlateShape } from "./printers";
   import Icon from "./Icon.svelte";
 
   type View = "iso" | "top" | "front" | "under";
@@ -50,7 +52,7 @@
     /** the plate area labels may use; the margin is drawn hatched when a label crosses it */
     labelArea?: LabelArea;
     /** the printable area of the chosen printer, drawn as the floor (none: plain grid) */
-    bed?: { x: number; y: number; exclude?: [number, number] };
+    bed?: { x: number; y: number; exclude?: [number, number]; plate?: PlateShape };
     units: [number, number];
     dimmed?: boolean;
     theme: string;
@@ -256,6 +258,45 @@
     draw();
   };
 
+  /** Points of a rounded rectangle, centred on the origin (`r` 0: a plain rectangle). */
+  const roundedOutline = (hw: number, hd: number, r: number): Vector2[] => {
+    const shape = new Shape();
+    if (r === 0) {
+      shape.moveTo(-hw, -hd);
+      shape.lineTo(hw, -hd);
+      shape.lineTo(hw, hd);
+      shape.lineTo(-hw, hd);
+      shape.closePath();
+    } else {
+      roundedRect(shape, hw, hd, r);
+    }
+    return shape.getPoints(8);
+  };
+
+  /** Outline of a build plate with a back tab and a front lip (printable area hx x hy). */
+  const plateOutline = (plate: PlateShape, hx: number, hy: number): Vector2[] => {
+    const { cornerRadius: r, backTab, frontLip } = plate;
+    const low = -hy - frontLip.depth;
+    const shape = new Shape();
+    shape.moveTo(-hx + r, -hy);
+    shape.lineTo(-hx + frontLip.start, -hy);
+    shape.lineTo(-hx + frontLip.start + frontLip.chamfer, low);
+    shape.lineTo(hx - r, low);
+    shape.absarc(hx - r, low + r, r, -Math.PI / 2, 0, false);
+    shape.lineTo(hx, hy - r);
+    shape.absarc(hx - r, hy - r, r, 0, Math.PI / 2, false);
+    const flank = (backTab.base - backTab.top) / 2;
+    shape.lineTo(backTab.base / 2, hy);
+    shape.lineTo(backTab.base / 2 - flank, hy + backTab.height);
+    shape.lineTo(-backTab.base / 2 + flank, hy + backTab.height);
+    shape.lineTo(-backTab.base / 2, hy);
+    shape.lineTo(-hx + r, hy);
+    shape.absarc(-hx + r, hy - r, r, Math.PI / 2, Math.PI, false);
+    shape.lineTo(-hx, -hy + r);
+    shape.absarc(-hx + r, -hy + r, r, Math.PI, Math.PI * 1.5, false);
+    return shape.getPoints(8);
+  };
+
   const rebuildGrid = () => {
     for (const child of [...gridGroup.children]) {
       gridGroup.remove(child);
@@ -283,8 +324,12 @@
     // the print bed of the chosen printer, centred on the origin (the lid centre is X0 Y0)
     if (bed) {
       const [hx, hy] = [bed.x / 2, bed.y / 2];
+      const outline = bed.plate
+        ? plateOutline(bed.plate, hx, hy)
+        : roundedOutline(hx, hy, 0);
+      const fillShape = new Shape(outline);
       const fill = new Mesh(
-        new PlaneGeometry(bed.x, bed.y),
+        new ShapeGeometry(fillShape),
         new MeshBasicMaterial({ color: new Color(css("--surface-2") || "#ededE9") }),
       );
       fill.position.z = -0.1;
@@ -303,15 +348,14 @@
         zone.position.set(-hx + ex / 2, -hy + ey / 2, -0.07);
         gridGroup.add(zone);
       }
-      const outline = [
-        ...flat(-hx, -hy, hx, -hy, -0.04),
-        ...flat(hx, -hy, hx, hy, -0.04),
-        ...flat(hx, hy, -hx, hy, -0.04),
-        ...flat(-hx, hy, -hx, -hy, -0.04),
-      ];
+      const edge: number[] = [];
+      outline.forEach((point, i) => {
+        const next = outline[(i + 1) % outline.length] ?? point;
+        edge.push(...flat(point.x, point.y, next.x, next.y, -0.04));
+      });
       gridGroup.add(
         new LineSegments(
-          lineGeometry(outline),
+          lineGeometry(edge),
           new LineBasicMaterial({
             color: new Color(css("--line-strong") || "#c4c4bc"),
           }),
@@ -390,15 +434,7 @@
     if (renderer && deps.length > 0) rebuildBand();
   });
   $effect(() => {
-    const deps = [
-      showGrid,
-      units[0],
-      units[1],
-      theme,
-      bed?.x,
-      bed?.y,
-      bed?.exclude?.[0],
-    ];
+    const deps = [showGrid, units[0], units[1], theme, bed];
     if (renderer && deps.length > 0) rebuildGrid();
   });
 
