@@ -270,13 +270,36 @@
       {:else if editor.bedCheck && editor.bedResult && !editor.bedResult.fits && editor.model}
         <div class="alert top" role="alert">
           <Icon name="triangle-alert" />
-          <p>
-            This lid does not fit the {editor.printer} bed. The lid is
-            {editor.model.size[0].toFixed(1)} × {editor.model.size[1].toFixed(1)} mm, the
-            bed
-            {editor.bed[0]} × {editor.bed[1]} mm, also when turned 90°. Reduce Width or Depth,
-            or pick a larger printer.
-          </p>
+          <div>
+            <p>
+              This lid does not fit the {editor.printer} bed. The lid is
+              {editor.model.size.map((v) => v.toFixed(1)).join(" × ")} mm, the printable area
+              {editor.bed.join(" × ")} mm{editor.printerInfo.exclude
+                ? `, with ${editor.printerInfo.exclude.join(" × ")} mm at the front left reserved`
+                : ""}, also when turned 90°.
+            </p>
+            <div class="fixes">
+              {#if editor.bedFixes.x}
+                <button
+                  type="button"
+                  onclick={() => (editor.params.units_x = editor.bedFixes.x)}
+                >
+                  Set Width to {editor.bedFixes.x}
+                </button>
+              {/if}
+              {#if editor.bedFixes.y}
+                <button
+                  type="button"
+                  onclick={() => (editor.params.units_y = editor.bedFixes.y)}
+                >
+                  Set Depth to {editor.bedFixes.y}
+                </button>
+              {/if}
+              <button type="button" onclick={() => (editor.bedCheck = false)}>
+                Turn the bed check off
+              </button>
+            </div>
+          </div>
         </div>
       {/if}
       {#if editor.status === "computing"}<div class="sweep"></div>{/if}
@@ -440,6 +463,11 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+  }
+  .fixes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
   }
   .alert button {
     margin-top: var(--space-3);

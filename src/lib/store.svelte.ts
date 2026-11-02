@@ -5,7 +5,7 @@ import { DEFAULT_LID, validateLid, type LidParams } from "../model/lidParams";
 import { parseModel, serializeModel, type ModelFile } from "../model/modelFile";
 import { GeometryClient, InputBuildError } from "../worker/client";
 import type { PartType } from "./parts";
-import { PRINTERS, checkBed } from "./printers";
+import { PRINTERS, checkBed, maxCells, type Printer } from "./printers";
 
 const STORAGE_KEY = "ugg.models";
 const MAX_STORED = 12;
@@ -65,11 +65,28 @@ class Editor {
 
   errors = $derived(validateLid(this.params));
 
-  bed = $derived(PRINTERS.find((p) => p.name === this.printer)?.bed ?? [256, 256, 256]);
-
-  bedResult = $derived(
-    this.model ? checkBed(this.model.size, this.bed as [number, number, number]) : null,
+  printerInfo: Printer = $derived(
+    PRINTERS.find((p) => p.name === this.printer) ?? (PRINTERS[0] as Printer),
   );
+
+  bed = $derived(this.printerInfo.bed);
+
+  bedResult = $derived(this.model ? checkBed(this.model.size, this.printerInfo) : null);
+
+  /**
+   * Fixes for a lid that does not fit: the most cells along each axis that fit (0 when
+   * changing that axis alone does not help), for the buttons of the bed-check alert.
+   */
+  bedFixes = $derived.by(() => {
+    if (!this.model) return { x: 0, y: 0 };
+    const units: [number, number] = [this.params.units_x, this.params.units_y];
+    const height = this.model.size[2];
+    const fix = (axis: "x" | "y") => {
+      const n = maxCells(axis, units, height, this.printerInfo);
+      return n >= 1 && n < units[axis === "x" ? 0 : 1] ? n : 0;
+    };
+    return { x: fix("x"), y: fix("y") };
+  });
 
   /** What blocks export, in words; empty when export is possible. */
   blocked = $derived.by(() => {
