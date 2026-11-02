@@ -32,7 +32,7 @@
   import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
   import type { LabelArea } from "../geometry/lid";
   import type { ModelMesh, PartName } from "../geometry/model";
-  import { exclusionOutline, plateOutline, type PlateShape } from "./plate";
+  import { plateOutline, type PlateShape } from "./plate";
   import Icon from "./Icon.svelte";
 
   type View = "iso" | "top" | "front" | "under";
@@ -51,7 +51,7 @@
     /** the plate area labels may use; the margin is drawn hatched when a label crosses it */
     labelArea?: LabelArea;
     /** the printable area of the chosen printer, drawn as the floor (none: plain grid) */
-    bed?: { x: number; y: number; exclude?: [number, number]; plate?: PlateShape };
+    bed?: { x: number; y: number; plate?: PlateShape };
     units: [number, number];
     dimmed?: boolean;
     theme: string;
@@ -293,23 +293,6 @@
       );
       fill.position.z = -0.1;
       gridGroup.add(fill);
-      if (bed.exclude) {
-        // area the printer keeps free (front left): outline only
-        const zone = exclusionOutline(bed.exclude, bed.plate, bed.x, bed.y);
-        const zoneLines: number[] = [];
-        zone.forEach((point, i) => {
-          const next = zone[(i + 1) % zone.length] ?? point;
-          zoneLines.push(...flat(point[0], point[1], next[0], next[1], -0.06));
-        });
-        gridGroup.add(
-          new LineSegments(
-            lineGeometry(zoneLines),
-            new LineBasicMaterial({
-              color: new Color(css("--line-strong") || "#c4c4bc"),
-            }),
-          ),
-        );
-      }
       const edge: number[] = [];
       outline.forEach((point, i) => {
         const next = outline[(i + 1) % outline.length] ?? point;

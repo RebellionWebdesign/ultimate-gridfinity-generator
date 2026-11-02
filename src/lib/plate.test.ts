@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boundsOf, exclusionOutline, plateOutline, type Point2 } from "./plate";
+import { boundsOf, plateOutline, type Point2 } from "./plate";
 import { PRINTERS, customPrinter } from "./printers";
 
 const plateOf = (name: string) => {
@@ -79,47 +79,5 @@ describe("build plate outlines", () => {
         );
       });
     }
-  });
-});
-
-const inside = (point: Point2, polygon: Point2[]): boolean => {
-  let result = false;
-  polygon.forEach(([x1, y1], i) => {
-    const [x2, y2] = polygon[(i + 1) % polygon.length] as Point2;
-    if (y1 > point[1] !== y2 > point[1]) {
-      const x = ((x2 - x1) * (point[1] - y1)) / (y2 - y1) + x1;
-      if (point[0] < x) result = !result;
-    }
-  });
-  return result;
-};
-
-describe("area a printer keeps free (P and X series)", () => {
-  it("never sticks out of the rounded plate corner", () => {
-    for (const name of ["P1S", "P1P", "X1", "X1C", "X1E"]) {
-      const { printer, outline } = plateOf(`Bambu Lab ${name}`);
-      const zone = exclusionOutline(
-        printer.exclude as [number, number],
-        printer.plate,
-        printer.bed[0],
-        printer.bed[1],
-      );
-      for (const [x, y] of zone) {
-        // a point on the zone's edge may touch the plate edge: move it 0.01 mm inward
-        const inward: Point2 = [x + 0.01, y + 0.01];
-        expect(inside(inward, outline), `${name} ${x.toFixed(2)} ${y.toFixed(2)}`).toBe(
-          true,
-        );
-      }
-      const { min, max } = boundsOf(zone);
-      expect(max[0] - min[0]).toBeCloseTo(18, 6);
-      expect(max[1] - min[1]).toBeCloseTo(28, 6);
-    }
-  });
-
-  it("its outer corner is rounded like the plate (no point in the sharp corner)", () => {
-    const { printer } = plateOf("Bambu Lab P1S");
-    const zone = exclusionOutline([18, 28], printer.plate, 256, 256);
-    expect(zone.some(([x, y]) => x === -128 && y === -128)).toBe(false);
   });
 });
