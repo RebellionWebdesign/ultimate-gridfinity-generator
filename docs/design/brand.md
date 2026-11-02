@@ -113,7 +113,7 @@ Rhythm, from small to large: inside a control 8 → between controls 12 → betw
 | `--size-icon-sm` / `--size-icon` / `--size-icon-lg` | 16 / 20 / 24 | Icons in small controls / buttons / feature lists |
 | `--page-max` | 1160 | Max content width of the landing page |
 | `--col-params` | 340 (320 below 1200 px) | Editor parameter column |
-| `--col-output` | 296 | Editor output column |
+| `--col-output` | 340 | Editor output column (was 296; the printer list with three numbers was cut off, owner, 2 November 2026) |
 
 ### Radius
 `--radius-tag` 4 (tags, swatches, kbd), `--radius-control` 8 (fields, buttons), `--radius-panel` 12 (toolbar, dialog, sheet top, preview frame), `--radius-round` 999 (switch, slider thumb, pills, dots). No cards.

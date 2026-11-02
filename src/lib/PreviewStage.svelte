@@ -273,23 +273,27 @@
     return shape.getPoints(8);
   };
 
-  /** Outline of a build plate with a back tab and a front lip (printable area hx x hy). */
+  /** Outline of a build plate, with an optional back tab and front lip (printable area hx x hy). */
   const plateOutline = (plate: PlateShape, hx: number, hy: number): Vector2[] => {
     const { cornerRadius: r, backTab, frontLip } = plate;
-    const low = -hy - frontLip.depth;
+    const low = frontLip ? -hy - frontLip.depth : -hy;
     const shape = new Shape();
     shape.moveTo(-hx + r, -hy);
-    shape.lineTo(-hx + frontLip.start, -hy);
-    shape.lineTo(-hx + frontLip.start + frontLip.chamfer, low);
+    if (frontLip) {
+      shape.lineTo(-hx + frontLip.start, -hy);
+      shape.lineTo(-hx + frontLip.start + frontLip.chamfer, low);
+    }
     shape.lineTo(hx - r, low);
     shape.absarc(hx - r, low + r, r, -Math.PI / 2, 0, false);
     shape.lineTo(hx, hy - r);
     shape.absarc(hx - r, hy - r, r, 0, Math.PI / 2, false);
-    const flank = (backTab.base - backTab.top) / 2;
-    shape.lineTo(backTab.base / 2, hy);
-    shape.lineTo(backTab.base / 2 - flank, hy + backTab.height);
-    shape.lineTo(-backTab.base / 2 + flank, hy + backTab.height);
-    shape.lineTo(-backTab.base / 2, hy);
+    if (backTab) {
+      const flank = (backTab.base - backTab.top) / 2;
+      shape.lineTo(backTab.base / 2, hy);
+      shape.lineTo(backTab.base / 2 - flank, hy + backTab.height);
+      shape.lineTo(-backTab.base / 2 + flank, hy + backTab.height);
+      shape.lineTo(-backTab.base / 2, hy);
+    }
     shape.lineTo(-hx + r, hy);
     shape.absarc(-hx + r, hy - r, r, Math.PI / 2, Math.PI, false);
     shape.lineTo(-hx, -hy + r);

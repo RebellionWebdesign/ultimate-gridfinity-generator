@@ -15,9 +15,9 @@
 export interface PlateShape {
   cornerRadius: number;
   /** centred tab at the back: width of its flat top and of its base, and how far it sticks out */
-  backTab: { top: number; base: number; height: number };
+  backTab?: { top: number; base: number; height: number };
   /** lip along the front: the 45 degree flank starts this far from the left edge */
-  frontLip: { start: number; chamfer: number; depth: number };
+  frontLip?: { start: number; chamfer: number; depth: number };
 }
 
 export interface Printer {
@@ -29,8 +29,11 @@ export interface Printer {
   plate?: PlateShape;
 }
 
-/** P2S build plate (owner's picture, 2 November 2026). */
-const P2S_PLATE: PlateShape = {
+/**
+ * The 256 x 256 build plate (owner's picture of the P2S, 2 November 2026). The owner asked
+ * to draw it for every printer with the same size.
+ */
+const PLATE_256: PlateShape = {
   cornerRadius: 6,
   backTab: { top: 57, base: 70, height: 8 },
   frontLip: { start: 71, chamfer: 10, depth: 10 },
@@ -40,21 +43,61 @@ const P2S_PLATE: PlateShape = {
 const CLASSIC_EXCLUDE: [number, number] = [18, 28];
 
 export const PRINTERS: Printer[] = [
-  { name: "Bambu Lab P2S", bed: [256, 256, 256], plate: P2S_PLATE },
-  { name: "Bambu Lab P1S", bed: [256, 256, 250], exclude: CLASSIC_EXCLUDE },
-  { name: "Bambu Lab P1P", bed: [256, 256, 250], exclude: CLASSIC_EXCLUDE },
-  { name: "Bambu Lab X1", bed: [256, 256, 250], exclude: CLASSIC_EXCLUDE },
-  { name: "Bambu Lab X1C", bed: [256, 256, 250], exclude: CLASSIC_EXCLUDE },
-  { name: "Bambu Lab X1E", bed: [256, 256, 250], exclude: CLASSIC_EXCLUDE },
-  { name: "Bambu Lab A1", bed: [256, 256, 256] },
+  { name: "Bambu Lab P2S", bed: [256, 256, 256], plate: PLATE_256 },
+  {
+    name: "Bambu Lab P1S",
+    bed: [256, 256, 250],
+    exclude: CLASSIC_EXCLUDE,
+    plate: PLATE_256,
+  },
+  {
+    name: "Bambu Lab P1P",
+    bed: [256, 256, 250],
+    exclude: CLASSIC_EXCLUDE,
+    plate: PLATE_256,
+  },
+  {
+    name: "Bambu Lab X1",
+    bed: [256, 256, 250],
+    exclude: CLASSIC_EXCLUDE,
+    plate: PLATE_256,
+  },
+  {
+    name: "Bambu Lab X1C",
+    bed: [256, 256, 250],
+    exclude: CLASSIC_EXCLUDE,
+    plate: PLATE_256,
+  },
+  {
+    name: "Bambu Lab X1E",
+    bed: [256, 256, 250],
+    exclude: CLASSIC_EXCLUDE,
+    plate: PLATE_256,
+  },
+  { name: "Bambu Lab A1", bed: [256, 256, 256], plate: PLATE_256 },
   { name: "Bambu Lab A1 mini", bed: [180, 180, 180] },
   { name: "Bambu Lab A2L", bed: [330, 320, 325] },
   { name: "Bambu Lab H2D", bed: [325, 320, 325] },
   { name: "Bambu Lab H2D Pro", bed: [325, 320, 325] },
   { name: "Bambu Lab H2C", bed: [325, 320, 325] },
   { name: "Bambu Lab H2S", bed: [340, 320, 340] },
-  { name: "Bambu Lab X2D", bed: [256, 256, 261] },
+  { name: "Bambu Lab X2D", bed: [256, 256, 261], plate: PLATE_256 },
 ];
+
+/** Name of the entry for a bed the user types in. */
+export const CUSTOM_PRINTER = "Custom";
+
+export const CUSTOM_LIMITS = {
+  size: { min: 50, max: 600, def: 256 },
+  height: { min: 20, max: 600, def: 256 },
+} as const;
+
+/** A square bed with rounded corners of the given side and build height (owner: square only). */
+export const customPrinter = (side: number, height: number): Printer => ({
+  name: CUSTOM_PRINTER,
+  bed: [side, side, height],
+  plate: { cornerRadius: 6 },
+});
 
 export interface BedResult {
   fits: boolean;

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { PRINTERS, checkBed, maxCells, type Printer } from "./printers";
+import {
+  CUSTOM_PRINTER,
+  PRINTERS,
+  checkBed,
+  customPrinter,
+  maxCells,
+  type Printer,
+} from "./printers";
 
 const printer = (name: string): Printer => {
   const found = PRINTERS.find((p) => p.name === name);
@@ -70,5 +77,35 @@ describe("bed check", () => {
     expect(maxCells("x", [3, 1], 7, p2s)).toBe(3);
     // 6 x 6 fits the P2S, not the P1S (251.5 > 238 and > 228)
     expect(maxCells("x", [6, 6], 7, p1s)).toBe(5);
+  });
+
+  it("every printer with a 256 x 256 mm bed gets the same plate outline", () => {
+    const same = PRINTERS.filter((p) => p.bed[0] === 256 && p.bed[1] === 256);
+    expect(same.map((p) => p.name)).toEqual([
+      "Bambu Lab P2S",
+      "Bambu Lab P1S",
+      "Bambu Lab P1P",
+      "Bambu Lab X1",
+      "Bambu Lab X1C",
+      "Bambu Lab X1E",
+      "Bambu Lab A1",
+      "Bambu Lab X2D",
+    ]);
+    for (const p of same) expect(p.plate, p.name).toBe(p2s.plate);
+    expect(p2s.plate?.backTab).toBeDefined();
+    // other sizes keep the plain rectangle
+    expect(printer("Bambu Lab A1 mini").plate).toBeUndefined();
+  });
+
+  it("a custom bed is a square with rounded corners and its own height", () => {
+    const custom = customPrinter(200, 180);
+    expect(custom.name).toBe(CUSTOM_PRINTER);
+    expect(custom.bed).toEqual([200, 200, 180]);
+    expect(custom.plate).toEqual({ cornerRadius: 6 });
+    expect(checkBed([199, 199, 180], custom).fits).toBe(true);
+    expect(checkBed([201, 100, 10], custom).fits).toBe(false);
+    expect(checkBed([100, 100, 181], custom).fits).toBe(false);
+    // 4 cells (167.5 mm) fit a 200 mm bed, 5 cells (209.5 mm) do not
+    expect(maxCells("x", [5, 1], 7, custom)).toBe(4);
   });
 });

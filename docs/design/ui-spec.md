@@ -37,7 +37,7 @@ Desktop (from 1200 px), three columns:
 |---|---|---|
 | Parameters | 340 px | Disclosure groups for the active part type (section 8), closed by default, scrolls on its own |
 | Preview | rest | 3D preview with overlays (section 3.2) |
-| Output | 296 px | Size, bed check, export, model file (section 5) |
+| Output | 340 px | Size, bed check, export, model file (section 5) |
 
 - 720 to 1200 px: parameters 320 px and preview; the output column is hidden and an "Export" button in the top bar opens it as a popover.
 - Below 720 px (phone): top bar; preview on top (42 % of the height); parameters below (58 %) with a tab strip of groups (one group visible at a time); Export opens a bottom sheet with the output content.
@@ -121,7 +121,7 @@ The images in `docs/design/mockups/` predate these changes; where they differ, t
 - Report-bug button (links to the repository's issues), thin scrollbars from tokens, camera animation of the views in 240 ms (instant with reduced motion).
 - PWA icon and favicon have a transparent background; the SVG favicon follows light and dark mode; no maskable icon.
 - Label edge margin (owner, 2 November 2026): text and symbol keep 3 mm from the lid edge on every side. When a label comes closer, a warning alert (`--warning-soft`) over the preview and a note in the Label group name the text or the symbol and suggest a shorter word, a smaller size, a larger lid or moving it (engraved text also: Raised or Flush). The strip between the edge and the margin is drawn on the plate as diagonal bars (about 1.8 mm wide, alternating `#84161C` and `#3F0709`, owner colours), following the rounded lid corners, only while a label crosses it. The warning measures against the same rounded free area. The lid is still built; Engraved stays.
-- The preview floor is the print bed of the chosen printer (owner, 2 November 2026): a rectangle of the printable area centred on the origin, with the 42 mm grid through the origin inside it and a marked rectangle for the area a printer keeps free (front left on P1P, P1S, X1, X1C, X1E). The P2S plate is drawn with its real outline: rounded corners, a handle tab at the back and a lip at the front (measured from the owner's picture, about 1 mm accurate; the printable area stays the rectangle). Other printers show the plain rectangle until their plate shape is added. No logos or printer branding. With the bed check off the floor is the plain grid.
+- The preview floor is the print bed of the chosen printer (owner, 2 November 2026): a rectangle of the printable area centred on the origin, with the 42 mm grid through the origin inside it and a marked rectangle for the area a printer keeps free (front left on P1P, P1S, X1, X1C, X1E). The P2S plate is drawn with its real outline: rounded corners, a handle tab at the back and a lip at the front (measured from the owner's picture, about 1 mm accurate; the printable area stays the rectangle). Every printer with a 256 x 256 mm bed (P2S, P1S, P1P, X1, X1C, X1E, A1, X2D) shows this plate; other sizes show a plain rectangle until their plate shape is added. The printer list has an entry "Custom size": the user types the side of a square bed (50 to 600 mm) and the build height (20 to 600 mm); it is drawn as a square with rounded corners. No logos or printer branding. With the bed check off the floor is the plain grid.
 - The phone layout with group tabs waits until after deployment (issue 7).
 
 ## 9. Components (Svelte)

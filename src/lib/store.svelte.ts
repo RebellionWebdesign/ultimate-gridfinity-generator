@@ -5,7 +5,15 @@ import { DEFAULT_LID, validateLid, type LidParams } from "../model/lidParams";
 import { parseModel, serializeModel, type ModelFile } from "../model/modelFile";
 import { GeometryClient, InputBuildError } from "../worker/client";
 import type { PartType } from "./parts";
-import { PRINTERS, checkBed, maxCells, type Printer } from "./printers";
+import {
+  CUSTOM_LIMITS,
+  CUSTOM_PRINTER,
+  PRINTERS,
+  checkBed,
+  customPrinter,
+  maxCells,
+  type Printer,
+} from "./printers";
 
 const STORAGE_KEY = "ugg.models";
 const MAX_STORED = 12;
@@ -71,8 +79,14 @@ class Editor {
   /** hints about the current model (not errors), shown while it is ready */
   warnings = $derived(this.status === "ready" && this.model ? this.model.warnings : []);
 
+  /** a bed the user typed in: a square with rounded corners, plus the build height */
+  customSize = $state<number>(CUSTOM_LIMITS.size.def);
+  customHeight = $state<number>(CUSTOM_LIMITS.height.def);
+
   printerInfo: Printer = $derived(
-    PRINTERS.find((p) => p.name === this.printer) ?? (PRINTERS[0] as Printer),
+    this.printer === CUSTOM_PRINTER
+      ? customPrinter(this.customSize, this.customHeight)
+      : (PRINTERS.find((p) => p.name === this.printer) ?? (PRINTERS[0] as Printer)),
   );
 
   bed = $derived(this.printerInfo.bed);

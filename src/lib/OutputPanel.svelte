@@ -1,6 +1,7 @@
 <script lang="ts">
   import Icon from "./Icon.svelte";
-  import { PRINTERS } from "./printers";
+  import NumberField from "./NumberField.svelte";
+  import { CUSTOM_LIMITS, CUSTOM_PRINTER, PRINTERS } from "./printers";
   import { PART_NAME } from "./parts";
   import { editor } from "./store.svelte";
   import {
@@ -72,7 +73,31 @@
       {#each PRINTERS as printer (printer.name)}
         <option value={printer.name}>{printer.name} · {printer.bed.join(" × ")}</option>
       {/each}
+      <option value={CUSTOM_PRINTER}>Custom size</option>
     </select>
+    {#if editor.printer === CUSTOM_PRINTER && editor.bedCheck}
+      <NumberField
+        label="Bed size, square"
+        bind:value={editor.customSize}
+        min={CUSTOM_LIMITS.size.min}
+        max={CUSTOM_LIMITS.size.max}
+        step={1}
+        def={CUSTOM_LIMITS.size.def}
+        unit="mm"
+        why="Width and depth are the same; the corners are rounded."
+        minWhy="A bed smaller than this is not a printer bed."
+      />
+      <NumberField
+        label="Build height"
+        bind:value={editor.customHeight}
+        min={CUSTOM_LIMITS.height.min}
+        max={CUSTOM_LIMITS.height.max}
+        step={1}
+        def={CUSTOM_LIMITS.height.def}
+        unit="mm"
+        minWhy="A build height smaller than this is not a printer."
+      />
+    {/if}
     <label class="check t-caption">
       <input type="checkbox" bind:checked={editor.bedCheck} /> Check against the bed
     </label>
