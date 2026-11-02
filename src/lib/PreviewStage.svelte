@@ -13,6 +13,7 @@
     Mesh,
     MeshStandardMaterial,
     PerspectiveCamera,
+    Quaternion,
     Scene,
     Vector3,
     WebGLRenderer,
@@ -72,17 +73,44 @@
     return Math.hypot(x, y, z) / 2;
   };
 
-  const setView = (next: View) => {
+  const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let animation = 0;
+
+  /** Eases the camera to a view in 240 ms; at once with reduced motion (ui-spec 3.2). */
+  const setView = (next: View, animate = true) => {
     view = next;
     const [dx, dy, dz] = DIRECTIONS[next];
     const distance = (radius() / Math.sin((camera.fov * Math.PI) / 360)) * 1.15;
-    const z = model ? model.size[2] / 2 : 3.5;
-    controls.target.set(0, 0, z);
-    camera.position.copy(
-      new Vector3(dx, dy, dz).normalize().multiplyScalar(distance).add(controls.target),
-    );
-    controls.update();
-    draw();
+    const target = new Vector3(0, 0, model ? model.size[2] / 2 : 3.5);
+    const direction = new Vector3(dx, dy, dz).normalize();
+    cancelAnimationFrame(animation);
+
+    if (!animate || reducedMotion()) {
+      controls.target.copy(target);
+      camera.position.copy(direction.multiplyScalar(distance).add(target));
+      controls.update();
+      draw();
+      return;
+    }
+    const fromTarget = controls.target.clone();
+    const offset = camera.position.clone().sub(fromTarget);
+    const fromDistance = offset.length();
+    const fromDirection = offset.normalize();
+    const turn = new Quaternion().setFromUnitVectors(fromDirection, direction);
+    const start = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / 240);
+      const eased = 1 - (1 - t) ** 3;
+      const rotation = new Quaternion().slerp(turn, eased);
+      const here = fromDirection.clone().applyQuaternion(rotation);
+      const length = fromDistance + (distance - fromDistance) * eased;
+      controls.target.lerpVectors(fromTarget, target, eased);
+      camera.position.copy(here.multiplyScalar(length).add(controls.target));
+      controls.update();
+      draw();
+      if (t < 1) animation = requestAnimationFrame(step);
+    };
+    animation = requestAnimationFrame(step);
   };
 
   const fit = () => setView(view);
@@ -178,7 +206,7 @@
     const observer = new ResizeObserver(resize);
     observer.observe(host);
     resize();
-    setView("iso");
+    setView("iso", false);
     return () => {
       observer.disconnect();
       controls.dispose();
@@ -195,7 +223,7 @@
     rebuild();
     if (first && model) {
       first = false;
-      setView("iso");
+      setView("iso", false);
     }
   });
   $effect(() => {
