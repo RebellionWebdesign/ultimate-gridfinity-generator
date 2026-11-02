@@ -32,12 +32,7 @@
   import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
   import type { LabelArea } from "../geometry/lid";
   import type { ModelMesh, PartName } from "../geometry/model";
-  import {
-    exclusionOutline,
-    hatchSegments,
-    plateOutline,
-    type PlateShape,
-  } from "./plate";
+  import { exclusionOutline, plateOutline, type PlateShape } from "./plate";
   import Icon from "./Icon.svelte";
 
   type View = "iso" | "top" | "front" | "under";
@@ -299,16 +294,13 @@
       fill.position.z = -0.1;
       gridGroup.add(fill);
       if (bed.exclude) {
-        // area the printer keeps free (front left): outlined and hatched, not filled
+        // area the printer keeps free (front left): outline only
         const zone = exclusionOutline(bed.exclude, bed.plate, bed.x, bed.y);
         const zoneLines: number[] = [];
         zone.forEach((point, i) => {
           const next = zone[(i + 1) % zone.length] ?? point;
           zoneLines.push(...flat(point[0], point[1], next[0], next[1], -0.06));
         });
-        for (const [a, b] of hatchSegments(zone, 4)) {
-          zoneLines.push(...flat(a[0], a[1], b[0], b[1], -0.06));
-        }
         gridGroup.add(
           new LineSegments(
             lineGeometry(zoneLines),

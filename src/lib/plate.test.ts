@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  boundsOf,
-  exclusionOutline,
-  hatchSegments,
-  plateOutline,
-  type Point2,
-} from "./plate";
+import { boundsOf, exclusionOutline, plateOutline, type Point2 } from "./plate";
 import { PRINTERS, customPrinter } from "./printers";
 
 const plateOf = (name: string) => {
@@ -127,24 +121,5 @@ describe("area a printer keeps free (P and X series)", () => {
     const { printer } = plateOf("Bambu Lab P1S");
     const zone = exclusionOutline([18, 28], printer.plate, 256, 256);
     expect(zone.some(([x, y]) => x === -128 && y === -128)).toBe(false);
-  });
-});
-
-describe("hatching of the keep-free area", () => {
-  it("covers the polygon with diagonal lines that stay inside its bounds", () => {
-    const zone = exclusionOutline([18, 28], undefined, 256, 256);
-    const lines = hatchSegments(zone, 4);
-    expect(lines.length).toBeGreaterThan(8);
-    const { min, max } = boundsOf(zone);
-    for (const [a, b] of lines) {
-      for (const [x, y] of [a, b]) {
-        expect(x).toBeGreaterThanOrEqual(min[0] - 1e-9);
-        expect(x).toBeLessThanOrEqual(max[0] + 1e-9);
-        expect(y).toBeGreaterThanOrEqual(min[1] - 1e-9);
-        expect(y).toBeLessThanOrEqual(max[1] + 1e-9);
-      }
-      // 45 degree lines: x + y is the same at both ends
-      expect(a[0] + a[1]).toBeCloseTo(b[0] + b[1], 9);
-    }
   });
 });
