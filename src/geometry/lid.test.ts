@@ -206,42 +206,25 @@ describe("B-06 stackable, hollow foot, top-side corner magnets", () => {
     expect(columnVolume({})).toBeCloseTo(1, 3);
   });
 
-  it("hollow foot: a pad keeps 0.8 mm of material under every pocket floor", () => {
-    // owner, 2 November 2026: pad only the missing thickness, no full-height column
-    const pad = (overrides: Partial<LidParams>): number => {
-      const scope = new Scope();
-      try {
-        const p = {
-          ...DEFAULT_LID,
-          corner_magnets: true,
-          foot_hollow: "open",
-          ...overrides,
-        };
-        const { plate } = buildLid(kernel, scope, p as LidParams);
-        const floor = 4.75 + 2.25 - pocketDepth(p as LidParams);
-        let total = 0;
-        for (const [x, y] of lidMagnetPoints(p as LidParams)) {
-          const cyl = scope.add(
-            kernel.Manifold.cylinder(
-              0.8,
-              p.corner_magnet_d / 2,
-              p.corner_magnet_d / 2,
-              40,
-            ).translate(x - 20.75, y - 20.75, floor - 0.8),
-          );
-          total += scope.add(kernel.Manifold.intersection(plate, cyl)).volume();
-        }
-        return total / pocketVolume(p.corner_magnet_d, 0.8) / 4;
-      } finally {
-        scope.dispose();
-      }
-    };
-    expect(pad({})).toBeCloseTo(1, 3);
-    expect(pad({ corner_magnet_d: 8.1, corner_magnet_h: 3.9 })).toBeCloseTo(1, 3);
-    // and nothing more: the cavity stays open below the pad
-    const open = measure({ foot_hollow: "open", corner_magnets: true });
-    const solid = measure({ corner_magnets: true });
-    expect(open.volume).toBeLessThan(solid.volume * 0.6);
+  it("hollow foot: nothing is added under the pockets, the cavity runs straight under them", () => {
+    // owner, 2 November 2026: no pad, no column, only the hollow foot
+    const hollow = measure({ foot_hollow: "open" });
+    const withPockets = measure({ foot_hollow: "open", corner_magnets: true });
+    expect(hollow.volume - withPockets.volume).toBeCloseTo(
+      4 * pocketVolume(6.1, 2.1),
+      1,
+    );
+    expect(withPockets.closed).toBe(true);
+    // the cavity is the same one with and without magnets
+    const scope = new Scope();
+    const a = buildLid(kernel, scope, { ...DEFAULT_LID, foot_hollow: "open" }).plate;
+    const b = buildLid(kernel, scope, {
+      ...DEFAULT_LID,
+      foot_hollow: "open",
+      corner_magnets: true,
+    }).plate;
+    expect(scope.add(a.slice(2)).area()).toBeCloseTo(scope.add(b.slice(2)).area(), 6);
+    scope.dispose();
   });
 
   it("hollow foot saves material and stays closed", () => {

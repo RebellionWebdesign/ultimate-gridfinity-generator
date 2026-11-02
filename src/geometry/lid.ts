@@ -112,28 +112,8 @@ const buildFoot = (kernel: Kernel, scope: Scope, p: LidParams, foot: FootSpec) =
 
   const wall = p.foot_wall;
   const cavity = scope.add(loft(kernel, cavityLayers(wall, foot.extraX, foot.extraY)));
-  // pad under each pocket: 0.8 mm of material below the pocket floor, no more. With the
-  // default pocket the plate leaves 0.15 mm, so the pad is 0.65 mm thick under the plate.
-  const half = cellHalf();
-  const padFrom =
-    plateThickness(p) + c("footHeight") - pocketDepth(p) - MIN_MATERIAL_UNDER_POCKET;
-  const pads = p.corner_magnets
-    ? lidMagnetPoints(p)
-        .map(([x, y]): [number, number] => [x - foot.cx, y - foot.cy])
-        .filter(
-          ([x, y]) =>
-            Math.abs(x) < half + foot.extraX && Math.abs(y) < half + foot.extraY,
-        )
-        .map(([x, y]) =>
-          cylinderAt(kernel, scope, p.corner_magnet_d + 2 * wall, {
-            x,
-            y,
-            z: padFrom,
-            h: 6.5,
-          }),
-        )
-    : [];
-  const hollow = scope.add(kernel.Manifold.difference([cavity, ...pads]));
+  // no support under the pockets: the cavity runs straight under them (owner, 2 November 2026)
+  const hollow = cavity;
   return scope.add(kernel.Manifold.difference(solid, hollow));
 };
 
