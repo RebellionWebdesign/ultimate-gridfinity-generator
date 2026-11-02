@@ -144,6 +144,39 @@ export const exclusionOutline = (
   return points;
 };
 
+/**
+ * Diagonal lines (x + y = k, every `spacing` mm) clipped to a polygon, as pairs of points.
+ * Used to hatch the area a printer keeps free.
+ */
+export const hatchSegments = (
+  polygon: Point2[],
+  spacing: number,
+): [Point2, Point2][] => {
+  const sums = polygon.map(([x, y]) => x + y);
+  const out: [Point2, Point2][] = [];
+  const first = Math.ceil(Math.min(...sums) / spacing) * spacing;
+  for (let k = first; k < Math.max(...sums); k += spacing) {
+    const xs: number[] = [];
+    polygon.forEach(([x1, y1], i) => {
+      const [x2, y2] = polygon[(i + 1) % polygon.length] as Point2;
+      const a = x1 + y1 - k;
+      const b = x2 + y2 - k;
+      if (a === b || a > 0 === b > 0) return;
+      const t = a / (a - b);
+      xs.push(x1 + (x2 - x1) * t);
+    });
+    xs.sort((p, q) => p - q);
+    for (let i = 0; i + 1 < xs.length; i += 2) {
+      const [x1, x2] = [xs[i] as number, xs[i + 1] as number];
+      out.push([
+        [x1, k - x1],
+        [x2, k - x2],
+      ]);
+    }
+  }
+  return out;
+};
+
 export const boundsOf = (points: Point2[]) => {
   const xs = points.map((p) => p[0]);
   const ys = points.map((p) => p[1]);
