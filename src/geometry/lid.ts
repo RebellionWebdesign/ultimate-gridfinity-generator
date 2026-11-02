@@ -6,7 +6,13 @@ import { CONSTANTS, holeOffset, outerSize } from "../gridfinity/constants";
 import { plateThicknessOf, type LidParams } from "../model/lidParams";
 import { cellHalf, footHalf, footRadius, solidFoot } from "./foot";
 import type { Kernel, Scope } from "./kernel";
-import { LABEL_EDGE_MARGIN, buildLabel, raisedExtra, type LabelAssets } from "./label";
+import {
+  LABEL_EDGE_MARGIN,
+  LID_CORNER_RADIUS,
+  buildLabel,
+  raisedExtra,
+  type LabelAssets,
+} from "./label";
 import { loft, type Layer } from "./loft";
 
 const c = (name: keyof typeof CONSTANTS): number => CONSTANTS[name].value;
@@ -38,6 +44,8 @@ export interface LabelArea {
   /** the surface faces down (printed upside down) */
   down: boolean;
   margin: number;
+  /** corner radius of the lid outline */
+  radius: number;
   /** a label comes closer to the edge than the margin */
   violated: boolean;
 }
@@ -289,6 +297,7 @@ export const buildLid = (
           z: p.print_orientation === "upside_down" ? topRef - plateTop : plateTop,
           down: p.print_orientation === "upside_down",
           margin: LABEL_EDGE_MARGIN,
+          radius: LID_CORNER_RADIUS,
           violated: label.warnings.length > 0,
         }
       : undefined,

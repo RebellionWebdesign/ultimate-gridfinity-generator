@@ -120,7 +120,7 @@ The images in `docs/design/mockups/` predate these changes; where they differ, t
 - Colour picker names the part ("Lid", "Bin", "Base"); header says "Base" instead of "Baseplate".
 - Report-bug button (links to the repository's issues), thin scrollbars from tokens, camera animation of the views in 240 ms (instant with reduced motion).
 - PWA icon and favicon have a transparent background; the SVG favicon follows light and dark mode; no maskable icon.
-- Label edge margin (owner, 2 November 2026): text and symbol keep 3 mm from the lid edge on every side. When a label comes closer, a warning alert (`--warning-soft`) over the preview and a note in the Label group name the text or the symbol and suggest a shorter word, a smaller size, a larger lid or moving it (engraved text also: Raised or Flush). The strip between the edge and the margin is drawn red and hatched on the plate, with the free area outlined, only while a label crosses it. The lid is still built; Engraved stays.
+- Label edge margin (owner, 2 November 2026): text and symbol keep 3 mm from the lid edge on every side. When a label comes closer, a warning alert (`--warning-soft`) over the preview and a note in the Label group name the text or the symbol and suggest a shorter word, a smaller size, a larger lid or moving it (engraved text also: Raised or Flush). The strip between the edge and the margin is drawn on the plate as diagonal bars (about 1.8 mm wide, alternating `#84161C` and `#3F0709`, owner colours), following the rounded lid corners, only while a label crosses it. The warning measures against the same rounded free area. The lid is still built; Engraved stays.
 - The phone layout with group tabs waits until after deployment (issue 7).
 
 ## 9. Components (Svelte)

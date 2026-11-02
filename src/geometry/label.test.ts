@@ -345,6 +345,33 @@ describe("label edge margin (3 mm)", () => {
     );
   });
 
+  it("the rounded lid corners count: a square inside the margin box but outside the rounded free area warns", async () => {
+    // a 4 mm square, centred by the importer; offsets put its lower left corner on the lid
+    const square: SvgShapes = {
+      shapes: [{ contours: pathToContours("M0 0 H4 V4 H0 Z"), evenOdd: false }],
+      unitMm: 1,
+    };
+    const place = async (corner: number) => {
+      const p = {
+        ...DEFAULT_LID,
+        symbol_mode: "raised",
+        symbol_source: "upload",
+        symbol_offset_x: corner + 2 - 20.75,
+        symbol_offset_y: corner + 2 - 20.75,
+      } as LidParams;
+      const scope = new Scope();
+      const lid = buildLid(kernel, scope, p, await prepareAssets(p, loaders, square));
+      const warnings = lid.warnings;
+      scope.dispose();
+      return warnings;
+    };
+    // corner at (3.05, 3.05): inside the 3 mm box, but 0.99 mm from the centre of the
+    // rounded free corner (radius 0.75), so it reaches into the margin
+    expect(await place(3.05)).toEqual([SYMBOL_EDGE_WARNING]);
+    // corner at (4, 4): 0.35 mm from that centre, inside the free area
+    expect(await place(4)).toEqual([]);
+  });
+
   it("a larger lid takes the same word without a warning", async () => {
     expect(
       (await lidWith({ ...wide, text_mode: "engraved", units_x: 3 })).warnings,

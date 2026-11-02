@@ -235,15 +235,30 @@ const svgShape = (kernel: Kernel, scope: Scope, svg: SvgShapes): CrossSection =>
   return scope.add(kernel.CrossSection.union(parts));
 };
 
-/** Does the shape come closer to the lid edge than the margin? `centre` is the lid centre. */
-const outsideMargin = (shape: CrossSection, centre: Point): boolean => {
-  const { min, max } = shape.bounds();
-  return (
-    min[0] < LABEL_EDGE_MARGIN ||
-    min[1] < LABEL_EDGE_MARGIN ||
-    max[0] > 2 * centre[0] - LABEL_EDGE_MARGIN ||
-    max[1] > 2 * centre[1] - LABEL_EDGE_MARGIN
+/** Corner radius of the lid outline (spec: 3.75). */
+export const LID_CORNER_RADIUS = 3.75;
+
+/**
+ * Does the shape come closer to the lid edge than the margin? The free area is the lid
+ * outline (rounded corners) moved inward by the margin, so the corners count exactly.
+ */
+const outsideMargin = (
+  kernel: Kernel,
+  scope: Scope,
+  shape: CrossSection,
+  centre: Point,
+): boolean => {
+  const [w, h] = [2 * centre[0], 2 * centre[1]];
+  const r = LID_CORNER_RADIUS;
+  const outline = scope.add(
+    scope
+      .add(kernel.CrossSection.square([w - 2 * r, h - 2 * r], true))
+      .offset(r, "Round", 2, 48),
   );
+  const free = scope.add(outline.offset(-LABEL_EDGE_MARGIN, "Round", 2, 48));
+  const freeAtLid = scope.add(free.translate(centre[0], centre[1]));
+  const excess = scope.add(kernel.CrossSection.difference(shape, freeAtLid));
+  return excess.area() > 1e-3;
 };
 
 export interface LabelBodies {
@@ -338,7 +353,7 @@ export const buildLabel = (
         textAt,
       );
       elements.push({ name: "text", element: { mode: p.text_mode, shape } });
-      if (outsideMargin(shape, centre)) {
+      if (outsideMargin(kernel, scope, shape, centre)) {
         result.warnings.push(textEdgeWarning(p.text_mode === "engraved"));
       }
     }
@@ -371,7 +386,10 @@ export const buildLabel = (
 
   result.hasLabel = elements.length > 0;
   const symbolElement = elements.find((e) => e.name === "symbol");
-  if (symbolElement && outsideMargin(symbolElement.element.shape, centre)) {
+  if (
+    symbolElement &&
+    outsideMargin(kernel, scope, symbolElement.element.shape, centre)
+  ) {
     result.warnings.push(SYMBOL_EDGE_WARNING);
   }
 

@@ -4,17 +4,26 @@
     AmbientLight,
     BufferAttribute,
     BufferGeometry,
+    CanvasTexture,
     Color,
     DirectionalLight,
+    DoubleSide,
     EdgesGeometry,
     Group,
     LineBasicMaterial,
     LineSegments,
     Mesh,
+    MeshBasicMaterial,
     MeshStandardMaterial,
+    NearestFilter,
+    Path,
     PerspectiveCamera,
     Quaternion,
+    RepeatWrapping,
     Scene,
+    Shape,
+    ShapeGeometry,
+    SRGBColorSpace,
     Vector3,
     WebGLRenderer,
   } from "three";
@@ -159,57 +168,86 @@
     draw();
   };
 
-  /** Red hatching on the strip between the lid edge and the label margin. */
+  /** Rounded rectangle path, centred on the origin. */
+  const roundedRect = (shape: Shape | Path, hw: number, hd: number, r: number) => {
+    shape.moveTo(-hw + r, -hd);
+    shape.lineTo(hw - r, -hd);
+    shape.absarc(hw - r, -hd + r, r, -Math.PI / 2, 0, false);
+    shape.lineTo(hw, hd - r);
+    shape.absarc(hw - r, hd - r, r, 0, Math.PI / 2, false);
+    shape.lineTo(-hw + r, hd);
+    shape.absarc(-hw + r, hd - r, r, Math.PI / 2, Math.PI, false);
+    shape.lineTo(-hw, -hd + r);
+    shape.absarc(-hw + r, -hd + r, r, Math.PI, Math.PI * 1.5, false);
+  };
+
+  // Diagonal bars for the label margin (colours from the owner, 2 November 2026)
+  const BAR_COLOURS = ["#84161C", "#3F0709"];
+  /** period of the bars along x in mm: each bar is about 1.8 mm wide */
+  const BAR_PERIOD = 5;
+  const barTexture = () => {
+    const size = 64;
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      const image = ctx.createImageData(size, size);
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          const colour = BAR_COLOURS[(x + y) % size < size / 2 ? 0 : 1] ?? "#000000";
+          const at = (y * size + x) * 4;
+          image.data[at] = parseInt(colour.slice(1, 3), 16);
+          image.data[at + 1] = parseInt(colour.slice(3, 5), 16);
+          image.data[at + 2] = parseInt(colour.slice(5, 7), 16);
+          image.data[at + 3] = 255;
+        }
+      }
+      ctx.putImageData(image, 0, 0);
+    }
+    const texture = new CanvasTexture(canvas);
+    // the bar colours are sRGB values: without this they render lighter
+    texture.colorSpace = SRGBColorSpace;
+    texture.wrapS = texture.wrapT = RepeatWrapping;
+    texture.magFilter = NearestFilter;
+    // ShapeGeometry uses x and y in mm as texture coordinates: one tile = BAR_PERIOD mm
+    texture.repeat.set(1 / BAR_PERIOD, 1 / BAR_PERIOD);
+    return texture;
+  };
+
+  /** Dark red diagonal bars on the strip between the lid edge and the label margin. */
   const rebuildBand = () => {
     for (const child of [...bandGroup.children]) {
       bandGroup.remove(child);
-      const line = child as LineSegments;
-      line.geometry.dispose();
-      (line.material as LineBasicMaterial).dispose();
+      const mesh = child as Mesh;
+      mesh.geometry.dispose();
+      const material = mesh.material as MeshBasicMaterial;
+      material.map?.dispose();
+      material.dispose();
     }
     if (!labelArea?.violated) return draw();
-    const { width, depth, margin, z, down } = labelArea;
-    const [hw, hd] = [width / 2, depth / 2];
-    const [iw, id] = [hw - margin, hd - margin];
-    const zLine = z + (down ? -0.05 : 0.05);
-    const points: number[] = [];
-    const segment = (x1: number, x2: number, k: number) => {
-      if (x2 > x1) points.push(x1, k - x1, zLine, x2, k - x2, zLine);
-    };
-    // lines x + y = k every 3 mm, clipped to the outer rectangle minus the inner one
-    for (let k = -(hw + hd); k <= hw + hd; k += 3) {
-      const outer: [number, number] = [Math.max(-hw, k - hd), Math.min(hw, k + hd)];
-      if (outer[1] <= outer[0]) continue;
-      const inner: [number, number] = [Math.max(-iw, k - id), Math.min(iw, k + id)];
-      if (inner[1] <= inner[0]) {
-        segment(outer[0], outer[1], k);
-      } else {
-        segment(outer[0], inner[0], k);
-        segment(inner[1], outer[1], k);
-      }
-    }
-    // outline of the area that stays free
-    const corners: [number, number][] = [
-      [-iw, -id],
-      [iw, -id],
-      [iw, id],
-      [-iw, id],
-    ];
-    corners.forEach(([x, y], i) => {
-      const [nx, ny] = corners[(i + 1) % 4] ?? [x, y];
-      points.push(x, y, zLine, nx, ny, zLine);
-    });
-    const geometry = new BufferGeometry();
-    geometry.setAttribute(
-      "position",
-      new BufferAttribute(Float32Array.from(points), 3),
+    const { width, depth, margin, radius, z, down } = labelArea;
+    const ring = new Shape();
+    roundedRect(ring, width / 2, depth / 2, radius);
+    const hole = new Path();
+    roundedRect(
+      hole,
+      width / 2 - margin,
+      depth / 2 - margin,
+      Math.max(radius - margin, 0.5),
     );
-    bandGroup.add(
-      new LineSegments(
-        geometry,
-        new LineBasicMaterial({ color: css("--error") || "#b3261e" }),
-      ),
+    ring.holes.push(hole);
+    const mesh = new Mesh(
+      new ShapeGeometry(ring, 24),
+      new MeshBasicMaterial({
+        map: barTexture(),
+        side: DoubleSide,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1,
+      }),
     );
+    mesh.position.z = z + (down ? -0.03 : 0.03);
+    bandGroup.add(mesh);
     draw();
   };
 
