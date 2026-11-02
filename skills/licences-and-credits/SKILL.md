@@ -39,7 +39,12 @@ The app shows a page that links to the official sites; this table is the source 
 | Manifold | Apache-2.0 | https://github.com/elalish/manifold |
 | opentype.js | MIT | https://github.com/opentypejs/opentype.js |
 | Lucide (interface icons, `lucide-static`; the reference script also bundles Lucide symbols) | ISC (icons derived from Feather: MIT) | https://github.com/lucide-icons/lucide |
-| Svelte, three.js and further packages | not yet checked; add when chosen | official repository of each |
+| Svelte | MIT (checked in `node_modules/svelte/package.json`, 2 November 2026) | https://github.com/sveltejs/svelte |
+| three.js | MIT (checked in the package, 2 November 2026) | https://github.com/mrdoob/three.js |
+| Gridfinity (credit) | MIT, Zack Freedman and Voidstar Lab LLC | https://www.printables.com/model/417152-gridfinity-specification |
+| Further packages | add when chosen | official repository of each |
+
+The app's "OSS Licenses" dialog (`src/lib/LicencesDialog.svelte`) repeats this table; change both together. Plex Sans SemiBold is in the bundled files (`src/fonts/IBMPlexSans-SemiBold.woff`). Font files and their licence texts are in `src/fonts/`.
 
 The root `README.md` points here. Font files are bundled together with their licence texts.
 
