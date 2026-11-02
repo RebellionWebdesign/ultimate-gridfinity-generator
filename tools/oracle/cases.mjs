@@ -1,6 +1,6 @@
 // Label cases use flush_gap 0: the app puts raised and flush labels directly on the plate
-// (owner, 2 November 2026). Hollow foot with magnets is not compared: the app does not route the
-// hollow around the pockets, the script does.
+// (owner, 2 November 2026). Hollow foot with magnets is not compared: the app pads only 0.8 mm under
+// each pocket, the script keeps a full-height column.
 // Cases compared with the reference script, at or above the spec minimum (skills/reference-oracle).
 // Keys are script parameter names. Text cases are left out: the script's fonts are those installed
 // where it runs, the app bundles its own (the symbol cases cover the label code).

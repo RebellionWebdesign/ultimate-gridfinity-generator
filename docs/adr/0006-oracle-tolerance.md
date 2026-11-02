@@ -26,4 +26,4 @@ The TypeScript geometry is compared with the reference script by bounding box an
 
 - Changing the reference script or a geometry rule means re-running the oracle tool and reviewing the diff of `oracle.json`.
 - A deliberate difference from the script (the spec wins) needs its own test and a line here.
-- **Known differences (owner decisions, 2026-11-02):** raised and flush labels sit directly on the plate (the script lifts them by `flush_gap`; label cases run with `flush_gap = 0`); the app does not route the hollow foot around the lid pockets (the script keeps a column), so hollow foot with magnets is not compared; the app has no screw holes on lids.
+- **Known differences (owner decisions, 2026-11-02):** raised and flush labels sit directly on the plate (the script lifts them by `flush_gap`; label cases run with `flush_gap = 0`); under a pocket in a hollow foot the app adds only a pad that keeps 0.8 mm below the pocket floor (the script keeps a full-height column), so hollow foot with magnets is not compared; the app has no screw holes on lids.
