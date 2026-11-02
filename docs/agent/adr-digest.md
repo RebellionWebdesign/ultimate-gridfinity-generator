@@ -8,4 +8,6 @@ One paragraph per ADR with the rules a change must keep. The ADRs in `docs/adr/`
 
 **ADR-0003, export and storage.** Export is STL (own binary writer) and 3MF. In the 3MF, plate, text and symbol are separate objects with base-material colour and must never be merged. Saved models are JSON with a schema version; a schema change needs a version bump and a migration.
 
+**ADR-0005, loading manifold.wasm.** The worker imports `manifold-3d/manifold.wasm?url` and passes it to `Module({ locateFile })`. Geometry code takes the kernel as an argument (testable in Node without a worker) and frees native objects through a `Scope`. The service worker must precache the hashed `.wasm`.
+
 **ADR-0004, toolchain.** Vite with Svelte (TypeScript strict, no SvelteKit), Prettier with `printWidth` 88, ESLint, Vitest, npm. Do not add SvelteKit, a router library, a CSS framework or another formatter, linter or package manager without a new ADR that the owner accepts. Keep `manifold.wasm` loadable under the bundler (static asset plus `locateFile`).
