@@ -38,7 +38,7 @@ describe("B-11 model file", () => {
       plate_thickness: 0.6,
     });
     expect(p.corner_magnet_d).toBe(6.1);
-    expect(p.text_size).toBe(8);
+    expect(p.text_size).toBe(5);
     expect(p.corner_len).toBe(10);
     expect(p.units_x).toBe(12);
     expect(p.plate_thickness).toBe(2.25);

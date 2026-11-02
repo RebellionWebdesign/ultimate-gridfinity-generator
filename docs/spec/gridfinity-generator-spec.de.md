@@ -97,7 +97,7 @@
 | Prägetiefe | 0,6 |
 | Schiebedeckel-Spiel | 0,3 |
 | Mittenmagnet | 5,0 × 2,0, Spiel 0,2 |
-| Texthöhe (`text_size`) | 8,0, zugleich Minimum (2 mm ist zu klein; Nutzer, 2. November 2026); Obergrenze 30 laut Script |
+| Texthöhe (`text_size`) | 5,0, zugleich Minimum (Nutzer, 2. November 2026; vorher 8, dann war ein Wort wie ENGRAVED zu breit für einen 1×1-Deckel); Obergrenze 30 laut Script |
 | Farben | Solange der Nutzer keine Farbe wählt, bleiben die Bauteile in Stone `#9DA39A`; der Text ist Schwarz (Platzhalter) |
 
 **Regel (Nutzer):** Der Spec-Wert ist immer Minimum und Standard. Der Nutzer kann ihn nur vergrößern, kleiner geht nicht, und nur bis zu einer Obergrenze (Limit) je Parameter. Die Obergrenzen sind Geometriegrenzen, bei denen die Teile noch nicht kollidieren. Das gilt für alle Werte mit Spec- oder Standardwert (Tabellen in diesem Abschnitt). Das gilt auch für die Plattendicke: Standard laut Spec (automatisch: Gesamthöhe ein Vielfaches von 7 mm, 1u = 2,25 mm), manuell nur größer. Der Maßstab ist entschieden: Referenzzeichnungen und offizielle Dokumentation, siehe oben.

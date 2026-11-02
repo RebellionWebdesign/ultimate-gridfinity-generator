@@ -155,7 +155,7 @@ Examples:
 - No save picker: "This browser saves straight to your Downloads folder; it cannot ask where. Chrome and Edge can."
 
 ## 8. Open points (owner)
-1. Decided (owner, 2 November 2026): `text_size` default 8 and minimum 8 (2 mm is too small). Still open: script defaults above their minimum: `icon_size` 14 (min 4), `label_gap` 3 (min 0), `symbol_scale` 1 (min 0.05), bin `height_units` 3 (min 1). Decided (owner, 2 November 2026): these defaults stay.
+1. Decided (owner, 2 November 2026): `text_size` default 5 and minimum 5 (owner, 2 November 2026; it was 8 and too large for words like ENGRAVED). Still open: script defaults above their minimum: `icon_size` 14 (min 4), `label_gap` 3 (min 0), `symbol_scale` 1 (min 0.05), bin `height_units` 3 (min 1). Decided (owner, 2 November 2026): these defaults stay.
 2. Signed values (offsets, rotations, `fit_x`, `fit_y`): the min = default rule cannot apply. Offsets have no limit in the script; ± half the lid size stays (owner, 2 November 2026).
 3. Decided (owner, 2 November 2026): until the user chooses a colour, the parts stay Stone `#9DA39A`; the text is black as a placeholder (instead of `#F7F7F3`).
 4. A separate symbol colour does not exist in the script (one `text_color` for text and symbol).

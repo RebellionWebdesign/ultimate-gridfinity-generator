@@ -117,10 +117,10 @@ export const LID_LIMITS = {
     why: "3 mm is the script's limit",
   },
   text_size: {
-    min: 8,
+    min: 5,
     max: 30,
     step: 0.5,
-    why: "8 mm is the smallest text that prints cleanly; 30 mm is the script's limit",
+    why: "5 mm is the smallest label text; 30 mm is the script's limit",
   },
   icon_size: {
     min: 4,

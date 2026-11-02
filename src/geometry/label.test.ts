@@ -102,10 +102,25 @@ describe("B-07 text", () => {
     expect(r.textZ[0]).toBeCloseTo(7 - 0.4, 4);
   });
 
-  it("text is 8 mm high at the minimum size and centred on the plate", async () => {
-    const r = await build({ text_mode: "raised", text_string: "H" });
-    expect(r.sizes.text?.y).toBeGreaterThan(5.5);
-    expect(r.sizes.text?.y).toBeLessThan(8.5);
+  it("a capital letter is about as high as the text size", async () => {
+    for (const size of [5, 8]) {
+      const r = await build({ text_mode: "raised", text_string: "H", text_size: size });
+      expect(r.sizes.text?.y).toBeGreaterThan(size * 0.65);
+      expect(r.sizes.text?.y).toBeLessThan(size * 1.05);
+    }
+  });
+
+  it("at the minimum size 5 the word ENGRAVED fits a 1x1 lid", async () => {
+    const small = await build({ text_mode: "raised", text_string: "ENGRAVED" });
+    expect(DEFAULT_LID.text_size).toBe(5);
+    expect(small.sizes.text!.x).toBeLessThan(41.5 - 2 * 2);
+    // at the old minimum of 8 it was wider than the lid
+    const old = await build({
+      text_mode: "raised",
+      text_string: "ENGRAVED",
+      text_size: 8,
+    });
+    expect(old.sizes.text!.x).toBeGreaterThan(41.5 - 2 * 2);
   });
 
   it("text on an upside-down lid is still a closed body on z >= 0", async () => {
@@ -251,9 +266,9 @@ describe("label layout and validation", () => {
     expect(validateLid({ ...p, emboss_depth: 1.8 })).toEqual([]);
   });
 
-  it("text below 8 mm is rejected, 8 is accepted", () => {
-    expect(validateLid({ ...DEFAULT_LID, text_size: 7.5 })).not.toEqual([]);
-    expect(validateLid({ ...DEFAULT_LID, text_size: 8 })).toEqual([]);
+  it("text below 5 mm is rejected, 5 is accepted", () => {
+    expect(validateLid({ ...DEFAULT_LID, text_size: 4.5 })).not.toEqual([]);
+    expect(validateLid({ ...DEFAULT_LID, text_size: 5 })).toEqual([]);
   });
 });
 
