@@ -30,11 +30,12 @@ export const buildFile = async (
   model: ModelMesh,
   colours: PartColours,
   title: string,
+  bodyName: string,
 ): Promise<Blob> => {
   const data =
     format === "stl"
       ? new Uint8Array(writeStl(model.parts))
-      : await write3mf(model.parts, colours, title);
+      : await write3mf(model.parts, colours, title, bodyName);
   return new Blob([data as BlobPart], { type: MIME[format] });
 };
 
