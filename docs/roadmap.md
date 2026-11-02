@@ -36,7 +36,7 @@ Rejected or postponed (spec section 2): desktop app with Tauri or Electron.
 - [x] **B-10 UI and preview.** Svelte UI, three.js preview. Depends on: B-06; design in `docs/design/ui-spec.md` and `brand.md`. *AC:* only the lid options are shown (bin and baseplate stay disabled, labelled "Later"); every lid parameter reachable; values below the spec minimum cannot be entered; parameters not part of the spec are labelled "not part of the spec".
 - [x] **B-11 Save and load.** Model JSON (type, schema version, parameters, text, colours, SVG as string) in browser storage and as a file; fallback where the save-file picker is missing. Depends on: B-10.
 - [x] **B-12 PWA.** HTTPS, manifest, service worker for offline use. Depends on: B-10.
-- [ ] **B-13 Static hosting.** Static delivery from the owner's server. Depends on: B-12.
+- [x] **B-13 Static hosting.** Dropped (owner, 2 November 2026): hosting is not a task of this repository. `npm run build` makes the static site; see the README for what the server needs. Depends on: B-12.
 - [x] **B-14 OSS Licenses page.** A page in the app that lists bundled fonts and packages with licence and a link to the official source; the list is kept in `skills/licences-and-credits/SKILL.md`. Licence texts are bundled with the font files. Depends on: B-10. *AC:* every bundled font and runtime package appears with name, licence and link; the page works offline.
 
 ## Phase C (later)
