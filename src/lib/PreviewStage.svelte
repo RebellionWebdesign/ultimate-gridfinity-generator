@@ -257,14 +257,14 @@
       (child as LineSegments).geometry.dispose();
     }
     if (!showGrid) return draw();
+    // the 42 mm grid passes through the origin: the lid centre is on X0 Y0
     const [nx, ny] = units;
     const span = Math.max(nx, ny) + 3;
+    const reach = span * 42;
     const points: number[] = [];
     for (let k = -span; k <= span; k++) {
-      const x = -nx * 21 + 42 * k;
-      const y = -ny * 21 + 42 * k;
-      points.push(x, -ny * 21 - span * 42, -0.05, x, -ny * 21 + span * 42, -0.05);
-      points.push(-nx * 21 - span * 42, y, -0.05, -nx * 21 + span * 42, y, -0.05);
+      points.push(42 * k, -reach, -0.05, 42 * k, reach, -0.05);
+      points.push(-reach, 42 * k, -0.05, reach, 42 * k, -0.05);
     }
     const geometry = new BufferGeometry();
     geometry.setAttribute(
