@@ -257,6 +257,9 @@
         </p>
       {/if}
       {@render num("text_size", "Text height", "mm")}
+      {#if editor.warnings.length > 0}
+        <p class="t-caption warn">{editor.warnings[0]}</p>
+      {/if}
     {/if}
     <Segmented label="Symbol" bind:value={p.symbol_mode} options={[...modes]} />
     {#if symbolOn}
@@ -420,6 +423,9 @@
     inset: 0;
     opacity: 0;
     cursor: pointer;
+  }
+  .warn {
+    color: var(--warning);
   }
   .error {
     color: var(--error);

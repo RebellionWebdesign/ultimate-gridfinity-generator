@@ -9,7 +9,7 @@ import {
   type LidParams,
 } from "../model/lidParams";
 import { InputError, prepareAssets, type AssetLoaders } from "./assets";
-import { labelPositions } from "./label";
+import { ENGRAVED_TEXT_WARNING, labelPositions } from "./label";
 import { initKernel, Scope, type Kernel } from "./kernel";
 import { buildLid } from "./lid";
 import { isClosed, sizeOf } from "./mesh";
@@ -292,5 +292,52 @@ describe("svg helpers", () => {
 
   it("reads translate and scale", () => {
     expect(parseTransform("translate(5 6) scale(2)")).toEqual([2, 0, 0, 2, 5, 6]);
+  });
+});
+
+describe("engraved text warning", () => {
+  const warningsFor = async (overrides: Partial<LidParams>) => {
+    const p = { ...DEFAULT_LID, ...overrides };
+    const scope = new Scope();
+    const { warnings } = buildLid(kernel, scope, p, await prepareAssets(p, loaders));
+    scope.dispose();
+    return warnings;
+  };
+
+  it("warns for engraved text that is wide for the lid", async () => {
+    const w = await warningsFor({
+      text_mode: "engraved",
+      text_string: "ENGRAVED",
+      text_size: 8,
+    });
+    expect(w).toEqual([ENGRAVED_TEXT_WARNING]);
+    expect(w[0]).toMatch(/shorter word.*Raised or Flush/);
+  });
+
+  it("does not warn for a short engraved word, nor for raised or flush text of any width", async () => {
+    expect(await warningsFor({ text_mode: "engraved", text_string: "M3" })).toEqual([]);
+    for (const mode of ["raised", "flush"] as const) {
+      expect(
+        await warningsFor({ text_mode: mode, text_string: "ENGRAVED", text_size: 8 }),
+      ).toEqual([]);
+    }
+  });
+
+  it("a larger lid takes the same word without a warning", async () => {
+    const options = {
+      text_mode: "engraved",
+      text_string: "ENGRAVED",
+      text_size: 8,
+    } as const;
+    expect(await warningsFor({ ...options, units_x: 3 })).toEqual([]);
+  });
+
+  it("the warning still builds the lid (it is a hint, not an error)", async () => {
+    const r = await build({
+      text_mode: "engraved",
+      text_string: "ENGRAVED",
+      text_size: 8,
+    });
+    expect(r.closed.plate).toBe(true);
   });
 });

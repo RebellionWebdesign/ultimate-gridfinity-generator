@@ -120,6 +120,7 @@ The images in `docs/design/mockups/` predate these changes; where they differ, t
 - Colour picker names the part ("Lid", "Bin", "Base"); header says "Base" instead of "Baseplate".
 - Report-bug button (links to the repository's issues), thin scrollbars from tokens, camera animation of the views in 240 ms (instant with reduced motion).
 - PWA icon and favicon have a transparent background; the SVG favicon follows light and dark mode; no maskable icon.
+- Warning for engraved text: when the engraved text is wider than 70 % of the lid (in x or y), a warning alert (`--warning-soft`) over the preview and a note in the Label group say that it may look cramped and suggest a shorter word, a smaller text height, a larger lid or Raised/Flush. The lid is still built (owner, 2 November 2026: Engraved stays, with a warning).
 - The phone layout with group tabs waits until after deployment (issue 7).
 
 ## 9. Components (Svelte)

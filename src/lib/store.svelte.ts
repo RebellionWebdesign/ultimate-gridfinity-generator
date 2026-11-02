@@ -68,6 +68,9 @@ class Editor {
 
   errors = $derived(validateLid(this.params));
 
+  /** hints about the current model (not errors), shown while it is ready */
+  warnings = $derived(this.status === "ready" && this.model ? this.model.warnings : []);
+
   printerInfo: Printer = $derived(
     PRINTERS.find((p) => p.name === this.printer) ?? (PRINTERS[0] as Printer),
   );

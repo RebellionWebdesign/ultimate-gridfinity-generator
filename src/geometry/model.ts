@@ -21,6 +21,8 @@ export interface ModelMesh {
   parts: PartMesh[];
   /** overall size in mm: x, y, z */
   size: [number, number, number];
+  /** hints for the user (for example engraved text that is too wide), not errors */
+  warnings: string[];
 }
 
 const toPartMesh = (name: PartName, m: Manifold): PartMesh => {
@@ -61,6 +63,7 @@ export const buildModel = (
     return {
       parts: named.map(([name, m]) => toPartMesh(name, m)),
       size: [max[0] - min[0], max[1] - min[1], max[2] - min[2]],
+      warnings: lid.warnings,
     };
   } finally {
     scope.dispose();

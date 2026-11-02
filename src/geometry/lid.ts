@@ -24,6 +24,8 @@ export interface LidParts {
   /** Raised or flush text; a separate body so the slicer can give it a filament. */
   text?: Manifold;
   symbol?: Manifold;
+  /** hints for the user, not errors */
+  warnings: string[];
 }
 
 export interface LidLayout {
@@ -265,5 +267,6 @@ export const buildLid = (
     lip: put(lip),
     text: put(label.text),
     symbol: put(label.symbol),
+    warnings: label.warnings,
   };
 };

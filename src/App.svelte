@@ -303,6 +303,11 @@
             </div>
           </div>
         </div>
+      {:else if editor.warnings.length > 0}
+        <div class="alert top warn" role="status">
+          <Icon name="triangle-alert" />
+          <p>{editor.warnings[0]}</p>
+        </div>
       {/if}
       {#if editor.slow}<div class="sweep"></div>{/if}
     </section>
@@ -451,6 +456,13 @@
   }
   .alert :global(.icon) {
     color: var(--error);
+  }
+  .alert.warn {
+    background: var(--warning-soft);
+    border-color: var(--warning);
+  }
+  .alert.warn :global(.icon) {
+    color: var(--warning);
   }
   .alert.top {
     top: var(--space-9);

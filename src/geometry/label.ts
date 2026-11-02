@@ -242,7 +242,15 @@ export interface LabelBodies {
   symbol?: Manifold;
   /** how far raised elements stand above the plate top */
   raisedExtra: number;
+  /** hints for the user, not errors: the lid is built anyway */
+  warnings: string[];
 }
+
+/** Engraved text wider than this share of the lid looks cramped. */
+export const ENGRAVED_TEXT_SHARE = 0.7;
+
+export const ENGRAVED_TEXT_WARNING =
+  "This engraved text is wide for the lid, so it may look cramped. Use a shorter word, a smaller text height or a larger lid, or switch the text to Raised or Flush.";
 
 export const raisedExtra = (p: LidParams): number =>
   (hasText(p) && p.text_mode === "raised") ||
@@ -267,7 +275,7 @@ export const buildLabel = (
   plateTop: number,
   centre: Point,
 ): LabelBodies => {
-  const result: LabelBodies = { cuts: [], raisedExtra: raisedExtra(p) };
+  const result: LabelBodies = { cuts: [], raisedExtra: raisedExtra(p), warnings: [] };
   const textOn = hasText(p);
   const symbolOn = hasSymbol(p);
   if (!textOn && !symbolOn) return result;
@@ -299,13 +307,22 @@ export const buildLabel = (
     const contours = textContours(assets.font, p);
     if (contours.length > 0) {
       const base = fromContours(kernel, scope, contours);
-      elements.push({
-        name: "text",
-        element: {
-          mode: p.text_mode,
-          shape: place(base, p.text_rotation, p.text_offset_x, p.text_offset_y, textAt),
-        },
-      });
+      const shape = place(
+        base,
+        p.text_rotation,
+        p.text_offset_x,
+        p.text_offset_y,
+        textAt,
+      );
+      elements.push({ name: "text", element: { mode: p.text_mode, shape } });
+      const { min, max } = shape.bounds();
+      if (
+        p.text_mode === "engraved" &&
+        (max[0] - min[0] > ENGRAVED_TEXT_SHARE * 2 * centre[0] ||
+          max[1] - min[1] > ENGRAVED_TEXT_SHARE * 2 * centre[1])
+      ) {
+        result.warnings.push(ENGRAVED_TEXT_WARNING);
+      }
     }
   }
   if (symbolOn) {
