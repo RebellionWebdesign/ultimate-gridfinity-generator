@@ -107,7 +107,14 @@
       const colour = showColours ? colours[part.name] : "#9da39a";
       const mesh = new Mesh(
         flat,
-        new MeshStandardMaterial({ color: new Color(colour), roughness: 0.7 }),
+        new MeshStandardMaterial({
+          color: new Color(colour),
+          roughness: 0.7,
+          // push the faces back, so the outline on a pocket's lower edge is not hidden
+          polygonOffset: true,
+          polygonOffsetFactor: 1,
+          polygonOffsetUnits: 1,
+        }),
       );
       const edges = new LineSegments(
         new EdgesGeometry(geometry, 35),
