@@ -13,7 +13,7 @@ The finished Parametric Model Maker script is the reference for parameter names,
 - Compare only at or above the spec minimum. The script allows smaller values for some parameters (for example `plate_thickness` from 0.6, `corner_magnet_d` from 3, `corner_len` from 5); the web app does not (spec: the spec value is the minimum).
 - **Magnet errors in the script were fixed on 2 November 2026** (lid: corner magnets on the top side in the four outermost corners, no centre magnet and no magnets in the foot, ≥0.8 mm material under the pocket floor, hollow foot routed around the pocket; bin: centre magnet without ribs, corner pockets only in the four outermost corners; `text_size` minimum 8). The behaviour is in `skills/gridfinity-spec/SKILL.md` ("Where the magnets go"). Checked with OpenSCAD WASM (volume difference = 4 pockets for 1x1, 4x4 merged, 3x2 per cell); not yet checked on MakerWorld's 2021.01.
 - Do not adopt any other script behaviour that contradicts the spec or the drawings; the spec wins. Report the deviation. If the owner names further script errors, list them here.
-- The tolerance is not decided yet. Record it in an ADR when the first comparison exists.
+- Tolerance and method: ADR-0006 (bounding box 0.001 mm, volume 0.01 %; fixture `src/geometry/oracle.json` from `tools/oracle/`). Text is not compared because the fonts differ.
 
 ## Constraints of the reference (spec 6.1)
 - Runs on MakerWorld's OpenSCAD **2021.01**. One file, no `include`/`use`, no local files, no external libraries.

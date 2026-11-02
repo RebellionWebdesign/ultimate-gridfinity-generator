@@ -1,0 +1,265 @@
+{
+  "lid_1x1": {
+    "params": {},
+    "triangles": 302,
+    "volume": 10710.555957876246,
+    "size": [41.5, 41.5, 7],
+    "min": [-20.75, -20.75, 0]
+  },
+  "lid_2x1": {
+    "params": {
+      "units_x": 2
+    },
+    "triangles": 294,
+    "volume": 22220.97059851335,
+    "size": [83.5, 41.5, 7],
+    "min": [-41.75, -20.75, 0]
+  },
+  "lid_4x4_merged": {
+    "params": {
+      "units_x": 4,
+      "units_y": 4
+    },
+    "triangles": 276,
+    "volume": 190905.04482962805,
+    "size": [167.5, 167.5, 7],
+    "min": [-83.75, -83.75, 0]
+  },
+  "lid_3x2_per_cell": {
+    "params": {
+      "units_x": 3,
+      "units_y": 2,
+      "foot_layout": "per_cell"
+    },
+    "triangles": 1404,
+    "volume": 64732.73461887195,
+    "size": [125.5, 83.5, 7],
+    "min": [-62.75, -41.75, 0]
+  },
+  "lid_manual_plate_3_5": {
+    "params": {
+      "plate_thickness_mode": "manual",
+      "plate_thickness": 3.5
+    },
+    "triangles": 302,
+    "volume": 12847.650603365279,
+    "size": [41.5, 41.5, 8.25],
+    "min": [-20.75, -20.75, 0]
+  },
+  "lid_auto_2u": {
+    "params": {
+      "plate_thickness_mode": "auto",
+      "height_units_auto": 2
+    },
+    "triangles": 302,
+    "volume": 22678.285972614853,
+    "size": [41.5, 41.5, 14],
+    "min": [-20.75, -20.75, 0]
+  },
+  "lid_upside_down": {
+    "params": {
+      "print_orientation": "upside_down"
+    },
+    "triangles": 302,
+    "volume": 10710.555957876251,
+    "size": [41.5, 41.5, 7],
+    "min": [-20.75, -20.75, 0]
+  },
+  "stackable_1x1": {
+    "params": {
+      "variant": "stackable"
+    },
+    "triangles": 538,
+    "volume": 11755.376086420503,
+    "size": [41.5, 41.5, 11.399999618530273],
+    "min": [-20.75, -20.75, 0]
+  },
+  "stackable_corners_only_2x2": {
+    "params": {
+      "variant": "stackable",
+      "lip_mode": "corners_only",
+      "units_x": 2,
+      "units_y": 2
+    },
+    "triangles": 582,
+    "volume": 46539.40503247241,
+    "size": [83.5, 83.5, 11.399999618530273],
+    "min": [-41.75, -41.75, 0]
+  },
+  "stackable_corner_len_15": {
+    "params": {
+      "variant": "stackable",
+      "lip_mode": "corners_only",
+      "corner_len": 15
+    },
+    "triangles": 618,
+    "volume": 11442.575882429603,
+    "size": [41.5, 41.5, 11.399999618530273],
+    "min": [-20.75, -20.75, 0]
+  },
+  "magnets_1x1": {
+    "params": {
+      "corner_magnets": true
+    },
+    "triangles": 942,
+    "volume": 10466.077003773891,
+    "size": [41.5, 41.5, 7],
+    "min": [-20.75, -20.75, 0]
+  },
+  "magnets_4x4": {
+    "params": {
+      "corner_magnets": true,
+      "units_x": 4,
+      "units_y": 4
+    },
+    "triangles": 916,
+    "volume": 190660.5657496141,
+    "size": [167.5, 167.5, 7],
+    "min": [-83.75, -83.75, 0]
+  },
+  "magnets_3x2_per_cell": {
+    "params": {
+      "corner_magnets": true,
+      "units_x": 3,
+      "units_y": 2,
+      "foot_layout": "per_cell"
+    },
+    "triangles": 2044,
+    "volume": 64488.255591552916,
+    "size": [125.5, 83.5, 7],
+    "min": [-62.75, -41.75, 0]
+  },
+  "magnets_8_1_x_3_9": {
+    "params": {
+      "corner_magnets": true,
+      "corner_magnet_d": 8.1,
+      "corner_magnet_h": 3.9
+    },
+    "triangles": 942,
+    "volume": 9909.989962785492,
+    "size": [41.5, 41.5, 7],
+    "min": [-20.75, -20.75, 0]
+  },
+  "hollow_1x1": {
+    "params": {
+      "foot_hollow": "open"
+    },
+    "triangles": 526,
+    "volume": 4672.269242173379,
+    "size": [41.5, 41.5, 7],
+    "min": [-20.75, -20.75, 0]
+  },
+  "hollow_2x2": {
+    "params": {
+      "foot_hollow": "open",
+      "units_x": 2,
+      "units_y": 2
+    },
+    "triangles": 508,
+    "volume": 17442.366896265656,
+    "size": [83.5, 83.5, 7],
+    "min": [-41.75, -41.75, 0]
+  },
+  "hollow_wall_2_5": {
+    "params": {
+      "foot_hollow": "open",
+      "foot_wall": 2.5
+    },
+    "triangles": 526,
+    "volume": 5516.66819057105,
+    "size": [41.5, 41.5, 7],
+    "min": [-20.75, -20.75, 0]
+  },
+  "hollow_magnets_1x1": {
+    "params": {
+      "foot_hollow": "open",
+      "corner_magnets": true
+    },
+    "triangles": 1870,
+    "volume": 5497.491495501053,
+    "size": [41.5, 41.5, 7],
+    "min": [-20.75, -20.75, 0]
+  },
+  "hollow_magnets_3x2_per_cell": {
+    "params": {
+      "foot_hollow": "open",
+      "corner_magnets": true,
+      "units_x": 3,
+      "units_y": 2,
+      "foot_layout": "per_cell"
+    },
+    "triangles": 4092,
+    "volume": 29328.23441308109,
+    "size": [125.5, 83.5, 7],
+    "min": [-62.75, -41.75, 0]
+  },
+  "hollow_magnets_stackable_2x2": {
+    "params": {
+      "foot_hollow": "open",
+      "corner_magnets": true,
+      "variant": "stackable",
+      "units_x": 2,
+      "units_y": 2
+    },
+    "triangles": 2070,
+    "volume": 20454.81002379203,
+    "size": [83.5, 83.5, 11.399999618530273],
+    "min": [-41.75, -41.75, 0]
+  },
+  "symbol_raised": {
+    "params": {
+      "symbol_mode": "raised",
+      "symbol_icon": "tools_wrench"
+    },
+    "triangles": 1286,
+    "volume": 10737.102626373944,
+    "size": [41.5, 41.5, 7.59999942779541],
+    "min": [-20.75, -20.75, 0]
+  },
+  "symbol_engraved": {
+    "params": {
+      "symbol_mode": "engraved",
+      "symbol_icon": "tools_wrench"
+    },
+    "triangles": 1286,
+    "volume": 10681.595944718441,
+    "size": [41.5, 41.5, 7],
+    "min": [-20.75, -20.75, 0]
+  },
+  "symbol_flush": {
+    "params": {
+      "symbol_mode": "flush",
+      "symbol_icon": "tools_wrench"
+    },
+    "triangles": 2270,
+    "volume": 10706.671028941917,
+    "size": [41.5, 41.5, 7],
+    "min": [-20.75, -20.75, 0]
+  },
+  "symbol_raised_scaled_rotated": {
+    "params": {
+      "symbol_mode": "raised",
+      "symbol_icon": "safety_hard-hat",
+      "icon_size": 20,
+      "symbol_scale": 1.5,
+      "symbol_rotation": 45,
+      "symbol_offset_x": 3,
+      "symbol_offset_y": -2
+    },
+    "triangles": 1042,
+    "volume": 10853.788097751325,
+    "size": [41.5, 41.5, 7.59999942779541],
+    "min": [-20.75, -20.75, 0]
+  },
+  "symbol_upside_down_raised": {
+    "params": {
+      "symbol_mode": "raised",
+      "symbol_icon": "tools_bolt",
+      "print_orientation": "upside_down"
+    },
+    "triangles": 1262,
+    "volume": 10742.537647846173,
+    "size": [41.5, 41.5, 7.599999904632568],
+    "min": [-20.75, -20.75, 0]
+  }
+}
