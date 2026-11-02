@@ -166,14 +166,6 @@
         hideLabel
         bind:value={editor.part}
         options={[
-          { value: "lid", label: "Lid" },
-          {
-            value: "bin",
-            label: "Bin",
-            note: "Later",
-            disabled: true,
-            title: "Bins come in a later version",
-          },
           {
             value: "baseplate",
             label: PART_NAME.baseplate,
@@ -181,6 +173,14 @@
             disabled: true,
             title: "Baseplates come in a later version",
           },
+          {
+            value: "bin",
+            label: "Bin",
+            note: "Later",
+            disabled: true,
+            title: "Bins come in a later version",
+          },
+          { value: "lid", label: "Lid" },
         ]}
       />
     </div>

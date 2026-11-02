@@ -42,7 +42,7 @@ Desktop (from 1200 px), three columns:
 - 720 to 1200 px: parameters 320 px and preview; the output column is hidden and an "Export" button in the top bar opens it as a popover.
 - Below 720 px (phone): top bar; preview on top (42 % of the height); parameters below (58 %) with a tab strip of groups (one group visible at a time); Export opens a bottom sheet with the output content.
 
-Top bar, left to right: logo (link to the landing page), model name (click to rename) with save state below, part type switch (segmented Lid / Bin / Baseplate, 296 px, centred; on phones a select; in the first version only Lid is active, Bin and Baseplate are disabled and labelled "Later"), then light/dark toggle, Open, and Export where the output column is hidden.
+Top bar, left to right: logo (link to the landing page), model name (click to rename) with save state below, part type switch (segmented Base / Bin / Lid (owner, 2 November 2026: the order of building, plate first, lid last; the label says "Base" for the baseplate), 296 px, centred; on phones a select; in the first version only Lid is active, Bin and Baseplate are disabled and labelled "Later"), then light/dark toggle, Open, and Export where the output column is hidden.
 
 Part type switch: changes the parameter set and the preview; each part type keeps its own values while the session lasts. First version (owner, 2 November 2026): only the lid options are shown and built; Bin and Baseplate are enabled one feature at a time after the owner has tested the previous one.
 
