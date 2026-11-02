@@ -16,9 +16,9 @@ Exported: every artboard of the canvas except the Bin and Baseplate parameter se
 See `brand.md`. Regions are separated by hairlines; one accent; Lucide icons; Inter for words, IBM Plex Mono for numbers.
 
 ## 2. Screens and layout
-Exactly two screens: the landing page and the editor. "OSS Licenses" is a dialog over the landing page, not a screen.
+**Dropped (owner, 2 November 2026): the landing page.** The built app has one screen, the editor; the "OSS Licenses" dialog lives in the editor. Section 2.1 and the landing images are kept only as design record and are not built.
 
-### 2.1 Landing page
+### 2.1 Landing page (dropped, not built)
 Content column max 1160 px, gutter 32 px (16 px on phones). Sections are separated by a hairline and padded 64 px top and bottom (48 px on phones). Order:
 1. Header, 56 px: logo mark + name, navigation (How it works, The spec, OSS Licenses; hidden below 960 px), light/dark toggle, primary button "Open editor".
 2. Hero: two columns (text 1fr, picture 1.15fr, gap 48), one column below 960 px. Display title, lead text, primary CTA "Open the editor" and a quiet "How it works", a mono line "No account · nothing uploaded · works offline". Picture: the lid preview with the label lifted off the plate (plate, text, symbol as three 3MF objects), in a frame with radius 12, caption in mono below. Padding 64 top, 96 bottom (48 / 48 on phones).
@@ -104,10 +104,23 @@ Every message: what happened, then how to fix it (`brand.md` section 7).
 
 ## 8. Parameter sets per part type
 Source: the reference script `reference/gridfinity_generator.scad`; minimum = default per `skills/gridfinity-spec/SKILL.md`; limits from the script ranges. Text height: default and minimum 8.0, limit 30 (owner, 2 November 2026). First version: Lid only; the Bin and Baseplate sets below are later work. Groups in order:
-- Lid: Size (width, depth in cells) · Shape (lid type, variant, stacking lip, corner piece length, foot layout, plate thickness auto/manual, total height or plate, print orientation) · Magnets and foot (corner magnets on the top side in the four outermost corners with diameter 6.1–8.1 and depth 2.1–3.9, foot solid/hollow, hollow-foot wall 1.2–3; no centre magnet on a lid) · Label (text mode, text, font, text height, symbol mode, source, icon or SVG, SVG scale, symbol size, symbol position, raised height/engraved depth 0.6–2, flush inlay 0.4–1.2) · Placement (group, align, gap, offsets, rotations), flush inlay 0.4–1.2 · Colours (plate, text, symbol, stacking lip).
+- Lid: Size (width, depth in cells) · Shape (lid type, variant, stacking lip, corner piece length, foot layout, plate thickness auto/manual, total height or plate, print orientation) · Magnets and foot (corner magnets on the top side in the four outermost corners with diameter 6.1–8.1 and depth 2.1–3.9, foot solid/hollow, hollow-foot wall 1.2–3; no centre magnet on a lid) · Label (text mode, text, font, text height, symbol mode, source, icon or SVG, SVG scale, symbol size, symbol position, raised height/engraved depth 0.6–2, flush inlay 0.4–1.2) · Placement (group, align, gap, offsets, rotations) · Colours (plate, text, symbol, stacking lip).
 - Bin (later): Size (width, depth, height in 7 mm units) · Top edge (stacking lip / flat / flat lower, groove for a sliding lid) · Walls and floor (wall 1.2–2.5, floor 0.8–5) · Magnets and foot (as lid but the corner pockets sit in the foot, plus the centre magnet with diameter 5.0–10, thickness 2.0–5, clearance 0.2–0.6 and only a 1.2 mm rim, no ribs; large bins: corner and centre magnets only in the corner feet; foot open / closed / pads, skin 0.8–2) · Sliding lid (clearance 0.3–0.8, finger recess) · Colours.
 - Baseplate (later): Size (width, depth, fit the bed) · Style (solid / skeleton) · Fit a drawer (minimum width and depth in mm, where the extra goes −1…1) · Magnets · Advanced (solid base 0.35–8) · Colours.
 Printer and bed check sit in the output column, not in the parameters.
+
+## 8b. Changes made in the built editor (owner, 2 November 2026)
+The images in `docs/design/mockups/` predate these changes; where they differ, this list wins (`params-lid.webp` still shows the Screw holes switch, the "not part of the spec" tags and the Advanced group).
+- No screw holes on lids. No tag for parameters outside the spec. No `flush_gap` and no Advanced group on the lid.
+- Parameter groups are closed by default.
+- Font "Other": the user uploads a font file (.ttf, .otf, .woff, up to 2 MB); it is stored in the model file.
+- Printer list and bed check from the official Bambu Studio machine profiles (including the keep-out zone where a printer has one); the alert offers "Set Width to N", "Set Depth to N" and "Turn the bed check off".
+- Status pill: only "Computing…" (after 150 ms, the preview dims at the same time) and "Needs a fix".
+- "In this browser": button "Download as ZIP and clear".
+- Colour picker names the part ("Lid", "Bin", "Base"); header says "Base" instead of "Baseplate".
+- Report-bug button (links to the repository's issues), thin scrollbars from tokens, camera animation of the views in 240 ms (instant with reduced motion).
+- PWA icon and favicon have a transparent background; the SVG favicon follows light and dark mode; no maskable icon.
+- The phone layout with group tabs waits until after deployment (issue 7).
 
 ## 9. Components (Svelte)
 | Component | Props / states |
