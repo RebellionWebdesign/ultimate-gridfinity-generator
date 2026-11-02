@@ -163,17 +163,20 @@ describe("B-08 3MF", () => {
     expect(counts).toEqual(m.parts.map((p) => p.positions.length / 3));
   });
 
-  it("carries each part's colour as a base material the part points to", async () => {
+  it("carries each part's colour in a colour group the part points to", async () => {
     const m = await model(withLabel);
     const xml = unzip(await write3mf(m.parts, colours))["3D/3dmodel.model"]!;
-    const bases = [
-      ...xml.matchAll(/<base name="([^"]+)" displaycolor="(#[0-9A-F]{8})"/g),
+    expect(xml).toContain(
+      'xmlns:m="http://schemas.microsoft.com/3dmanufacturing/material/2015/02"',
+    );
+    const groups = [
+      ...xml.matchAll(/<m:colorgroup id="(\d+)"><m:color color="(#[0-9A-F]{6})"\/>/g),
     ];
-    expect(bases.map((b) => [b[1], b[2]])).toEqual([
-      ["Lid", "#9DA39AFF"],
-      ["Stacking lip", "#336699FF"],
-      ["Text", "#000000FF"],
-      ["Symbol", "#112233FF"],
+    expect(groups.map((g) => [Number(g[1]), g[2]])).toEqual([
+      [1, "#9DA39A"],
+      [2, "#336699"],
+      [3, "#000000"],
+      [4, "#112233"],
     ]);
     const refs = [...xml.matchAll(/<object id="(\d+)"[^>]*pid="(\d+)" pindex="0"/g)];
     expect(refs.map((r) => [Number(r[1]), Number(r[2])])).toEqual([
@@ -189,7 +192,7 @@ describe("B-08 3MF", () => {
     const xml = unzip(await write3mf(m.parts, colours, "Gridfinity lid", "Base"))[
       "3D/3dmodel.model"
     ]!;
-    expect(xml).toContain('<base name="Base"');
+    expect(xml).toContain('name="Base"');
   });
 
   it("a lid without a label has exactly one part", async () => {

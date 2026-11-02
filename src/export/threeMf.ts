@@ -1,8 +1,8 @@
 // 3MF writer (ADR-0003, ADR-0008): a plain 3MF Core file, no vendor files. The lid is ONE
 // object made of components: plate, lip, text and symbol stay separate meshes (never
-// merged), each with its colour as a standard `basematerials` entry. Slicers read the
-// colours themselves; Bambu Studio, for example, shows its colour-to-filament dialog for
-// such files. Reference: 3MF Core Specification (3MF Consortium, BSD-2-Clause).
+// merged), each with its colour in a `colorgroup` of the 3MF Materials Extension (prefix `m`,
+// 3MF Consortium, BSD-2-Clause). Bambu Studio reads colours from that element, not from
+// `basematerials`, and then shows its dialog that maps each colour to a filament.
 import type { PartMesh, PartName } from "../geometry/model";
 import { zip } from "./zip";
 
@@ -18,8 +18,8 @@ const num = (value: number): string => String(Math.round(value * 1e5) / 1e5);
 const escapeXml = (text: string): string =>
   text.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
-/** `#rrggbb` to the `#RRGGBBAA` form of the 3MF display colour. */
-const displayColour = (hex: string): string => `${hex.toUpperCase()}FF`;
+/** The colour as `#RRGGBB`. */
+const colourValue = (hex: string): string => hex.toUpperCase();
 
 const partName = (name: PartName, bodyName: string): string =>
   ({ plate: bodyName, lip: "Stacking lip", text: "Text", symbol: "Symbol" })[name];
@@ -38,7 +38,7 @@ export const modelXml = (
   const groups = parts
     .map(
       (part, i) =>
-        `  <basematerials id="${i + 1}"><base name="${escapeXml(partName(part.name, bodyName))}" displaycolor="${displayColour(colours[part.name])}"/></basematerials>`,
+        `  <m:colorgroup id="${i + 1}"><m:color color="${colourValue(colours[part.name])}"/></m:colorgroup>`,
     )
     .join("\n");
   const objects = parts
@@ -76,7 +76,7 @@ export const modelXml = (
     .join("");
   return (
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
-    `<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">\n` +
+    `<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:m="http://schemas.microsoft.com/3dmanufacturing/material/2015/02">\n` +
     ` <metadata name="Title">${escapeXml(title)}</metadata>\n` +
     ` <metadata name="Application">Ultimate Gridfinity Generator</metadata>\n` +
     ` <resources>\n${groups}\n${objects}\n` +

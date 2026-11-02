@@ -10,13 +10,13 @@ The owner's first 3MF showed in Bambu Studio "The 3mf file has invalid config, l
 What the Bambu Studio source shows (v02.08.02.61):
 - The message comes from `Plater.cpp`: a project config is rejected when its printer model is not a Bambu one **and** `check_project_config()` fails. In this version that function returns false whenever `nozzle_diameter` is missing, even for an empty config. Every 3MF from another tool without a Bambu project config therefore shows the message; it is an information notice, the geometry loads. Newer sources (master) return true for an empty config.
 - A 3MF counts as Bambu's own only when `<metadata name="Application">` starts with `BambuStudio-`. Our file must not claim that.
-- For other 3MF files Bambu reads standard colours (`basematerials` through `pid`/`pindex`) and opens its colour dialog, in which the user maps each colour in the file to a filament. Without a project config the colours of the printer's own filament slots apply (here slot 1 black, slot 2 red), which explains the swapped colours of the second version.
+- For other 3MF files Bambu reads colours only from `m:colorgroup` / `m:color` (3MF Materials Extension; the importer has no `basematerials` handling) through `pid`/`pindex`, and then opens its colour dialog, in which the user maps each colour in the file to a filament. The first two versions of our writer used `basematerials`, so Bambu saw no colours at all. Without a project config the colours of the printer's own filament slots apply (here slot 1 black, slot 2 red), which explains the "swapped" colours of the second version: it was Bambu's own slot order, not ours.
 - Supplying a project config that passes the check (with `nozzle_diameter`) would make Bambu apply it as the project's printer and filament settings, replacing the user's presets with defaults. Not acceptable.
 
 ## Decision
 
 - Write a **plain 3MF Core file**: `[Content_Types].xml`, `_rels/.rels`, `3D/3dmodel.model`. No vendor files, no `BambuStudio:` metadata, no production extension.
-- The lid is **one object made of components**: lid, stacking lip, text and symbol stay separate meshes (never merged, ADR-0003) and stay registered to each other. Each part points to its own `basematerials` colour (`pid`, `pindex`).
+- The lid is **one object made of components**: lid, stacking lip, text and symbol stay separate meshes (never merged, ADR-0003) and stay registered to each other. Each part points to its own colour in an `m:colorgroup` (`pid`, `pindex`; colour as `#RRGGBB`).
 - The main body is named after the part type (Lid, Bin, Base).
 - No placement transform: slicers centre the object themselves.
 

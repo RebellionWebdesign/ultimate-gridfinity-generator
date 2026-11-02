@@ -14,6 +14,6 @@ One paragraph per ADR with the rules a change must keep. The ADRs in `docs/adr/`
 
 **ADR-0007, PWA plugin.** `vite-plugin-pwa` (generateSW, autoUpdate) with `workbox-build`, dev dependencies only; `base: "./"`; precache must include wasm, fonts and json (checked offline). A new runtime asset type needs its extension in `workbox.globPatterns`.
 
-**ADR-0008, 3MF layout.** A plain 3MF Core file (no Bambu or other vendor files, no `BambuStudio:` tag): one object of component parts, each with a `basematerials` colour. Bambu Studio 02.08.02.61 shows an "invalid config" notice for every 3MF without its project config; it is harmless. Never write a project config that overrides the user's presets. Re-test in a slicer after changing the writer.
+**ADR-0008, 3MF layout.** A plain 3MF Core file (no Bambu or other vendor files, no `BambuStudio:` tag): one object of component parts, each with its colour in an `m:colorgroup` (Bambu Studio ignores `basematerials`). Bambu Studio 02.08.02.61 shows an "invalid config" notice for every 3MF without its project config; it is harmless. Never write a project config that overrides the user's presets. Re-test in a slicer after changing the writer.
 
 **ADR-0004, toolchain.** Vite with Svelte (TypeScript strict, no SvelteKit), Prettier with `printWidth` 88, ESLint, Vitest, npm. Do not add SvelteKit, a router library, a CSS framework or another formatter, linter or package manager without a new ADR that the owner accepts. Keep `manifold.wasm` loadable under the bundler (static asset plus `locateFile`).
