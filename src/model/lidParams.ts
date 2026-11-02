@@ -75,8 +75,6 @@ export interface NumberLimit {
   step: number;
   /** Why the limit is what it is, shown next to the field. */
   why: string;
-  /** Not part of the Gridfinity spec: the UI tags it. */
-  nonSpec?: boolean;
 }
 
 const MAG_WALL = 0.75;
@@ -90,7 +88,6 @@ export const LID_LIMITS = {
     max: 20,
     step: 0.05,
     why: "2.25 mm is the usable space of the first 7 mm layer (Gridfinity spec)",
-    nonSpec: true,
   },
   height_units_auto: { min: 1, max: 6, step: 1, why: "6 units is the script's limit" },
   corner_magnet_d: {
@@ -112,70 +109,60 @@ export const LID_LIMITS = {
     max: 30,
     step: 1,
     why: "30 mm is the script's limit",
-    nonSpec: true,
   },
   foot_wall: {
     min: 1.2,
     max: 3,
     step: 0.1,
     why: "3 mm is the script's limit",
-    nonSpec: true,
   },
   text_size: {
     min: 8,
     max: 30,
     step: 0.5,
     why: "8 mm is the smallest text that prints cleanly; 30 mm is the script's limit",
-    nonSpec: true,
   },
   icon_size: {
     min: 4,
     max: 40,
     step: 1,
     why: "40 mm is the script's limit",
-    nonSpec: true,
   },
   symbol_scale: {
     min: 0.05,
     max: 10,
     step: 0.05,
     why: "10 times is the script's limit",
-    nonSpec: true,
   },
   label_gap: {
     min: 0,
     max: 20,
     step: 0.5,
     why: "20 mm is the script's limit",
-    nonSpec: true,
   },
   emboss_depth: {
     min: 0.6,
     max: 2,
     step: 0.1,
     why: "0.6 mm is the project's default; 2 mm is the script's limit",
-    nonSpec: true,
   },
   flush_depth: {
     min: 0.4,
     max: 1.2,
     step: 0.2,
     why: "0.4 mm is two layers; 1.2 mm is the script's limit",
-    nonSpec: true,
   },
   text_rotation: {
     min: -180,
     max: 180,
     step: 5,
     why: "a full turn either way",
-    nonSpec: true,
   },
   symbol_rotation: {
     min: -180,
     max: 180,
     step: 5,
     why: "a full turn either way",
-    nonSpec: true,
   },
 } as const satisfies Record<string, NumberLimit>;
 

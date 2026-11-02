@@ -49,7 +49,7 @@ Source: spec section 4 (`docs/spec/gridfinity-generator-spec.de.md`). All values
 One pocket, 6.1 Ø × 2.1 deep as the start value; the user sets diameter and depth. With screws selected, a 3 mm hole is punched through the pocket centre, nothing more. There are no larger holes. Other magnet sizes are possible; the upper limits are computed geometry limits, not spec numbers: corner pocket up to 8.1 Ø (keeps 0.75 mm of wall at the foot edge), centre magnet up to 10 Ø. The drawings show other hole sizes (magnet hole 6.5 Ø × 2.4, baseplate screw hole 3.5 Ø, bin screw hole 6 deep); the project does not use them. This owner decision wins over the drawings. The reference `.scad` uses the same defaults (`corner_magnet_d` 6.1, `corner_magnet_h` 2.1, `SCREW_D` 3.0).
 
 ## Not part of the spec
-Wall thickness, floor thickness, lid plate, clearance, hollow-foot wall, corner lip length, emboss depth. These are parameters; the UI labels them "not part of the spec".
+Wall thickness, floor thickness, lid plate, clearance, hollow-foot wall, corner lip length, emboss depth. These are project parameters; the UI shows no badge for them (owner, 2 November 2026).
 
 ## Default values (confirmed by the owner, 2 November 2026)
 | Parameter | Default |

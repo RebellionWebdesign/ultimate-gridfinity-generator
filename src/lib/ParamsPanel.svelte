@@ -94,7 +94,6 @@
     step={LID_LIMITS[key].step}
     def={DEFAULT_LID[key]}
     {unit}
-    nonSpec={"nonSpec" in LID_LIMITS[key]}
     why={LID_LIMITS[key].why}
     {minWhy}
   />
@@ -233,7 +232,7 @@
     {/if}
   </ParamGroup>
 
-  <ParamGroup name="Label" summary={labelSummary} nonSpec>
+  <ParamGroup name="Label" summary={labelSummary}>
     <Segmented label="Text" bind:value={p.text_mode} options={[...modes]} />
     {#if textOn}
       <Field label="Text" kind="text" bind:value={p.text_string} maxlength={40} />
@@ -338,7 +337,6 @@
   {#if textOn || symbolOn}
     <ParamGroup
       name="Placement"
-      nonSpec
       open={false}
       summary={both && p.label_group ? "as one group" : "free"}
     >

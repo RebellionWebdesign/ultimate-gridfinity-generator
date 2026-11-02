@@ -45,7 +45,7 @@ export const saveBlob = async (
   fileName: string,
   description: string,
   mimeToExtensions: Record<string, string[]>,
-): Promise<void> => {
+): Promise<boolean> => {
   const picker = (window as SaveFilePickerWindow).showSaveFilePicker;
   if (picker) {
     try {
@@ -56,9 +56,9 @@ export const saveBlob = async (
       const writable = await handle.createWritable();
       await writable.write(blob);
       await writable.close();
-      return;
+      return true;
     } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
+      if (error instanceof DOMException && error.name === "AbortError") return false;
       throw error;
     }
   }
@@ -68,6 +68,7 @@ export const saveBlob = async (
   link.download = fileName;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
+  return true;
 };
 
 export const exportExtensions = (format: Format): Record<string, string[]> => ({

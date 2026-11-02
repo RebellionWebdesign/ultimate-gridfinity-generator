@@ -11,7 +11,7 @@ description: Use when working on the interface, layout, look, colours, type, ico
 - Pretty, modern, little visual overhead, similar in spirit to Apple's interfaces, and fun to use. Dark mode and light mode both exist (owner statements, `docs/design/README.md`).
 - The look sits between "too playful" and "a bit too sober" (owner statement). When in doubt, choose the restrained option and say so.
 - Colours, sizes and durations are defined once as tokens; components use the tokens.
-- Parameters outside the Gridfinity spec are labelled "not part of the spec".
+- Parameters outside the Gridfinity spec carry no badge or label (owner, 2 November 2026).
 - Respect reduced-motion settings; status never relies on colour alone.
 - A new technical design starts from `docs/design/_template.md`.
 - Fonts and icons need a licence check first (`skills/licences-and-credits/SKILL.md`).

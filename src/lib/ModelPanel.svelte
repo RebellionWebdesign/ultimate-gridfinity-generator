@@ -1,7 +1,8 @@
 <script lang="ts">
   import Icon from "./Icon.svelte";
+  import { zip } from "../export/zip";
   import { saveBlob } from "./exporter";
-  import { editor } from "./store.svelte";
+  import { editor, slug } from "./store.svelte";
 
   let input: HTMLInputElement;
 
@@ -17,6 +18,32 @@
   };
 
   const date = (iso: string) => iso.slice(0, 10);
+
+  let confirming = $state(false);
+  let clearFailure = $state("");
+
+  /** Offers every stored model as one ZIP, and empties the storage only after it is saved. */
+  const downloadAndClear = async () => {
+    clearFailure = "";
+    const encoder = new TextEncoder();
+    const entries = editor.stored.map((item) => ({
+      name: `${slug(item.name)}-${item.id.slice(0, 6)}.json`,
+      data: encoder.encode(item.json),
+    }));
+    try {
+      const archive = await zip(entries);
+      const saved = await saveBlob(
+        new Blob([new Uint8Array(archive)], { type: "application/zip" }),
+        "gridfinity-models.zip",
+        "ZIP archive",
+        { "application/zip": [".zip"] },
+      );
+      if (saved) editor.clearStored();
+    } catch (error) {
+      clearFailure = error instanceof Error ? error.message : String(error);
+    }
+    confirming = false;
+  };
 </script>
 
 <section>
@@ -69,6 +96,25 @@
       {/each}
     </ul>
   {/if}
+  {#if editor.stored.length > 0}
+    {#if confirming}
+      <p class="t-caption">
+        This saves all {editor.stored.length} models as one ZIP file, then removes them from
+        this browser.
+      </p>
+      <div class="buttons">
+        <button type="button" onclick={() => void downloadAndClear()}
+          >Download and clear</button
+        >
+        <button type="button" onclick={() => (confirming = false)}>Cancel</button>
+      </div>
+    {:else}
+      <button type="button" class="clear" onclick={() => (confirming = true)}>
+        <Icon name="download" />Download as ZIP and clear
+      </button>
+    {/if}
+    {#if clearFailure}<p class="t-caption err" role="alert">{clearFailure}</p>{/if}
+  {/if}
   {#if editor.storageFailed}
     <p class="t-caption err" role="alert">
       This browser did not allow saving here. Use Save file to keep your model.
@@ -94,6 +140,17 @@
   }
   .buttons button {
     flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    height: var(--size-button);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-control);
+    background: var(--surface);
+    cursor: pointer;
+  }
+  .clear {
     display: flex;
     align-items: center;
     justify-content: center;

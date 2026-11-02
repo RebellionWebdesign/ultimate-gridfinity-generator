@@ -1,6 +1,5 @@
 <script lang="ts">
   import Icon from "./Icon.svelte";
-  import NonSpecTag from "./NonSpecTag.svelte";
 
   interface Props {
     label: string;
@@ -12,7 +11,6 @@
     /** default when it is above the minimum */
     def?: number;
     unit?: string;
-    nonSpec?: boolean;
     /** why the limit is what it is, for the tooltip */
     why?: string;
     minWhy?: string;
@@ -29,7 +27,6 @@
     step,
     def = min,
     unit = "",
-    nonSpec = false,
     why = "",
     minWhy = "",
     signed = false,
@@ -100,7 +97,6 @@
 <div class="field">
   <div class="row">
     <label class="t-label" for={id}>{label}</label>
-    {#if nonSpec}<NonSpecTag />{/if}
     {#if value !== def}
       <button
         class="reset n-s"
@@ -164,10 +160,10 @@
         }}
       />
       <div class="scale n-s">
-        <span>{fmt(min)} {signed ? "" : "min"}</span>
-        {#if def !== min}<span>default {fmt(def)}</span>{/if}
+        <span>{fmt(min)}{signed ? "" : " min"}</span>
         <span>{fmt(max)} limit</span>
       </div>
+      {#if def !== min}<p class="default n-s">default {fmt(def)}</p>{/if}
     </div>
   </div>
   {#if invalid}
@@ -302,8 +298,14 @@
     display: flex;
     justify-content: space-between;
     gap: var(--space-1);
+    white-space: nowrap;
     font-size: 11px;
     color: var(--text-3);
+  }
+  .default {
+    font-size: 11px;
+    color: var(--text-3);
+    white-space: nowrap;
   }
   .msg {
     font-size: 12px;

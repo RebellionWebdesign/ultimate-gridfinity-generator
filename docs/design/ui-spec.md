@@ -35,7 +35,7 @@ Grid of two rows: top bar (56 px) and the main area.
 Desktop (from 1200 px), three columns:
 | Region | Width | Content |
 |---|---|---|
-| Parameters | 340 px | Disclosure groups for the active part type (section 8), scrolls on its own |
+| Parameters | 340 px | Disclosure groups for the active part type (section 8), closed by default, scrolls on its own |
 | Preview | rest | 3D preview with overlays (section 3.2) |
 | Output | 296 px | Size, bed check, export, model file (section 5) |
 
@@ -67,7 +67,7 @@ Part type switch: changes the parameter set and the preview; each part type keep
 Tab order: top bar, parameters top to bottom, preview toolbar, output. Shortcuts (never while a text field has focus): F fit, 1–4 view presets, G grid, C part colours, Ctrl/⌘ E export, Ctrl/⌘ S save model file, Ctrl/⌘ O open model file, Ctrl/⌘ ↓ next group. In a NumberField: ↑ ↓ one step, Shift ten steps; on the rail ← → one step, Home minimum, End limit; Enter commits a typed value.
 
 ## 4. Parameters not part of the Gridfinity spec
-Tag "not part of the spec": 20 px high, dashed 1 px outline (`--line-strong`), radius 4, Inter 500 11/16, `--text-2`. Placement: on the parameter's label row after the label when single parameters differ; once in the group header when the whole group is outside the spec (Label, Placement, Advanced, Walls and floor, Fit a drawer, Sliding lid). Tooltip: "Gridfinity defines no value for this. The default is this project's."
+No badge or label marks parameters outside the Gridfinity spec (owner, 2 November 2026: the tag was dropped). The groups Label and Placement and single values such as wall and corner length are project parameters; this document and `skills/gridfinity-spec/SKILL.md` list which they are.
 
 ## 4a. Minimum, default and limit
 - The rail scale shows "6.1 min" on the left and "8.1 limit" on the right; when the default is above the minimum, "default 8.0" in the middle.
@@ -112,15 +112,14 @@ Printer and bed check sit in the output column, not in the parameters.
 ## 9. Components (Svelte)
 | Component | Props / states |
 |---|---|
-| `NumberField` | label, value, min (= default from the spec), def, limit, step, unit, nonSpec, why (limit reason); states: at min, changed (reset chip), clamped note, invalid, focus, disabled |
+| `NumberField` | label, value, min (= default from the spec), def, limit, step, unit, why (limit reason); states: at min, changed (reset chip), clamped note, invalid, focus, disabled |
 | `RangeRail` | min, max, step, value; fill in `--accent` up to the value; scale min · default · limit |
 | `Segmented` | options, value, disabled options with tooltip; arrow keys move the choice |
 | `Switch` | checked, label; `role="switch"` |
 | `Select`, `TextField` | `.field` style, 36 px |
 | `ColorField` | value, presets, hex input, system picker; popover |
 | `FileDrop` | accept; states idle, drag over, loaded (file name, Replace), error |
-| `NonSpecTag` | on a row or in a group header |
-| `ParamGroup` | name, summary, open, nonSpec; disclosure on desktop, tab on phones |
+| `ParamGroup` | name, summary, open (closed by default); disclosure on desktop, tab on phones |
 | `Button` | primary, secondary, quiet, icon, small, large; disabled, busy |
 | `ExportPanel` | format, file name, picker available or not, state (ready, computing, blocked) |
 | `ModelList` | saved models in the browser, Open per row |

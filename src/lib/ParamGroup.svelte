@@ -1,18 +1,15 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import Icon from "./Icon.svelte";
-  import NonSpecTag from "./NonSpecTag.svelte";
 
   let {
     name,
     summary = "",
-    nonSpec = false,
-    open = $bindable(true),
+    open = $bindable(false),
     children,
   }: {
     name: string;
     summary?: string;
-    nonSpec?: boolean;
     open?: boolean;
     children: Snippet;
   } = $props();
@@ -30,7 +27,6 @@
     >
       <span class="chev" class:open><Icon name="chevron-right" size={16} /></span>
       <span class="t-strong">{name}</span>
-      {#if nonSpec}<NonSpecTag />{/if}
       {#if !open && summary}<span class="summary n-s">{summary}</span>{/if}
     </button>
   </h3>
@@ -65,7 +61,12 @@
   .chev.open {
     transform: rotate(90deg);
   }
+  .t-strong {
+    flex: none;
+    white-space: nowrap;
+  }
   .summary {
+    min-width: 0;
     margin-left: auto;
     color: var(--text-3);
     overflow: hidden;
