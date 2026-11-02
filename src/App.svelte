@@ -24,6 +24,8 @@
   let theme = $state<Theme>(storedTheme() ?? systemTheme());
   const toggleTheme = () => {
     theme = theme === "dark" ? "light" : "dark";
+    // set it now: the preview reads the theme's colours in the same update
+    document.documentElement.dataset.theme = theme;
     try {
       localStorage.setItem("ugg.theme", theme);
     } catch {

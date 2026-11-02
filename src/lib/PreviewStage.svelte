@@ -257,6 +257,12 @@
     draw();
   };
 
+  // The print bed is always dark, in light and dark mode (owner, 2 November 2026): the dark
+  // theme's surface, line and grid values.
+  const BED_FILL = "#222320";
+  const BED_EDGE = "#43453F";
+  const BED_GRID = "#2C2D2A";
+
   const rebuildGrid = () => {
     for (const child of [...gridGroup.children]) {
       gridGroup.remove(child);
@@ -289,7 +295,7 @@
       const fillShape = new Shape(outline);
       const fill = new Mesh(
         new ShapeGeometry(fillShape),
-        new MeshBasicMaterial({ color: new Color(css("--surface-2") || "#ededE9") }),
+        new MeshBasicMaterial({ color: new Color(BED_FILL) }),
       );
       fill.position.z = -0.1;
       gridGroup.add(fill);
@@ -301,9 +307,7 @@
       gridGroup.add(
         new LineSegments(
           lineGeometry(edge),
-          new LineBasicMaterial({
-            color: new Color(css("--line-strong") || "#c4c4bc"),
-          }),
+          new LineBasicMaterial({ color: new Color(BED_EDGE) }),
         ),
       );
     }
@@ -323,7 +327,10 @@
       gridGroup.add(
         new LineSegments(
           lineGeometry(points),
-          new LineBasicMaterial({ color: css("--stage-grid") || "#dadad3" }),
+          new LineBasicMaterial({
+            // on a bed the grid is dark as well; without one it follows the theme
+            color: bed ? BED_GRID : css("--stage-grid") || "#dadad3",
+          }),
         ),
       );
     }
