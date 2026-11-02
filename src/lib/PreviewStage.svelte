@@ -33,7 +33,7 @@
   import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
   import type { LabelArea } from "../geometry/lid";
   import type { ModelMesh, PartName } from "../geometry/model";
-  import type { PlateShape } from "./printers";
+  import { plateOutline, type PlateShape } from "./plate";
   import Icon from "./Icon.svelte";
 
   type View = "iso" | "top" | "front" | "under";
@@ -258,49 +258,6 @@
     draw();
   };
 
-  /** Points of a rounded rectangle, centred on the origin (`r` 0: a plain rectangle). */
-  const roundedOutline = (hw: number, hd: number, r: number): Vector2[] => {
-    const shape = new Shape();
-    if (r === 0) {
-      shape.moveTo(-hw, -hd);
-      shape.lineTo(hw, -hd);
-      shape.lineTo(hw, hd);
-      shape.lineTo(-hw, hd);
-      shape.closePath();
-    } else {
-      roundedRect(shape, hw, hd, r);
-    }
-    return shape.getPoints(8);
-  };
-
-  /** Outline of a build plate, with an optional back tab and front lip (printable area hx x hy). */
-  const plateOutline = (plate: PlateShape, hx: number, hy: number): Vector2[] => {
-    const { cornerRadius: r, backTab, frontLip } = plate;
-    const low = frontLip ? -hy - frontLip.depth : -hy;
-    const shape = new Shape();
-    shape.moveTo(-hx + r, -hy);
-    if (frontLip) {
-      shape.lineTo(-hx + frontLip.start, -hy);
-      shape.lineTo(-hx + frontLip.start + frontLip.chamfer, low);
-    }
-    shape.lineTo(hx - r, low);
-    shape.absarc(hx - r, low + r, r, -Math.PI / 2, 0, false);
-    shape.lineTo(hx, hy - r);
-    shape.absarc(hx - r, hy - r, r, 0, Math.PI / 2, false);
-    if (backTab) {
-      const flank = (backTab.base - backTab.top) / 2;
-      shape.lineTo(backTab.base / 2, hy);
-      shape.lineTo(backTab.base / 2 - flank, hy + backTab.height);
-      shape.lineTo(-backTab.base / 2 + flank, hy + backTab.height);
-      shape.lineTo(-backTab.base / 2, hy);
-    }
-    shape.lineTo(-hx + r, hy);
-    shape.absarc(-hx + r, hy - r, r, Math.PI / 2, Math.PI, false);
-    shape.lineTo(-hx, -hy + r);
-    shape.absarc(-hx + r, -hy + r, r, Math.PI, Math.PI * 1.5, false);
-    return shape.getPoints(8);
-  };
-
   const rebuildGrid = () => {
     for (const child of [...gridGroup.children]) {
       gridGroup.remove(child);
@@ -328,9 +285,9 @@
     // the print bed of the chosen printer, centred on the origin (the lid centre is X0 Y0)
     if (bed) {
       const [hx, hy] = [bed.x / 2, bed.y / 2];
-      const outline = bed.plate
-        ? plateOutline(bed.plate, hx, hy)
-        : roundedOutline(hx, hy, 0);
+      const outline = plateOutline(bed.plate ?? { cornerRadius: 0 }, bed.x, bed.y).map(
+        ([x, y]) => new Vector2(x, y),
+      );
       const fillShape = new Shape(outline);
       const fill = new Mesh(
         new ShapeGeometry(fillShape),

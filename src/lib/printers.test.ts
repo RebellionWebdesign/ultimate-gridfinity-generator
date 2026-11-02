@@ -92,9 +92,14 @@ describe("bed check", () => {
       "Bambu Lab X2D",
     ]);
     for (const p of same) expect(p.plate, p.name).toBe(p2s.plate);
-    expect(p2s.plate?.backTab).toBeDefined();
-    // other sizes keep the plain rectangle
-    expect(printer("Bambu Lab A1 mini").plate).toBeUndefined();
+    expect(p2s.plate?.backTabs).toHaveLength(1);
+    // the H2 family shares one plate, the A1 mini has its own
+    const h2 = ["H2D", "H2D Pro", "H2C", "H2S", "A2L"].map((n) =>
+      printer(`Bambu Lab ${n}`),
+    );
+    for (const p of h2) expect(p.plate, p.name).toBe(h2[0]?.plate);
+    expect(h2[0]?.plate?.body).toEqual({ width: 350, depth: 320 });
+    expect(printer("Bambu Lab A1 mini").plate?.backTabs).toHaveLength(2);
   });
 
   it("a custom bed is a square with rounded corners and its own height", () => {

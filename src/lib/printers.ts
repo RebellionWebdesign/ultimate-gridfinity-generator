@@ -6,19 +6,7 @@
 // X2D): the area one nozzle reaches (`extruder_printable_area` of the profile; for the H2D the
 // single-nozzle volume of Bambu Lab's technical specifications); the wider total needs both
 // nozzles with the same filament. Origin of the bed is its front left corner.
-/**
- * Outline of the physical build plate where it differs from the printable rectangle: a
- * handle tab at the back and a lip at the front. Drawn only (the printable area stays the
- * rectangle). Measured from a picture of the plate, about 1 mm accurate; mm, relative to
- * the printable area, whose front left corner is the origin.
- */
-export interface PlateShape {
-  cornerRadius: number;
-  /** centred tab at the back: width of its flat top and of its base, and how far it sticks out */
-  backTab?: { top: number; base: number; height: number };
-  /** lip along the front: the 45 degree flank starts this far from the left edge */
-  frontLip?: { start: number; chamfer: number; depth: number };
-}
+import type { PlateShape } from "./plate";
 
 export interface Printer {
   name: string;
@@ -29,18 +17,47 @@ export interface Printer {
   plate?: PlateShape;
 }
 
+/** P1P, P1S, X1, X1C and X1E reserve 18 x 28 mm at the front left and print 250 mm high. */
+const CLASSIC_EXCLUDE: [number, number] = [18, 28];
+
 /**
  * The 256 x 256 build plate (owner's picture of the P2S, 2 November 2026). The owner asked
- * to draw it for every printer with the same size.
+ * to draw it for every printer with the same size. A handle tab at the back, a lip at the
+ * front; the body is the printable area.
  */
 const PLATE_256: PlateShape = {
   cornerRadius: 6,
-  backTab: { top: 57, base: 70, height: 8 },
-  frontLip: { start: 71, chamfer: 10, depth: 10 },
+  backTabs: [{ from: 93, to: 163, flank: 6.5, height: 8 }],
+  frontLips: [{ from: 71, to: 256, flank: 10, depth: 10 }],
 };
 
-/** P1P, P1S, X1, X1C and X1E reserve 18 x 28 mm at the front left and print 250 mm high. */
-const CLASSIC_EXCLUDE: [number, number] = [18, 28];
+/**
+ * The plate of the H2D, H2D Pro, H2C, H2S and A2L (owner's picture, 2 November 2026): a
+ * 350 x 320 mm body, two raised tabs at the back corners and two lips at the front corners.
+ * It is drawn at this size for every one of these printers, centred on the printable area.
+ */
+const PLATE_H2: PlateShape = {
+  cornerRadius: 3,
+  body: { width: 350, depth: 320 },
+  backTabs: [
+    { from: 0, to: 46, flank: 5, height: 4.6 },
+    { from: 304, to: 350, flank: 5, height: 4.6 },
+  ],
+  frontLips: [
+    { from: 0, to: 125.5, flank: 15, depth: 15 },
+    { from: 224.5, to: 350, flank: 15, depth: 15 },
+  ],
+};
+
+/** The A1 mini plate (owner's picture, 2 November 2026): two tabs at the back, a lip at the front. */
+const PLATE_A1_MINI: PlateShape = {
+  cornerRadius: 3,
+  backTabs: [
+    { from: 33, to: 67, flank: 6, height: 5.5 },
+    { from: 113, to: 146, flank: 5, height: 5.5 },
+  ],
+  frontLips: [{ from: 49, to: 180, flank: 7.5, depth: 7.5 }],
+};
 
 export const PRINTERS: Printer[] = [
   { name: "Bambu Lab P2S", bed: [256, 256, 256], plate: PLATE_256 },
@@ -75,12 +92,12 @@ export const PRINTERS: Printer[] = [
     plate: PLATE_256,
   },
   { name: "Bambu Lab A1", bed: [256, 256, 256], plate: PLATE_256 },
-  { name: "Bambu Lab A1 mini", bed: [180, 180, 180] },
-  { name: "Bambu Lab A2L", bed: [330, 320, 325] },
-  { name: "Bambu Lab H2D", bed: [325, 320, 325] },
-  { name: "Bambu Lab H2D Pro", bed: [325, 320, 325] },
-  { name: "Bambu Lab H2C", bed: [325, 320, 325] },
-  { name: "Bambu Lab H2S", bed: [340, 320, 340] },
+  { name: "Bambu Lab A1 mini", bed: [180, 180, 180], plate: PLATE_A1_MINI },
+  { name: "Bambu Lab A2L", bed: [330, 320, 325], plate: PLATE_H2 },
+  { name: "Bambu Lab H2D", bed: [325, 320, 325], plate: PLATE_H2 },
+  { name: "Bambu Lab H2D Pro", bed: [325, 320, 325], plate: PLATE_H2 },
+  { name: "Bambu Lab H2C", bed: [325, 320, 325], plate: PLATE_H2 },
+  { name: "Bambu Lab H2S", bed: [340, 320, 340], plate: PLATE_H2 },
   { name: "Bambu Lab X2D", bed: [256, 256, 261], plate: PLATE_256 },
 ];
 
