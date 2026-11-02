@@ -1,2 +1,16 @@
 # Third-party screenshots (counter-examples for Claude Design), not for the public repository
 docs/design/references/
+
+# Build output and tooling
+node_modules
+dist
+*.local
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+
+# Local agent and tool settings
+.claude/
+*.tsbuildinfo
+coverage

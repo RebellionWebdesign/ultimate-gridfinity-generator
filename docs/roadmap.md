@@ -24,7 +24,7 @@ Rejected or postponed (spec section 2): desktop app with Tauri or Electron.
 
 ## Phase B: web app
 
-- [ ] **B-01 Toolchain decision and skeleton.** TypeScript strict, Vitest, Svelte (spec 7.1, owner's choice). Decided (owner, 2 November 2026): Vite with Svelte (template `svelte-ts`, no SvelteKit), Prettier, ESLint, npm; see ADR-0004. Depends on: owner's go for code. *AC:* a build and a test run succeed on an empty project.
+- [x] **B-01 Toolchain decision and skeleton.** TypeScript strict, Vitest, Svelte (spec 7.1, owner's choice). Decided (owner, 2 November 2026): Vite with Svelte (template `svelte-ts`, no SvelteKit), Prettier, ESLint, npm; see ADR-0004. Depends on: owner's go for code. *AC:* a build and a test run succeed on an empty project.
 - [ ] **B-02 Constants module with sources.** One place for all Gridfinity constants (spec section 4), each with its source. *AC:* a test per spec number; the code stops with an error for a dimension that is not defined.
 - [ ] **B-03 Geometry core.** Manifold WASM in a Web Worker; foot profile 0.8 (45°) / 1.8 vertical / 2.15 (45°), total 4.75; stepped corner radii 3.75 → 1.6 → 0.8. Depends on: B-02. *AC:* foot bottom edge 35.6 for 1x1.
 - [ ] **B-04 Lid 1x1.** Foot plus plate, dust-protection variant. Depends on: B-03. *AC:* bounding box 41.5 × 41.5 × 7.0 (spec 6.2); plate thickness manual or automatic (total height a multiple of 7; 1u gives 2.25).

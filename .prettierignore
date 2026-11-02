@@ -1,0 +1,8 @@
+node_modules
+dist
+docs
+reference
+skills
+*.md
+package-lock.json
+public
