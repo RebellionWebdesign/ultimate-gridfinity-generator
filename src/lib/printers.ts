@@ -2,9 +2,10 @@
 // Source: Bambu Studio's own machine profiles (bambulab/BambuStudio, resources/profiles/BBL/
 // machine, `printable_area`, `printable_height`, `bed_exclude_area`, checked 2 November 2026)
 // and the P2S profile of the owner's installed Bambu Studio 02.08.02.61, which also lists
-// the P2S as 256 x 256 x 256 with no excluded area. H2D: the single-nozzle volume of
-// Bambu Lab's technical specifications (the 350 mm width needs both nozzles with the same
-// filament). Origin of the bed is its front left corner.
+// the P2S as 256 x 256 x 256 with no excluded area. Two-nozzle printers (H2D, H2D Pro, H2C,
+// X2D): the area one nozzle reaches (`extruder_printable_area` of the profile; for the H2D the
+// single-nozzle volume of Bambu Lab's technical specifications); the wider total needs both
+// nozzles with the same filament. Origin of the bed is its front left corner.
 export interface Printer {
   name: string;
   bed: [number, number, number];
@@ -12,19 +13,24 @@ export interface Printer {
   exclude?: [number, number];
 }
 
-/** P1P, P1S, X1C and X1E reserve 18 x 28 mm at the front left and print 250 mm high. */
+/** P1P, P1S, X1, X1C and X1E reserve 18 x 28 mm at the front left and print 250 mm high. */
 const CLASSIC_EXCLUDE: [number, number] = [18, 28];
 
 export const PRINTERS: Printer[] = [
   { name: "Bambu Lab P2S", bed: [256, 256, 256] },
   { name: "Bambu Lab P1S", bed: [256, 256, 250], exclude: CLASSIC_EXCLUDE },
   { name: "Bambu Lab P1P", bed: [256, 256, 250], exclude: CLASSIC_EXCLUDE },
+  { name: "Bambu Lab X1", bed: [256, 256, 250], exclude: CLASSIC_EXCLUDE },
   { name: "Bambu Lab X1C", bed: [256, 256, 250], exclude: CLASSIC_EXCLUDE },
   { name: "Bambu Lab X1E", bed: [256, 256, 250], exclude: CLASSIC_EXCLUDE },
   { name: "Bambu Lab A1", bed: [256, 256, 256] },
   { name: "Bambu Lab A1 mini", bed: [180, 180, 180] },
+  { name: "Bambu Lab A2L", bed: [330, 320, 325] },
   { name: "Bambu Lab H2D", bed: [325, 320, 325] },
+  { name: "Bambu Lab H2D Pro", bed: [325, 320, 325] },
+  { name: "Bambu Lab H2C", bed: [325, 320, 325] },
   { name: "Bambu Lab H2S", bed: [340, 320, 340] },
+  { name: "Bambu Lab X2D", bed: [256, 256, 261] },
 ];
 
 export interface BedResult {

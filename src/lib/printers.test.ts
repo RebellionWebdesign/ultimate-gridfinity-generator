@@ -52,6 +52,17 @@ describe("bed check", () => {
     expect(checkBed([239, 239, 10], p1s).fits).toBe(false);
   });
 
+  it("A2L, H2D Pro, H2C, X1 and X2D follow Bambu Studio's machine profiles", () => {
+    expect(printer("Bambu Lab A2L").bed).toEqual([330, 320, 325]);
+    expect(printer("Bambu Lab H2D Pro").bed).toEqual([325, 320, 325]);
+    expect(printer("Bambu Lab H2C").bed).toEqual([325, 320, 325]);
+    expect(printer("Bambu Lab X2D").bed).toEqual([256, 256, 261]);
+    expect(printer("Bambu Lab X1")).toMatchObject({
+      bed: [256, 256, 250],
+      exclude: [18, 28],
+    });
+  });
+
   it("maxCells: the most cells that fit along one axis", () => {
     // 6 x 42 - 0.5 = 251.5 fits 256, 7 x 42 - 0.5 = 293.5 does not
     expect(maxCells("x", [7, 1], 7, p2s)).toBe(6);
