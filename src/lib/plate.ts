@@ -119,6 +119,31 @@ export const plateOutline = (
   return roundCorners(sharpOutline(plate, bodyW, bodyD), plate.cornerRadius);
 };
 
+/**
+ * Area a printer keeps free at the front left corner (`ex` x `ey`), as a polygon on the
+ * plate. Its outer corner follows the plate's rounded corner, so it never sticks out.
+ */
+export const exclusionOutline = (
+  [ex, ey]: [number, number],
+  plate: PlateShape | undefined,
+  width: number,
+  depth: number,
+): Point2[] => {
+  const [x0, y0] = [-width / 2, -depth / 2];
+  const r = Math.min(plate?.cornerRadius ?? 0, ex, ey);
+  const points: Point2[] = [];
+  if (r > 0) {
+    for (let k = 0; k <= 8; k++) {
+      const angle = Math.PI + (k / 8) * (Math.PI / 2);
+      points.push([x0 + r + r * Math.cos(angle), y0 + r + r * Math.sin(angle)]);
+    }
+  } else {
+    points.push([x0, y0]);
+  }
+  points.push([x0 + ex, y0], [x0 + ex, y0 + ey], [x0, y0 + ey]);
+  return points;
+};
+
 export const boundsOf = (points: Point2[]) => {
   const xs = points.map((p) => p[0]);
   const ys = points.map((p) => p[1]);

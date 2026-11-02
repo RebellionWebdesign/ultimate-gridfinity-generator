@@ -18,7 +18,6 @@
     MeshStandardMaterial,
     NearestFilter,
     Path,
-    PlaneGeometry,
     PerspectiveCamera,
     Quaternion,
     RepeatWrapping,
@@ -33,7 +32,7 @@
   import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
   import type { LabelArea } from "../geometry/lid";
   import type { ModelMesh, PartName } from "../geometry/model";
-  import { plateOutline, type PlateShape } from "./plate";
+  import { exclusionOutline, plateOutline, type PlateShape } from "./plate";
   import Icon from "./Icon.svelte";
 
   type View = "iso" | "top" | "front" | "under";
@@ -284,7 +283,6 @@
 
     // the print bed of the chosen printer, centred on the origin (the lid centre is X0 Y0)
     if (bed) {
-      const [hx, hy] = [bed.x / 2, bed.y / 2];
       const outline = plateOutline(bed.plate ?? { cornerRadius: 0 }, bed.x, bed.y).map(
         ([x, y]) => new Vector2(x, y),
       );
@@ -297,16 +295,21 @@
       gridGroup.add(fill);
       if (bed.exclude) {
         // area the printer keeps free (front left), no logo or label
-        const [ex, ey] = bed.exclude;
         const zone = new Mesh(
-          new PlaneGeometry(ex, ey),
+          new ShapeGeometry(
+            new Shape(
+              exclusionOutline(bed.exclude, bed.plate, bed.x, bed.y).map(
+                ([x, y]) => new Vector2(x, y),
+              ),
+            ),
+          ),
           new MeshBasicMaterial({
             color: new Color(css("--line-strong") || "#c4c4bc"),
             transparent: true,
             opacity: 0.6,
           }),
         );
-        zone.position.set(-hx + ex / 2, -hy + ey / 2, -0.07);
+        zone.position.z = -0.07;
         gridGroup.add(zone);
       }
       const edge: number[] = [];
