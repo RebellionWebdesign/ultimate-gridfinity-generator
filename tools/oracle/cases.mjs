@@ -1,6 +1,6 @@
 // Label cases use flush_gap 0: the app puts raised and flush labels directly on the plate
 // (owner, 2 November 2026). Hollow foot is not compared: the app cuts one straight cavity (no profile
-// steps, owner 2 November 2026) and adds nothing under pockets; the script follows the foot
+// steps, owner 2 November 2026) and stops 1.45 mm below the plate; the script follows the foot
 // profile and keeps full-height columns.
 // Cases compared with the reference script, at or above the spec minimum (skills/reference-oracle).
 // Keys are script parameter names. Text cases are left out: the script's fonts are those installed

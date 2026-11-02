@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { DEFAULT_LID, type LidParams } from "../model/lidParams";
 import { initKernel, Scope, type Kernel } from "./kernel";
-import { buildLid, lidMagnetPoints, pocketDepth } from "./lid";
+import { HOLLOW_FLOOR, buildLid, lidMagnetPoints, pocketDepth } from "./lid";
 import { isClosed, sizeOf } from "./mesh";
 
 let kernel: Kernel;
@@ -32,6 +32,9 @@ const measure = (overrides: Partial<LidParams>): Measured => {
     scope.dispose();
   }
 };
+
+const pocketCrossSection = (d: number) =>
+  0.5 * 40 * (d / 2) ** 2 * Math.sin((2 * Math.PI) / 40);
 
 // area of a regular 40-gon with radius r, times depth: what a pocket removes
 const pocketVolume = (d: number, h: number) =>
@@ -206,24 +209,45 @@ describe("B-06 stackable, hollow foot, top-side corner magnets", () => {
     expect(columnVolume({})).toBeCloseTo(1, 3);
   });
 
-  it("hollow foot: nothing is added under the pockets, the cavity runs straight under them", () => {
-    // owner, 2 November 2026: no pad, no column, only the hollow foot
-    const hollow = measure({ foot_hollow: "open" });
+  it("hollow foot: the cavity stops 1.45 mm below the plate, 1.6 mm of material under the pocket floor", () => {
+    // owner, 2 November 2026: extra floor of 1.45 mm inside the hollow foot
+    expect(HOLLOW_FLOOR).toBe(1.45);
+    const scope = new Scope();
+    const p = {
+      ...DEFAULT_LID,
+      foot_hollow: "open",
+      corner_magnets: true,
+    } as LidParams;
+    const { plate } = buildLid(kernel, scope, p);
+    const ceiling = 4.75 - HOLLOW_FLOOR;
+    // above the cavity ceiling the foot is solid: no void at z = 3.4, a void at z = 3.2
+    const solid = buildLid(kernel, scope, DEFAULT_LID).plate;
+    const voidAt = (z: number) =>
+      scope.add(solid.slice(z)).area() - scope.add(plate.slice(z)).area();
+    expect(voidAt(ceiling + 0.1)).toBeLessThan(0.5 * pocketCrossSection(6.1) * 4 + 1);
+    expect(voidAt(ceiling - 0.1)).toBeGreaterThan(1000);
+    // between the ceiling and the pocket floor (4.9) nothing is missing under the pockets
+    const floorZ = 4.75 + 2.25 - pocketDepth(p);
+    expect(floorZ - ceiling).toBeCloseTo(1.6, 6);
+    for (const [x, y] of lidMagnetPoints(p)) {
+      const cyl = scope.add(
+        kernel.Manifold.cylinder(floorZ - ceiling, 3.05, 3.05, 40).translate(
+          x - 20.75,
+          y - 20.75,
+          ceiling,
+        ),
+      );
+      const kept = scope.add(kernel.Manifold.intersection(plate, cyl)).volume();
+      expect(kept / cyl.volume()).toBeCloseTo(1, 3);
+    }
+    // the pockets still remove exactly their own volume
+    const noMagnets = measure({ foot_hollow: "open" });
     const withPockets = measure({ foot_hollow: "open", corner_magnets: true });
-    expect(hollow.volume - withPockets.volume).toBeCloseTo(
+    expect(noMagnets.volume - withPockets.volume).toBeCloseTo(
       4 * pocketVolume(6.1, 2.1),
       1,
     );
     expect(withPockets.closed).toBe(true);
-    // the cavity is the same one with and without magnets
-    const scope = new Scope();
-    const a = buildLid(kernel, scope, { ...DEFAULT_LID, foot_hollow: "open" }).plate;
-    const b = buildLid(kernel, scope, {
-      ...DEFAULT_LID,
-      foot_hollow: "open",
-      corner_magnets: true,
-    }).plate;
-    expect(scope.add(a.slice(2)).area()).toBeCloseTo(scope.add(b.slice(2)).area(), 6);
     scope.dispose();
   });
 
@@ -245,7 +269,7 @@ describe("B-06 stackable, hollow foot, top-side corner magnets", () => {
     }).plate;
     // inner square: bottom edge half 17.8 minus the 1.2 wall, corner radius 0.3
     const expected = 33.2 * 33.2 - (4 - Math.PI) * 0.3 * 0.3;
-    for (const z of [0.2, 0.5, 1.5, 2.5, 3.5, 4.5]) {
+    for (const z of [0.2, 0.5, 1.5, 2.5, 3.2]) {
       const void_ =
         scope.add(solid.slice(z)).area() - scope.add(hollow.slice(z)).area();
       expect(void_, `z = ${z}`).toBeCloseTo(expected, 0);

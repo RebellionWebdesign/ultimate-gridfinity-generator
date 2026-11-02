@@ -15,7 +15,7 @@ Checks the spec asks for (section 6.2). They become automated tests once code ex
 - **3MF:** plate, text and symbol are separate objects; assert the object count, and assert that colours are carried as base materials.
 - **Minimum values:** the validation rejects every value below its spec minimum (spec section 4, rule of the owner) and accepts the minimum itself and values up to the limit.
 - **Magnet corners:** 1x1 has pockets in all four corners; for larger parts (for example 4x4) pockets exist only in the four outermost corners. Lids have no centre magnet and no pockets in the foot; the pockets are on the top side.
-- **Material under a lid pocket:** with a solid foot at least 0.8 mm below the pocket floor. With a hollow foot nothing is added under the pocket (owner, 2 November 2026); the plate alone remains (0.15 mm under the default pocket).
-- **Hollow foot:** the cavity is one straight cut from below up to the plate (the same outline at every height, inset from the foot's bottom edge by the wall); nothing is added under the magnet pockets.
+- **Material under a lid pocket:** with a solid foot at least 0.8 mm below the pocket floor. With a hollow foot the cavity ends 1.45 mm below the plate (owner, 2 November 2026), so 1.6 mm remain under the default pocket floor.
+- **Hollow foot:** the cavity is one straight cut from below (the same outline at every height, inset from the foot's bottom edge by the wall) that ends 1.45 mm below the plate; nothing else is added under the magnet pockets.
 
 Report what you measured and with which tool. Do not report a check as passed that was not run.

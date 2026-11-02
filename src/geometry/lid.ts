@@ -84,9 +84,15 @@ const cylinderAt = (
 };
 
 /**
- * Cavity of an open hollow foot: one straight cut from below up to the plate, inset from
- * the narrowest part of the foot (its bottom edge) by the wall. No profile steps, no lip
- * inside (owner, 2 November 2026).
+ * Extra floor inside a hollow foot: the cavity stops this far below the plate, so the
+ * plate and this floor together carry the magnet pockets (owner, 2 November 2026).
+ */
+export const HOLLOW_FLOOR = 1.45;
+
+/**
+ * Cavity of an open hollow foot: one straight cut from below, inset from the narrowest
+ * part of the foot (its bottom edge) by the wall, ending `HOLLOW_FLOOR` below the plate.
+ * No profile steps, no lip inside (owner, 2 November 2026).
  */
 const cavityLayers = (inset: number, extraX: number, extraY: number): Layer[] => {
   const ring = (z: number): Layer => ({
@@ -95,7 +101,7 @@ const cavityLayers = (inset: number, extraX: number, extraY: number): Layer[] =>
     hy: footHalf(0) - inset + extraY,
     r: Math.max(footRadius(0) - inset, 0.3),
   });
-  return [ring(-0.5), ring(c("footHeight"))];
+  return [ring(-0.5), ring(c("footHeight") - HOLLOW_FLOOR)];
 };
 
 interface FootSpec {
@@ -112,9 +118,7 @@ const buildFoot = (kernel: Kernel, scope: Scope, p: LidParams, foot: FootSpec) =
 
   const wall = p.foot_wall;
   const cavity = scope.add(loft(kernel, cavityLayers(wall, foot.extraX, foot.extraY)));
-  // no support under the pockets: the cavity runs straight under them (owner, 2 November 2026)
-  const hollow = cavity;
-  return scope.add(kernel.Manifold.difference(solid, hollow));
+  return scope.add(kernel.Manifold.difference(solid, cavity));
 };
 
 /** Lip wall on top of the plate, plate top at local z = 0, centred on the origin. */
