@@ -19,6 +19,7 @@
     WebGLRenderer,
   } from "three";
   import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+  import type { LabelArea } from "../geometry/lid";
   import type { ModelMesh, PartName } from "../geometry/model";
   import Icon from "./Icon.svelte";
 
@@ -27,12 +28,15 @@
   let {
     model,
     colours,
+    labelArea,
     units,
     dimmed = false,
     theme,
   }: {
     model: ModelMesh | null;
     colours: Record<PartName, string>;
+    /** the plate area labels may use; the margin is drawn hatched when a label crosses it */
+    labelArea?: LabelArea;
     units: [number, number];
     dimmed?: boolean;
     theme: string;
@@ -50,7 +54,8 @@
   const scene = new Scene();
   const partsGroup = new Group();
   const gridGroup = new Group();
-  scene.add(partsGroup, gridGroup);
+  const bandGroup = new Group();
+  scene.add(partsGroup, gridGroup, bandGroup);
 
   const css = (name: string) =>
     getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -154,6 +159,60 @@
     draw();
   };
 
+  /** Red hatching on the strip between the lid edge and the label margin. */
+  const rebuildBand = () => {
+    for (const child of [...bandGroup.children]) {
+      bandGroup.remove(child);
+      const line = child as LineSegments;
+      line.geometry.dispose();
+      (line.material as LineBasicMaterial).dispose();
+    }
+    if (!labelArea?.violated) return draw();
+    const { width, depth, margin, z, down } = labelArea;
+    const [hw, hd] = [width / 2, depth / 2];
+    const [iw, id] = [hw - margin, hd - margin];
+    const zLine = z + (down ? -0.05 : 0.05);
+    const points: number[] = [];
+    const segment = (x1: number, x2: number, k: number) => {
+      if (x2 > x1) points.push(x1, k - x1, zLine, x2, k - x2, zLine);
+    };
+    // lines x + y = k every 3 mm, clipped to the outer rectangle minus the inner one
+    for (let k = -(hw + hd); k <= hw + hd; k += 3) {
+      const outer: [number, number] = [Math.max(-hw, k - hd), Math.min(hw, k + hd)];
+      if (outer[1] <= outer[0]) continue;
+      const inner: [number, number] = [Math.max(-iw, k - id), Math.min(iw, k + id)];
+      if (inner[1] <= inner[0]) {
+        segment(outer[0], outer[1], k);
+      } else {
+        segment(outer[0], inner[0], k);
+        segment(inner[1], outer[1], k);
+      }
+    }
+    // outline of the area that stays free
+    const corners: [number, number][] = [
+      [-iw, -id],
+      [iw, -id],
+      [iw, id],
+      [-iw, id],
+    ];
+    corners.forEach(([x, y], i) => {
+      const [nx, ny] = corners[(i + 1) % 4] ?? [x, y];
+      points.push(x, y, zLine, nx, ny, zLine);
+    });
+    const geometry = new BufferGeometry();
+    geometry.setAttribute(
+      "position",
+      new BufferAttribute(Float32Array.from(points), 3),
+    );
+    bandGroup.add(
+      new LineSegments(
+        geometry,
+        new LineBasicMaterial({ color: css("--error") || "#b3261e" }),
+      ),
+    );
+    draw();
+  };
+
   const rebuildGrid = () => {
     for (const child of [...gridGroup.children]) {
       gridGroup.remove(child);
@@ -226,6 +285,10 @@
       first = false;
       setView("iso", false);
     }
+  });
+  $effect(() => {
+    const deps = [labelArea, theme];
+    if (renderer && deps.length > 0) rebuildBand();
   });
   $effect(() => {
     const deps = [showGrid, units[0], units[1], theme];

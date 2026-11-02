@@ -6,7 +6,7 @@ import { CONSTANTS, holeOffset, outerSize } from "../gridfinity/constants";
 import { plateThicknessOf, type LidParams } from "../model/lidParams";
 import { cellHalf, footHalf, footRadius, solidFoot } from "./foot";
 import type { Kernel, Scope } from "./kernel";
-import { buildLabel, raisedExtra, type LabelAssets } from "./label";
+import { LABEL_EDGE_MARGIN, buildLabel, raisedExtra, type LabelAssets } from "./label";
 import { loft, type Layer } from "./loft";
 
 const c = (name: keyof typeof CONSTANTS): number => CONSTANTS[name].value;
@@ -26,6 +26,20 @@ export interface LidParts {
   symbol?: Manifold;
   /** hints for the user, not errors */
   warnings: string[];
+  /** the plate area a label may use, for the preview; only with a text or symbol */
+  labelArea?: LabelArea;
+}
+
+export interface LabelArea {
+  width: number;
+  depth: number;
+  /** height of the plate surface in the printed orientation */
+  z: number;
+  /** the surface faces down (printed upside down) */
+  down: boolean;
+  margin: number;
+  /** a label comes closer to the edge than the margin */
+  violated: boolean;
 }
 
 export interface LidLayout {
@@ -268,5 +282,15 @@ export const buildLid = (
     text: put(label.text),
     symbol: put(label.symbol),
     warnings: label.warnings,
+    labelArea: label.hasLabel
+      ? {
+          width: w,
+          depth: h,
+          z: p.print_orientation === "upside_down" ? topRef - plateTop : plateTop,
+          down: p.print_orientation === "upside_down",
+          margin: LABEL_EDGE_MARGIN,
+          violated: label.warnings.length > 0,
+        }
+      : undefined,
   };
 };

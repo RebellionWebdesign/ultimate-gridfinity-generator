@@ -9,7 +9,7 @@ import {
   type LidParams,
 } from "../model/lidParams";
 import { InputError, prepareAssets, type AssetLoaders } from "./assets";
-import { ENGRAVED_TEXT_WARNING, labelPositions } from "./label";
+import { SYMBOL_EDGE_WARNING, labelPositions, textEdgeWarning } from "./label";
 import { initKernel, Scope, type Kernel } from "./kernel";
 import { buildLid } from "./lid";
 import { isClosed, sizeOf } from "./mesh";
@@ -295,49 +295,89 @@ describe("svg helpers", () => {
   });
 });
 
-describe("engraved text warning", () => {
-  const warningsFor = async (overrides: Partial<LidParams>) => {
+describe("label edge margin (3 mm)", () => {
+  const lidWith = async (overrides: Partial<LidParams>) => {
     const p = { ...DEFAULT_LID, ...overrides };
     const scope = new Scope();
-    const { warnings } = buildLid(kernel, scope, p, await prepareAssets(p, loaders));
+    const lid = buildLid(kernel, scope, p, await prepareAssets(p, loaders));
+    const result = { warnings: lid.warnings, area: lid.labelArea };
     scope.dispose();
-    return warnings;
+    return result;
   };
+  const wide = { text_string: "ENGRAVED", text_size: 8 } as const;
 
-  it("warns for engraved text that is wide for the lid", async () => {
-    const w = await warningsFor({
-      text_mode: "engraved",
-      text_string: "ENGRAVED",
-      text_size: 8,
-    });
-    expect(w).toEqual([ENGRAVED_TEXT_WARNING]);
-    expect(w[0]).toMatch(/shorter word.*Raised or Flush/);
+  it("warns when text comes closer than 3 mm to the lid edge, with the Raised or Flush hint for engraved text", async () => {
+    const engraved = await lidWith({ ...wide, text_mode: "engraved" });
+    expect(engraved.warnings).toEqual([textEdgeWarning(true)]);
+    expect(engraved.warnings[0]).toMatch(/shorter word.*Raised or Flush/);
+    // other modes warn as well, without that hint
+    const raised = await lidWith({ ...wide, text_mode: "raised" });
+    expect(raised.warnings).toEqual([textEdgeWarning(false)]);
+    expect(raised.warnings[0]).not.toMatch(/Raised or Flush/);
   });
 
-  it("does not warn for a short engraved word, nor for raised or flush text of any width", async () => {
-    expect(await warningsFor({ text_mode: "engraved", text_string: "M3" })).toEqual([]);
-    for (const mode of ["raised", "flush"] as const) {
-      expect(
-        await warningsFor({ text_mode: mode, text_string: "ENGRAVED", text_size: 8 }),
-      ).toEqual([]);
+  it("does not warn for a short word in any mode", async () => {
+    for (const mode of ["raised", "engraved", "flush"] as const) {
+      expect((await lidWith({ text_mode: mode, text_string: "M3" })).warnings).toEqual(
+        [],
+      );
     }
   });
 
-  it("a larger lid takes the same word without a warning", async () => {
-    const options = {
-      text_mode: "engraved",
-      text_string: "ENGRAVED",
-      text_size: 8,
-    } as const;
-    expect(await warningsFor({ ...options, units_x: 3 })).toEqual([]);
+  it("warns when an offset pushes a short word into the margin, and not just inside it", async () => {
+    // lid is 41.5 wide; the word must stay between x = 3 and x = 38.5
+    expect(
+      (await lidWith({ text_mode: "raised", text_string: "M3", text_offset_x: 16 }))
+        .warnings,
+    ).toEqual([textEdgeWarning(false)]);
+    expect(
+      (await lidWith({ text_mode: "raised", text_string: "M3", text_offset_x: 8 }))
+        .warnings,
+    ).toEqual([]);
   });
 
-  it("the warning still builds the lid (it is a hint, not an error)", async () => {
-    const r = await build({
-      text_mode: "engraved",
-      text_string: "ENGRAVED",
-      text_size: 8,
+  it("warns for a symbol that comes closer than 3 mm", async () => {
+    expect((await lidWith({ symbol_mode: "raised", icon_size: 40 })).warnings).toEqual([
+      SYMBOL_EDGE_WARNING,
+    ]);
+    expect((await lidWith({ symbol_mode: "raised", icon_size: 14 })).warnings).toEqual(
+      [],
+    );
+  });
+
+  it("a larger lid takes the same word without a warning", async () => {
+    expect(
+      (await lidWith({ ...wide, text_mode: "engraved", units_x: 3 })).warnings,
+    ).toEqual([]);
+  });
+
+  it("describes the label area for the preview, only when a label is shown", async () => {
+    expect((await lidWith({})).area).toBeUndefined();
+    const ok = (await lidWith({ text_mode: "raised", text_string: "M3" })).area;
+    expect(ok).toMatchObject({
+      width: 41.5,
+      depth: 41.5,
+      z: 7,
+      down: false,
+      margin: 3,
+      violated: false,
     });
+    const bad = (await lidWith({ ...wide, text_mode: "raised" })).area;
+    expect(bad?.violated).toBe(true);
+    // printed upside down the plate surface faces down and lies 0.6 mm above the bed
+    const flipped = (
+      await lidWith({
+        text_mode: "raised",
+        text_string: "M3",
+        print_orientation: "upside_down",
+      })
+    ).area;
+    expect(flipped).toMatchObject({ down: true });
+    expect(flipped?.z).toBeCloseTo(0.6, 6);
+  });
+
+  it("the warning does not stop the build", async () => {
+    const r = await build({ ...wide, text_mode: "engraved" });
     expect(r.closed.plate).toBe(true);
   });
 });

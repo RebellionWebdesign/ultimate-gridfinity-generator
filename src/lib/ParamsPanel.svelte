@@ -257,9 +257,6 @@
         </p>
       {/if}
       {@render num("text_size", "Text height", "mm")}
-      {#if editor.warnings.length > 0}
-        <p class="t-caption warn">{editor.warnings[0]}</p>
-      {/if}
     {/if}
     <Segmented label="Symbol" bind:value={p.symbol_mode} options={[...modes]} />
     {#if symbolOn}
@@ -335,6 +332,9 @@
     {#if anyFlush}
       {@render num("flush_depth", "Flush inlay depth", "mm")}
     {/if}
+    {#each editor.warnings as warning (warning)}
+      <p class="t-caption warn">{warning}</p>
+    {/each}
   </ParamGroup>
 
   {#if textOn || symbolOn}

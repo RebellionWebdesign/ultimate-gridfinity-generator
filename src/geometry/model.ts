@@ -3,7 +3,7 @@
 import type { Manifold } from "manifold-3d";
 import { validateLid, type LidParams } from "../model/lidParams";
 import type { LabelAssets } from "./label";
-import { buildLid } from "./lid";
+import { buildLid, type LabelArea } from "./lid";
 import { Scope, type Kernel } from "./kernel";
 
 export type PartName = "plate" | "lip" | "text" | "symbol";
@@ -23,6 +23,8 @@ export interface ModelMesh {
   size: [number, number, number];
   /** hints for the user (for example engraved text that is too wide), not errors */
   warnings: string[];
+  /** the plate area labels may use, only when a text or symbol is shown */
+  labelArea?: LabelArea;
 }
 
 const toPartMesh = (name: PartName, m: Manifold): PartMesh => {
@@ -64,6 +66,7 @@ export const buildModel = (
       parts: named.map(([name, m]) => toPartMesh(name, m)),
       size: [max[0] - min[0], max[1] - min[1], max[2] - min[2]],
       warnings: lid.warnings,
+      labelArea: lid.labelArea,
     };
   } finally {
     scope.dispose();

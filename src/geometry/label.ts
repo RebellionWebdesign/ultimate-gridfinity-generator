@@ -235,6 +235,17 @@ const svgShape = (kernel: Kernel, scope: Scope, svg: SvgShapes): CrossSection =>
   return scope.add(kernel.CrossSection.union(parts));
 };
 
+/** Does the shape come closer to the lid edge than the margin? `centre` is the lid centre. */
+const outsideMargin = (shape: CrossSection, centre: Point): boolean => {
+  const { min, max } = shape.bounds();
+  return (
+    min[0] < LABEL_EDGE_MARGIN ||
+    min[1] < LABEL_EDGE_MARGIN ||
+    max[0] > 2 * centre[0] - LABEL_EDGE_MARGIN ||
+    max[1] > 2 * centre[1] - LABEL_EDGE_MARGIN
+  );
+};
+
 export interface LabelBodies {
   /** solids to subtract from the plate (engraved and flush pockets) */
   cuts: Manifold[];
@@ -244,13 +255,20 @@ export interface LabelBodies {
   raisedExtra: number;
   /** hints for the user, not errors: the lid is built anyway */
   warnings: string[];
+  /** a text or symbol is shown, so the edge margin matters */
+  hasLabel: boolean;
 }
 
-/** Engraved text wider than this share of the lid looks cramped. */
-export const ENGRAVED_TEXT_SHARE = 0.7;
+/** Labels keep this distance from the lid edge on every side (owner, 2 November 2026). */
+export const LABEL_EDGE_MARGIN = 3;
 
-export const ENGRAVED_TEXT_WARNING =
-  "This engraved text is wide for the lid, so it may look cramped. Use a shorter word, a smaller text height or a larger lid, or switch the text to Raised or Flush.";
+export const textEdgeWarning = (engraved: boolean): string =>
+  `The text comes closer than ${LABEL_EDGE_MARGIN} mm to the lid edge. Use a shorter word, a smaller text height or a larger lid` +
+  (engraved
+    ? ", or switch the text to Raised or Flush."
+    : ", or move it away from the edge.");
+
+export const SYMBOL_EDGE_WARNING = `The symbol comes closer than ${LABEL_EDGE_MARGIN} mm to the lid edge. Use a smaller symbol or a larger lid, or move it away from the edge.`;
 
 export const raisedExtra = (p: LidParams): number =>
   (hasText(p) && p.text_mode === "raised") ||
@@ -275,7 +293,12 @@ export const buildLabel = (
   plateTop: number,
   centre: Point,
 ): LabelBodies => {
-  const result: LabelBodies = { cuts: [], raisedExtra: raisedExtra(p), warnings: [] };
+  const result: LabelBodies = {
+    cuts: [],
+    raisedExtra: raisedExtra(p),
+    warnings: [],
+    hasLabel: false,
+  };
   const textOn = hasText(p);
   const symbolOn = hasSymbol(p);
   if (!textOn && !symbolOn) return result;
@@ -315,13 +338,8 @@ export const buildLabel = (
         textAt,
       );
       elements.push({ name: "text", element: { mode: p.text_mode, shape } });
-      const { min, max } = shape.bounds();
-      if (
-        p.text_mode === "engraved" &&
-        (max[0] - min[0] > ENGRAVED_TEXT_SHARE * 2 * centre[0] ||
-          max[1] - min[1] > ENGRAVED_TEXT_SHARE * 2 * centre[1])
-      ) {
-        result.warnings.push(ENGRAVED_TEXT_WARNING);
+      if (outsideMargin(shape, centre)) {
+        result.warnings.push(textEdgeWarning(p.text_mode === "engraved"));
       }
     }
   }
@@ -349,6 +367,12 @@ export const buildLabel = (
         ),
       },
     });
+  }
+
+  result.hasLabel = elements.length > 0;
+  const symbolElement = elements.find((e) => e.name === "symbol");
+  if (symbolElement && outsideMargin(symbolElement.element.shape, centre)) {
+    result.warnings.push(SYMBOL_EDGE_WARNING);
   }
 
   const extrude = (cs: CrossSection, z: number, h: number) =>

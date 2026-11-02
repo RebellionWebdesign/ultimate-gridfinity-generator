@@ -236,6 +236,7 @@
       <PreviewStage
         model={editor.model}
         {colours}
+        labelArea={editor.model?.labelArea}
         units={[editor.params.units_x, editor.params.units_y]}
         dimmed={editor.slow && !!editor.model}
         {theme}
@@ -306,7 +307,9 @@
       {:else if editor.warnings.length > 0}
         <div class="alert top warn" role="status">
           <Icon name="triangle-alert" />
-          <p>{editor.warnings[0]}</p>
+          <div>
+            {#each editor.warnings as warning (warning)}<p>{warning}</p>{/each}
+          </div>
         </div>
       {/if}
       {#if editor.slow}<div class="sweep"></div>{/if}
