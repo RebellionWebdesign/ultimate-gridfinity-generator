@@ -144,3 +144,4 @@ The images in `docs/design/mockups/` predate these changes; where they differ, t
 | `Alert` (error, warning), `Note`, `FieldMessage`, `Toast` | text, icon, actions |
 | `Sheet`, `Dialog` | modal, scrim, close button, focus trap |
 | `ThemeToggle` | light / dark / follow system |
+- Version and saved models (owner, 3 November 2026): the version of `package.json` (0.2.0 with the baseplate) shows at the bottom of the left panel. "In this browser" is a closed-by-default group like the parameter groups, with a bar under its title for how full the browser storage is (an estimate: about 5 MB for localStorage). Clearing the saved models opens a dialog: download a ZIP and then remove, remove without a ZIP, or cancel.

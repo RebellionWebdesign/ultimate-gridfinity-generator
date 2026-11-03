@@ -1,9 +1,16 @@
 /// <reference types="vitest/config" />
+import { readFileSync } from "node:fs";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+const { version } = JSON.parse(readFileSync("./package.json", "utf8")) as {
+  version: string;
+};
+
 export default defineConfig({
+  // the app shows the version of package.json
+  define: { __APP_VERSION__: JSON.stringify(version) },
   // relative paths: the build runs from any folder of a static server (B-13)
   base: "./",
   plugins: [

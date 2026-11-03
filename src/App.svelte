@@ -220,11 +220,14 @@
   <main id="main" class="main">
     <h1 class="visually-hidden">Ultimate Gridfinity Generator: {editor.noun} editor</h1>
     <aside class="params" aria-label="Parameters">
-      {#if editor.part === "baseplate"}
-        <BaseplatePanel />
-      {:else}
-        <ParamsPanel />
-      {/if}
+      <div class="panel-body">
+        {#if editor.part === "baseplate"}
+          <BaseplatePanel />
+        {:else}
+          <ParamsPanel />
+        {/if}
+      </div>
+      <p class="version t-caption n-s">Version {__APP_VERSION__}</p>
     </aside>
 
     <section class="preview" aria-label="Preview">
@@ -416,7 +419,17 @@
     background: var(--surface);
   }
   .params {
+    display: flex;
+    flex-direction: column;
     border-right: 1px solid var(--line);
+  }
+  .panel-body {
+    flex: none;
+  }
+  .version {
+    margin-top: auto;
+    padding: var(--space-5);
+    color: var(--text-3);
   }
   .output {
     border-left: 1px solid var(--line);
