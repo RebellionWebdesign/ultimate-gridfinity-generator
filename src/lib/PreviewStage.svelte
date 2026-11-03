@@ -32,7 +32,7 @@
   import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
   import type { LabelArea } from "../geometry/lid";
   import type { ModelMesh, PartName } from "../geometry/model";
-  import { plateOutline, type PlateShape } from "./plate";
+  import { outwardOutline, plateOutline, type PlateShape } from "./plate";
   import Icon from "./Icon.svelte";
 
   type View = "iso" | "top" | "front" | "under";
@@ -42,6 +42,7 @@
     colours,
     labelArea,
     bed,
+    bedFits = true,
     units,
     dimmed = false,
     theme,
@@ -52,6 +53,8 @@
     labelArea?: LabelArea;
     /** the printable area of the chosen printer, drawn as the floor (none: plain grid) */
     bed?: { x: number; y: number; plate?: PlateShape };
+    /** the part fits the bed (also turned by 90 degrees); when not, a red band runs around the bed */
+    bedFits?: boolean;
     units: [number, number];
     dimmed?: boolean;
     theme: string;
@@ -262,13 +265,17 @@
   const BED_FILL = "#222320";
   const BED_EDGE = "#43453F";
   const BED_GRID = "#2C2D2A";
+  /** width of the red band around the bed when the part does not fit (mm) */
+  const BED_BAND = 6;
 
   const rebuildGrid = () => {
     for (const child of [...gridGroup.children]) {
       gridGroup.remove(child);
       const item = child as Mesh | LineSegments | LineLoop;
       item.geometry.dispose();
-      (item.material as LineBasicMaterial | MeshBasicMaterial).dispose();
+      const material = item.material as LineBasicMaterial | MeshBasicMaterial;
+      if ("map" in material) material.map?.dispose();
+      material.dispose();
     }
     const flat = (x1: number, y1: number, x2: number, y2: number, z: number) => [
       x1,
@@ -310,6 +317,22 @@
           new LineBasicMaterial({ color: new Color(BED_EDGE) }),
         ),
       );
+    }
+
+    // the part does not fit the bed: the red bars of the label margin run around the whole
+    // bed, just outside its edge
+    if (bed && !bedFits) {
+      const inner = plateOutline(bed.plate ?? { cornerRadius: 0 }, bed.x, bed.y);
+      const band = new Shape(
+        outwardOutline(inner, BED_BAND).map(([x, y]) => new Vector2(x, y)),
+      );
+      band.holes.push(new Path(inner.map(([x, y]) => new Vector2(x, y))));
+      const bars = new Mesh(
+        new ShapeGeometry(band),
+        new MeshBasicMaterial({ map: barTexture(), side: DoubleSide }),
+      );
+      bars.position.z = -0.03;
+      gridGroup.add(bars);
     }
 
     if (showGrid) {
@@ -386,7 +409,7 @@
     if (renderer && deps.length > 0) rebuildBand();
   });
   $effect(() => {
-    const deps = [showGrid, units[0], units[1], theme, bed];
+    const deps = [showGrid, units[0], units[1], theme, bed, bedFits];
     if (renderer && deps.length > 0) rebuildGrid();
   });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boundsOf, plateOutline, type Point2 } from "./plate";
+import { boundsOf, outwardOutline, plateOutline, type Point2 } from "./plate";
 import { PRINTERS, customPrinter } from "./printers";
 
 const plateOf = (name: string) => {
@@ -79,5 +79,41 @@ describe("build plate outlines", () => {
         );
       });
     }
+  });
+});
+
+describe("outwardOutline", () => {
+  const square: Point2[] = [
+    [-10, -10],
+    [10, -10],
+    [10, 10],
+    [-10, 10],
+  ];
+
+  it("moves every edge of a square out by the distance", () => {
+    const out = outwardOutline(square, 3);
+    const xs = out.map(([x]) => x);
+    const ys = out.map(([, y]) => y);
+    expect(Math.min(...xs)).toBeCloseTo(-13, 10);
+    expect(Math.max(...xs)).toBeCloseTo(13, 10);
+    expect(Math.min(...ys)).toBeCloseTo(-13, 10);
+    expect(Math.max(...ys)).toBeCloseTo(13, 10);
+  });
+
+  it("gives the same result for the other winding order", () => {
+    const out = outwardOutline([...square].reverse(), 3);
+    const xs = out.map(([x]) => x);
+    expect(Math.max(...xs)).toBeCloseTo(13, 10);
+    expect(Math.min(...xs)).toBeCloseTo(-13, 10);
+  });
+
+  it("surrounds a real build plate: every point moves away from the middle", () => {
+    const outline = plateOutline(PRINTERS[0]?.plate ?? { cornerRadius: 0 }, 256, 256);
+    const out = outwardOutline(outline, 5);
+    expect(out).toHaveLength(outline.length);
+    out.forEach(([x, y], i) => {
+      const [ox, oy] = outline[i] as Point2;
+      expect(Math.hypot(x - ox, y - oy)).toBeGreaterThan(4.9);
+    });
   });
 });

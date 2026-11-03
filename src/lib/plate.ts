@@ -127,3 +127,35 @@ export const boundsOf = (points: Point2[]) => {
     max: [Math.max(...xs), Math.max(...ys)] as Point2,
   };
 };
+
+/**
+ * The outline moved outwards by `distance` (mitred corners, so every edge is exactly
+ * `distance` away). Used for a band around the bed. Works for either winding order.
+ */
+export const outwardOutline = (points: Point2[], distance: number): Point2[] => {
+  // drop repeated points, they have no direction
+  const pts = points.filter((p, i) => !same(p, points[(i + 1) % points.length] ?? p));
+  const n = pts.length;
+  let area = 0;
+  pts.forEach((p, i) => {
+    const q = pts[(i + 1) % n] ?? p;
+    area += p[0] * q[1] - q[0] * p[1];
+  });
+  // for a counter-clockwise outline the outside is to the right of each edge
+  const side = area >= 0 ? 1 : -1;
+  const normal = (a: Point2, b: Point2): Point2 => {
+    const [dx, dy] = [b[0] - a[0], b[1] - a[1]];
+    const len = Math.hypot(dx, dy) || 1;
+    return [(side * dy) / len, (-side * dx) / len];
+  };
+  return pts.map((p, i) => {
+    const prev = pts[(i + n - 1) % n] ?? p;
+    const next = pts[(i + 1) % n] ?? p;
+    const a = normal(prev, p);
+    const b = normal(p, next);
+    // miter length factor 1 / cos(half the turn); capped on very sharp turns
+    const dot = a[0] * b[0] + a[1] * b[1];
+    const k = distance / Math.max(1 + dot, 0.25);
+    return [p[0] + (a[0] + b[0]) * k, p[1] + (a[1] + b[1]) * k];
+  });
+};
