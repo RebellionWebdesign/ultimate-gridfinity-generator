@@ -15,7 +15,7 @@ export interface Layer {
 /** Segments per rounded corner (script constant Q). */
 export const CORNER_SEGMENTS = 6;
 
-const ringPoints = ({ hx, hy, r }: Layer): [number, number][] => {
+export const ringPoints = ({ hx, hy, r }: Layer): [number, number][] => {
   const points: [number, number][] = [];
   for (let k = 0; k < 4; k++) {
     const cx = k === 0 || k === 3 ? hx - r : -(hx - r);

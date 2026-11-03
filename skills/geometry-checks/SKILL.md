@@ -18,4 +18,6 @@ Checks the spec asks for (section 6.2). They become automated tests once code ex
 - **Material under a lid pocket:** with a solid foot at least 0.8 mm below the pocket floor. With a hollow foot the cavity ends 1.45 mm below the plate (owner, 2 November 2026), so 1.6 mm remain under the default pocket floor.
 - **Hollow foot:** the cavity is one straight cut from below (the same outline at every height, inset from the foot's bottom edge by the wall) that ends 1.45 mm below the plate; nothing else is added under the magnet pockets.
 
+- **Baseplate:** 1x1 is 42 × 42 × 5.05 with the default base (0.4); closed mesh for 1x1 to 4x4, solid and skeleton, with and without magnets; four corner pockets and one centre pocket per cell; the base is raised so 0.4 mm of material stays under every pocket; the foot of a lid is 0.25 mm smaller per side than the pocket wall.
+
 Report what you measured and with which tool. Do not report a check as passed that was not run.

@@ -419,7 +419,7 @@
   <canvas
     bind:this={canvas}
     class:dimmed
-    aria-label="3D preview of the lid"
+    aria-label="3D preview of the part"
     ondblclick={fit}
   ></canvas>
   <div class="toolbar" role="toolbar" aria-label="Preview">

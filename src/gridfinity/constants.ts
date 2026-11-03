@@ -30,6 +30,26 @@ export const CONSTANTS = {
   lipHeight: { value: 4.4, source: `${SPEC}: does not count toward the 7 mm height` },
   lipDepth: { value: 2.6, source: SPEC },
   lipFootOffset: { value: 0.25, source: SPEC },
+  baseplateProfileLower: {
+    value: 0.7,
+    source: `${SPEC}: baseplate profile, 45 degrees`,
+  },
+  baseplateProfileVertical: { value: 1.8, source: `${SPEC}: baseplate profile` },
+  baseplateProfileUpper: {
+    value: 2.15,
+    source: `${SPEC}: baseplate profile, 45 degrees`,
+  },
+  baseplateProfileHeight: { value: 4.65, source: `${SPEC}: 0.7 + 1.8 + 2.15` },
+  baseplateBottomInset: {
+    value: 2.85,
+    source: `${SPEC}: per side at the bottom, 42 - 2 x 2.85 = 36.3`,
+  },
+  baseplateWallInset: {
+    value: 2.15,
+    source: `${SPEC}: per side at the wall, 42 - 2 x 2.15 = 37.7`,
+  },
+  baseplateRadiusBottom: { value: 1.15, source: `${SPEC}: inside radii R1.85, R1.15` },
+  baseplateRadiusWall: { value: 1.85, source: `${SPEC}: inside radii R1.85, R1.15` },
   magnetDiameter: { value: 6, source: `${SPEC}: magnet 6 x 2` },
   magnetThickness: { value: 2, source: `${SPEC}: magnet 6 x 2` },
   magnetPocketDiameter: { value: 6.1, source: `${SPEC}: owner decision, start value` },

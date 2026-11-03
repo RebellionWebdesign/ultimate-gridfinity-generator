@@ -2,7 +2,7 @@
   import Icon from "./Icon.svelte";
   import NumberField from "./NumberField.svelte";
   import { CUSTOM_LIMITS, CUSTOM_PRINTER, PRINTERS } from "./printers";
-  import { PART_NAME } from "./parts";
+  import { PART_NAME, formatSize } from "./parts";
   import { editor } from "./store.svelte";
   import {
     buildFile,
@@ -17,18 +17,8 @@
   let busy = $state(false);
   let failure = $state("");
 
-  const p = editor.params;
-  const sizeText = $derived(
-    editor.model ? editor.model.size.map((v) => v.toFixed(1)).join(" × ") : "—",
-  );
+  const sizeText = $derived(editor.model ? formatSize(editor.model.size) : "—");
   const picker = hasSavePicker();
-
-  const colours = $derived({
-    plate: p.plate_color,
-    lip: p.lip_color,
-    text: p.text_color,
-    symbol: p.symbol_color,
-  });
 
   const save = async () => {
     if (!editor.model || editor.blocked) return;
@@ -38,7 +28,7 @@
       const blob = await buildFile(
         format,
         editor.model,
-        colours,
+        editor.colours,
         editor.name,
         PART_NAME[editor.part],
       );
@@ -136,7 +126,9 @@
     </div>
     <p class="t-caption">
       {format === "3mf"
-        ? "Lid, text and symbol stay separate parts of one object, each with its colour. Your slicer may ask which filament each colour gets."
+        ? editor.part === "baseplate"
+          ? "The baseplate is one part with its colour. Your slicer may ask which filament the colour gets."
+          : "Lid, text and symbol stay separate parts of one object, each with its colour. Your slicer may ask which filament each colour gets."
         : "Geometry only: no colours, all parts in one file."}
     </p>
     <label class="t-label" for="file-name">File name</label>

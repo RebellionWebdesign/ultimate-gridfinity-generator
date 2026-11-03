@@ -70,7 +70,6 @@
     if (file) editor.setSvg(await file.text(), file.name);
   };
 
-  const mm = (v: number) => `${v} mm`;
   const sizeSummary = $derived(`${p.units_x} × ${p.units_y} cells`);
   const shapeSummary = $derived(
     `${p.variant === "stackable" ? "stackable" : "dust cover"} · ${p.plate_thickness_mode}`,
@@ -121,9 +120,6 @@
   <ParamGroup name="Size" summary={sizeSummary}>
     {@render num("units_x", "Width", "cells")}
     {@render num("units_y", "Depth", "cells")}
-    <p class="t-caption n-s">
-      {mm(p.units_x * 42 - 0.5)} × {mm(p.units_y * 42 - 0.5)} (n × 42 − 0.5)
-    </p>
   </ParamGroup>
 
   <ParamGroup name="Shape" summary={shapeSummary}>

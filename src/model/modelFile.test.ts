@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_BASEPLATE, validateBaseplate } from "./baseplateParams";
 import { DEFAULT_LID, validateLid } from "./lidParams";
 import {
   ModelFileError,
   SCHEMA_VERSION,
   parseModel,
+  sanitizeBaseplate,
   sanitizeParams,
+  serializeBaseplate,
   serializeModel,
 } from "./modelFile";
 
@@ -65,5 +68,58 @@ describe("B-11 model file", () => {
       parseModel(`{"type":"lid","schemaVersion":${SCHEMA_VERSION + 1}}`, "a.json"),
     ).toThrow(/Update the app/);
     expect(() => parseModel('{"type":"lid"}', "a.json")).toThrow(/schema version/);
+  });
+});
+
+describe("C-03 baseplate model file", () => {
+  it("round-trips every parameter", () => {
+    const params = {
+      ...DEFAULT_BASEPLATE,
+      units_x: 4,
+      units_y: 3,
+      baseplate_style: "skeleton" as const,
+      corner_magnets: true,
+      center_magnet: true,
+      rib_width: 6,
+      plate_color: "#445566",
+    };
+    const file = parseModel(serializeBaseplate("My base", params));
+    expect(file.params).toEqual(params);
+    expect(file).toMatchObject({
+      type: "baseplate",
+      schemaVersion: SCHEMA_VERSION,
+      name: "My base",
+    });
+  });
+
+  it("clamps values below the spec minimum; never below the minimum", () => {
+    const p = sanitizeBaseplate({
+      corner_magnet_d: 3,
+      baseplate_base: 0.3,
+      center_magnet_d: 1,
+      units_x: 99,
+    });
+    expect(p.corner_magnet_d).toBe(6.1);
+    expect(p.baseplate_base).toBe(0.4);
+    expect(p.center_magnet_d).toBe(5);
+    expect(p.units_x).toBe(12);
+    expect(validateBaseplate(p)).toEqual([]);
+  });
+
+  it("replaces wrong types, unknown choices and bad colours with defaults", () => {
+    const p = sanitizeBaseplate({
+      baseplate_style: "lace",
+      units_y: "3",
+      plate_color: "red",
+      corner_magnets: "yes",
+    });
+    expect(p).toEqual(DEFAULT_BASEPLATE);
+  });
+
+  it("opens a lid file as a lid and a baseplate file as a baseplate", () => {
+    expect(parseModel(serializeModel("a", DEFAULT_LID, "")).type).toBe("lid");
+    expect(parseModel(serializeBaseplate("b", DEFAULT_BASEPLATE)).type).toBe(
+      "baseplate",
+    );
   });
 });

@@ -1,6 +1,13 @@
 // Saved model: JSON with model type, schema version, parameters, text, colours and the
 // SVG as a string (ADR-0003). A schema change needs a version bump and a migration step.
 import {
+  BASEPLATE_LIMITS,
+  DEFAULT_BASEPLATE,
+  clampBaseplate,
+  type BaseplateLimitedKey,
+  type BaseplateParams,
+} from "./baseplateParams";
+import {
   DEFAULT_LID,
   LID_LIMITS,
   clampToLimit,
@@ -11,18 +18,21 @@ import {
 
 export const SCHEMA_VERSION = 1;
 
-export interface ModelFile {
-  type: "lid";
+interface ModelFileBase {
   schemaVersion: number;
   name: string;
   savedAt: string;
   svgName: string;
-  params: LidParams;
 }
+
+export type ModelFile =
+  | (ModelFileBase & { type: "lid"; params: LidParams })
+  | (ModelFileBase & { type: "baseplate"; params: BaseplateParams });
 
 export class ModelFileError extends Error {}
 
-const ENUMS: Partial<Record<keyof LidParams, readonly string[]>> = {
+const ENUMS: Partial<Record<string, readonly string[]>> = {
+  baseplate_style: ["solid", "skeleton"],
   variant: ["dust_cover", "stackable"],
   lip_mode: ["full", "corners_only"],
   foot_layout: ["merged", "per_cell"],
@@ -55,7 +65,7 @@ export const sanitizeParams = (raw: unknown): LidParams => {
     } else if (typeof fallback === "boolean") {
       if (typeof value === "boolean") out[key] = value;
     } else if (typeof value === "string") {
-      const choices = ENUMS[key as keyof LidParams];
+      const choices = ENUMS[key];
       if (choices ? choices.includes(value) : true) out[key] = value;
     }
   }
@@ -83,6 +93,35 @@ export const sanitizeParams = (raw: unknown): LidParams => {
   return lid;
 };
 
+/** Baseplate parameters of unknown origin to valid ones, like `sanitizeParams`. */
+export const sanitizeBaseplate = (raw: unknown): BaseplateParams => {
+  const input = (typeof raw === "object" && raw !== null ? raw : {}) as Record<
+    string,
+    unknown
+  >;
+  const out = { ...DEFAULT_BASEPLATE } as Record<string, unknown>;
+  for (const [key, fallback] of Object.entries(DEFAULT_BASEPLATE)) {
+    const value = input[key];
+    if (typeof fallback === "number") {
+      if (typeof value !== "number" || !Number.isFinite(value)) continue;
+      out[key] =
+        key in BASEPLATE_LIMITS
+          ? clampBaseplate(key as BaseplateLimitedKey, value)
+          : value;
+    } else if (typeof fallback === "boolean") {
+      if (typeof value === "boolean") out[key] = value;
+    } else if (typeof value === "string") {
+      const choices = ENUMS[key];
+      if (choices ? choices.includes(value) : true) out[key] = value;
+    }
+  }
+  const plate = out as unknown as BaseplateParams;
+  if (!/^#[0-9a-fA-F]{6}$/.test(plate.plate_color)) {
+    plate.plate_color = DEFAULT_BASEPLATE.plate_color;
+  }
+  return plate;
+};
+
 export const serializeModel = (
   name: string,
   params: LidParams,
@@ -94,6 +133,18 @@ export const serializeModel = (
     name,
     savedAt: new Date().toISOString(),
     svgName,
+    params,
+  };
+  return JSON.stringify(file, null, 2);
+};
+
+export const serializeBaseplate = (name: string, params: BaseplateParams): string => {
+  const file: ModelFile = {
+    type: "baseplate",
+    schemaVersion: SCHEMA_VERSION,
+    name,
+    savedAt: new Date().toISOString(),
+    svgName: "",
     params,
   };
   return JSON.stringify(file, null, 2);
@@ -114,13 +165,10 @@ export const parseModel = (text: string, fileName = "the file"): ModelFile => {
       `${fileName} is not a saved model. Open a .json file that this app saved.`,
     );
   }
-  if (
-    typeof data !== "object" ||
-    data === null ||
-    (data as { type?: unknown }).type !== "lid"
-  ) {
+  const type = (data as { type?: unknown } | null)?.type;
+  if (typeof data !== "object" || (type !== "lid" && type !== "baseplate")) {
     throw new ModelFileError(
-      `${fileName} is not a lid. Only lids can be opened in this version.`,
+      `${fileName} is not a lid or a baseplate. Only those can be opened in this version.`,
     );
   }
   const file = data as Record<string, unknown>;
@@ -136,15 +184,27 @@ export const parseModel = (text: string, fileName = "the file"): ModelFile => {
     );
   }
   const migrated = migrate(file);
-  return {
-    type: "lid",
+  const base = {
     schemaVersion: SCHEMA_VERSION,
-    name: typeof migrated.name === "string" && migrated.name ? migrated.name : "Lid",
     savedAt:
       typeof migrated.savedAt === "string"
         ? migrated.savedAt
         : new Date().toISOString(),
     svgName: typeof migrated.svgName === "string" ? migrated.svgName : "",
+  };
+  const name = typeof migrated.name === "string" ? migrated.name : "";
+  if (type === "baseplate") {
+    return {
+      ...base,
+      type,
+      name: name || "Base",
+      params: sanitizeBaseplate(migrated.params),
+    };
+  }
+  return {
+    ...base,
+    type,
+    name: name || "Lid",
     params: sanitizeParams(migrated.params),
   };
 };

@@ -4,7 +4,13 @@ import { beforeAll, describe, expect, it } from "vitest";
 import lucideIcons from "../data/lucideLidIcons.json";
 import { prepareAssets, type AssetLoaders } from "../geometry/assets";
 import { initKernel, type Kernel } from "../geometry/kernel";
-import { buildModel, type ModelMesh, type PartMesh } from "../geometry/model";
+import {
+  buildBaseplateModel,
+  buildModel,
+  type ModelMesh,
+  type PartMesh,
+} from "../geometry/model";
+import { DEFAULT_BASEPLATE } from "../model/baseplateParams";
 import { DEFAULT_LID, type LidParams } from "../model/lidParams";
 import { writeStl } from "./stl";
 import { write3mf, type PartColours } from "./threeMf";
@@ -208,5 +214,45 @@ describe("B-08 3MF", () => {
     const plateTop = Math.max(...plate.positions.filter((_, i) => i % 3 === 2));
     const textBottom = Math.min(...text.positions.filter((_, i) => i % 3 === 2));
     expect(textBottom).toBeCloseTo(plateTop, 4);
+  });
+});
+
+describe("C-02 baseplate meshes and export", () => {
+  it("every baseplate from 1x1 to 4x4 is a closed mesh with positive volume", () => {
+    for (const style of ["solid", "skeleton"] as const) {
+      for (const magnets of [false, true]) {
+        for (let n = 1; n <= 4; n++) {
+          const m = buildBaseplateModel(kernel, {
+            ...DEFAULT_BASEPLATE,
+            units_x: n,
+            units_y: n,
+            baseplate_style: style,
+            corner_magnets: magnets,
+            center_magnet: magnets,
+          });
+          const label = `${n}x${n} ${style} magnets ${magnets}`;
+          expect(
+            m.parts.map((part) => part.name),
+            label,
+          ).toEqual(["plate"]);
+          const part = m.parts[0] as PartMesh;
+          expect(edgesAreClosed(part), label).toBe(true);
+          // float32 vertices: the two volumes agree to a few parts in 10 million
+          const drift = Math.abs(signedVolume(part) - part.volume) / part.volume;
+          expect(drift, label).toBeLessThan(1e-5);
+          expect(signedVolume(part), label).toBeGreaterThan(0);
+        }
+      }
+    }
+  });
+
+  it("writes a 3MF with one object and one colour, and an STL", async () => {
+    const m = buildBaseplateModel(kernel, { ...DEFAULT_BASEPLATE, units_x: 2 });
+    const stl = writeStl(m.parts);
+    expect(stl.byteLength).toBe(
+      84 + 50 * ((m.parts[0] as PartMesh).indices.length / 3),
+    );
+    const file = await write3mf(m.parts, colours, "Base 2 × 1", "Base");
+    expect(file.byteLength).toBeGreaterThan(1000);
   });
 });

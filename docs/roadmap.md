@@ -17,7 +17,7 @@ Source: spec sections 2, 3, 6.2, 7 (incl. 7.3) and 9 (`docs/spec/gridfinity-gene
 |---|---|---|
 | A | MakerWorld script (OpenSCAD, Parametric Model Maker) | Done by the owner (outside this repo); serves as oracle |
 | B | Web app (PWA), lids | This repository, not started |
-| C | Bins and baseplates, sliding lid, filler for free space; one feature at a time | Later |
+| C | Bins and baseplates, sliding lid, filler for free space; one feature at a time | In progress: baseplate (C-01 to C-03) |
 | D | SolidCraft plugin | Later, only when the plugin system is mature |
 
 Rejected or postponed (spec section 2): desktop app with Tauri or Electron.
@@ -41,7 +41,17 @@ Rejected or postponed (spec section 2): desktop app with Tauri or Electron.
 
 Status 2 November 2026: B-01 to B-12 and B-14 built, B-13 dropped (owner decisions made in testing: `docs/spec/gridfinity-generator-spec.de.md` 7.1, "Stand Phase B"). Open: issue 7 (phone layout, after deployment). The owner released the lid on 3 November 2026 (tested, delivers well); the next feature is Phase C.
 
-## Phase C (later)
+## Phase C: one feature at a time
+
+Released by the owner on 3 November 2026: the baseplate ("Base"), first. Branch `base-feature`.
+
+- [x] **C-01 Baseplate constants and parameters.** Profile 0.7 / 1.8 / 2.15 (wall 4.65), widths 2.85 and 2.15 per side, radii R4 outside and R1.85 / R1.15 inside, with sources, and a test per number. Baseplate parameters with limits (size, style, solid base, corner and centre magnets, ribs). *AC:* a test per spec number; every value below its minimum is rejected.
+- [x] **C-02 Baseplate geometry.** Solid and skeleton style, corner magnets in every cell, centre magnet (on a hub with four ribs in the skeleton style), solid base raised automatically under the magnets. Depends on: C-01. *AC:* 1x1 is 42 × 42 × 5.05 with the default base (solid base 0.4); closed mesh for 1x1 up to 4x4 in both styles; a lid 1x1 fits a baseplate cell with about 0.25 mm of gap; pockets keep the 0.4 mm of base under the magnet.
+- [x] **C-03 Baseplate in the app.** Part switch enables "Base", parameter groups per `docs/design/ui-spec.md` section 8 (Size with a button that fits the bed, Style, Magnets, Advanced, Colours), preview, bed check, STL and 3MF export, save and load with `type: "baseplate"`. Depends on: C-02. *AC:* lid and baseplate keep their own values while the page is open; a saved baseplate opens again; the lid behaves as before.
+
+Not in this feature: fit to a drawer (own feature, below), bins, sliding lid.
+
+## Phase C, later features
 
 Bins and baseplates in the standard, sliding lid, filler for free space. Bin scope is given by the grid (Open decision 3). Filler: the user enters the width and length of the drawer, the baseplate is generated and, where it is too small, filled solid (fit to drawer, as in the script); later the drawer height is added so that the height of bins and lids stays locked to what fits. The reference script already contains more than Phase B (bin, baseplate, sliding lid, label); the owner accepts that. Extras come once the web app runs, and some may be paid.
 

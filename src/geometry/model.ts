@@ -1,7 +1,9 @@
 // Turns lid parameters into plain mesh data for the preview and the exporters.
 // Runs inside the worker; also used directly by the tests.
 import type { Manifold } from "manifold-3d";
+import { validateBaseplate, type BaseplateParams } from "../model/baseplateParams";
 import { validateLid, type LidParams } from "../model/lidParams";
+import { buildBaseplate } from "./baseplate";
 import type { LabelAssets } from "./label";
 import { buildLid, type LabelArea } from "./lid";
 import { Scope, type Kernel } from "./kernel";
@@ -44,6 +46,23 @@ const toPartMesh = (name: PartName, m: Manifold): PartMesh => {
   };
 };
 
+const toModelMesh = (
+  kernel: Kernel,
+  scope: Scope,
+  named: [PartName, Manifold][],
+  warnings: string[],
+  labelArea?: LabelArea,
+): ModelMesh => {
+  const all = scope.add(kernel.Manifold.compose(named.map(([, m]) => m)));
+  const { min, max } = all.boundingBox();
+  return {
+    parts: named.map(([name, m]) => toPartMesh(name, m)),
+    size: [max[0] - min[0], max[1] - min[1], max[2] - min[2]],
+    warnings,
+    labelArea,
+  };
+};
+
 export const buildModel = (
   kernel: Kernel,
   params: LidParams,
@@ -59,15 +78,23 @@ export const buildModel = (
     if (lid.lip) named.push(["lip", lid.lip]);
     if (lid.text) named.push(["text", lid.text]);
     if (lid.symbol) named.push(["symbol", lid.symbol]);
+    return toModelMesh(kernel, scope, named, lid.warnings, lid.labelArea);
+  } finally {
+    scope.dispose();
+  }
+};
 
-    const all = scope.add(kernel.Manifold.compose(named.map(([, m]) => m)));
-    const { min, max } = all.boundingBox();
-    return {
-      parts: named.map(([name, m]) => toPartMesh(name, m)),
-      size: [max[0] - min[0], max[1] - min[1], max[2] - min[2]],
-      warnings: lid.warnings,
-      labelArea: lid.labelArea,
-    };
+export const buildBaseplateModel = (
+  kernel: Kernel,
+  params: BaseplateParams,
+): ModelMesh => {
+  const errors = validateBaseplate(params);
+  if (errors.length > 0) throw new Error(errors.join(" "));
+
+  const scope = new Scope();
+  try {
+    const plate = buildBaseplate(kernel, scope, params);
+    return toModelMesh(kernel, scope, [["plate", plate]], []);
   } finally {
     scope.dispose();
   }

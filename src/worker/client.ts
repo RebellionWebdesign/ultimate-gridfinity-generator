@@ -2,6 +2,7 @@
 // dropped so a fast slider never queues up work.
 import type { ModelMesh } from "../geometry/model";
 import type { SvgShapes } from "../geometry/svg";
+import type { BaseplateParams } from "../model/baseplateParams";
 import type { LidParams } from "../model/lidParams";
 import type { BuildRequest, BuildResponse } from "./protocol";
 
@@ -40,12 +41,22 @@ export class GeometryClient {
     params: LidParams,
     svg?: SvgShapes,
   ): { id: number; result: Promise<ModelMesh> } {
+    return this.send((id) => ({ id, part: "lid", params, svg }));
+  }
+
+  buildBaseplate(params: BaseplateParams): { id: number; result: Promise<ModelMesh> } {
+    return this.send((id) => ({ id, part: "baseplate", params }));
+  }
+
+  private send(request: (id: number) => BuildRequest): {
+    id: number;
+    result: Promise<ModelMesh>;
+  } {
     const id = ++this.counter;
     const result = new Promise<ModelMesh>((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
     });
-    const request: BuildRequest = { id, params, svg };
-    this.worker.postMessage(request);
+    this.worker.postMessage(request(id));
     return { id, result };
   }
 

@@ -23,6 +23,14 @@ describe("Gridfinity constants match the spec", () => {
     ["lipHeight", 4.4],
     ["lipDepth", 2.6],
     ["lipFootOffset", 0.25],
+    ["baseplateProfileLower", 0.7],
+    ["baseplateProfileVertical", 1.8],
+    ["baseplateProfileUpper", 2.15],
+    ["baseplateProfileHeight", 4.65],
+    ["baseplateBottomInset", 2.85],
+    ["baseplateWallInset", 2.15],
+    ["baseplateRadiusBottom", 1.15],
+    ["baseplateRadiusWall", 1.85],
     ["magnetDiameter", 6],
     ["magnetThickness", 2],
     ["magnetPocketDiameter", 6.1],
@@ -47,6 +55,18 @@ describe("Gridfinity constants match the spec", () => {
     expect(sum + CONSTANTS.footUpperSlope.value).toBeCloseTo(
       CONSTANTS.footHeight.value,
     );
+  });
+
+  it("baseplate profile height is the sum of the profile", () => {
+    const { baseplateProfileLower: a, baseplateProfileVertical: b } = CONSTANTS;
+    const sum = a.value + b.value + CONSTANTS.baseplateProfileUpper.value;
+    expect(sum).toBeCloseTo(CONSTANTS.baseplateProfileHeight.value);
+  });
+
+  it("baseplate profile widths are 36.3 and 37.7", () => {
+    const { grid, baseplateBottomInset: bottom, baseplateWallInset: wall } = CONSTANTS;
+    expect(grid.value - 2 * bottom.value).toBeCloseTo(36.3, 10);
+    expect(grid.value - 2 * wall.value).toBeCloseTo(37.7, 10);
   });
 
   it("first layer usable space is 7 - 4.75", () => {

@@ -146,8 +146,11 @@ export const checkBed = (
   };
 };
 
-/** Outer size of a lid n cells wide (n x 42 - 0.5). */
-const lidSize = (cells: number): number => cells * 42 - 0.5;
+/** Outer size of a part n cells wide: a lid is n x 42 - 0.5, a baseplate n x 42. */
+const partSize = (cells: number, tolerance: number): number => cells * 42 - tolerance;
+
+/** The 0.5 mm that lids and bins are smaller than their cells. */
+export const LID_TOLERANCE = 0.5;
 
 /** The most cells along one axis that still fit, with the other axis unchanged. */
 export const maxCells = (
@@ -155,10 +158,14 @@ export const maxCells = (
   units: [number, number],
   height: number,
   printer: Printer,
+  tolerance = LID_TOLERANCE,
 ): number => {
   for (let n = units[axis === "x" ? 0 : 1]; n >= 1; n--) {
     const [ux, uy] = axis === "x" ? [n, units[1]] : [units[0], n];
-    if (checkBed([lidSize(ux), lidSize(uy), height], printer).fits) return n;
+    if (
+      checkBed([partSize(ux, tolerance), partSize(uy, tolerance), height], printer).fits
+    )
+      return n;
   }
   return 0;
 };

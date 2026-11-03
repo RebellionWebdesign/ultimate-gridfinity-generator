@@ -83,7 +83,9 @@
         <li>
           <div>
             <p class="t-label">{item.name}</p>
-            <p class="n-s t-caption">{date(item.savedAt)} · lid</p>
+            <p class="n-s t-caption">
+              {date(item.savedAt)} · {item.part === "baseplate" ? "base" : "lid"}
+            </p>
           </div>
           <button
             type="button"

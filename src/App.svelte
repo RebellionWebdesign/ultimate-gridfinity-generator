@@ -3,10 +3,11 @@
   import Icon from "./lib/Icon.svelte";
   import LicencesDialog from "./lib/LicencesDialog.svelte";
   import OutputPanel from "./lib/OutputPanel.svelte";
+  import BaseplatePanel from "./lib/BaseplatePanel.svelte";
   import ParamsPanel from "./lib/ParamsPanel.svelte";
   import PreviewStage from "./lib/PreviewStage.svelte";
   import Segmented from "./lib/Segmented.svelte";
-  import { ISSUES_URL, PART_NAME } from "./lib/parts";
+  import { ISSUES_URL, PART_NAME, formatSize } from "./lib/parts";
   import { editor } from "./lib/store.svelte";
 
   type Theme = "light" | "dark";
@@ -45,7 +46,7 @@
   // every change goes to the worker; the name follows the lid until it is renamed
   let touched = false;
   $effect(() => {
-    JSON.stringify(editor.params);
+    JSON.stringify([editor.part, editor.active]);
     untrack(() => {
       editor.syncName();
       editor.requestBuild();
@@ -63,16 +64,10 @@
   onMount(() => editor.requestBuild());
 
   const elapsed = $derived(((now - editor.startedAt) / 1000).toFixed(1));
-  const colours = $derived({
-    plate: editor.params.plate_color,
-    lip: editor.params.lip_color,
-    text: editor.params.text_color,
-    symbol: editor.params.symbol_color,
-  });
   const readout = $derived(
     editor.model
-      ? `${editor.params.units_x} × ${editor.params.units_y} lid · ${editor.model.size.map((v) => v.toFixed(1)).join(" × ")} mm`
-      : "Lid",
+      ? `${editor.units[0]} × ${editor.units[1]} ${editor.noun} · ${formatSize(editor.model.size)} mm`
+      : PART_NAME[editor.part],
   );
 
   const onDrop = async (event: DragEvent) => {
@@ -168,13 +163,7 @@
         hideLabel
         bind:value={editor.part}
         options={[
-          {
-            value: "baseplate",
-            label: PART_NAME.baseplate,
-            note: "Later",
-            disabled: true,
-            title: "Baseplates come in a later version",
-          },
+          { value: "baseplate", label: PART_NAME.baseplate },
           {
             value: "bin",
             label: "Bin",
@@ -229,15 +218,19 @@
   </header>
 
   <main id="main" class="main">
-    <h1 class="visually-hidden">Ultimate Gridfinity Generator: lid editor</h1>
+    <h1 class="visually-hidden">Ultimate Gridfinity Generator: {editor.noun} editor</h1>
     <aside class="params" aria-label="Parameters">
-      <ParamsPanel />
+      {#if editor.part === "baseplate"}
+        <BaseplatePanel />
+      {:else}
+        <ParamsPanel />
+      {/if}
     </aside>
 
     <section class="preview" aria-label="Preview">
       <PreviewStage
         model={editor.model}
-        {colours}
+        colours={editor.colours}
         labelArea={editor.model?.labelArea}
         bed={editor.bedCheck
           ? {
@@ -246,7 +239,7 @@
               plate: editor.printerInfo.plate,
             }
           : undefined}
-        units={[editor.params.units_x, editor.params.units_y]}
+        units={editor.units}
         dimmed={editor.slow && !!editor.model}
         {theme}
       />
@@ -273,8 +266,7 @@
           <div>
             <p>The preview stopped. {editor.message}</p>
             <p>
-              Your settings are kept. Make the lid smaller or turn off the hollow foot,
-              then try again.
+              Your settings are kept. Make the {editor.noun} smaller, then try again.
             </p>
             <button type="button" onclick={() => editor.retry()}>Try again</button>
           </div>
@@ -284,8 +276,8 @@
           <Icon name="triangle-alert" />
           <div>
             <p>
-              This lid does not fit the {editor.printer} bed. The lid is
-              {editor.model.size.map((v) => v.toFixed(1)).join(" × ")} mm, the printable area
+              This {editor.noun} does not fit the {editor.printer} bed. It is
+              {formatSize(editor.model.size)} mm, the printable area
               {editor.bed.join(" × ")} mm{editor.printerInfo.exclude
                 ? `, with ${editor.printerInfo.exclude.join(" × ")} mm at the front left reserved`
                 : ""}, also when turned 90°.
@@ -294,7 +286,7 @@
               {#if editor.bedFixes.x}
                 <button
                   type="button"
-                  onclick={() => (editor.params.units_x = editor.bedFixes.x)}
+                  onclick={() => editor.setUnits("x", editor.bedFixes.x)}
                 >
                   Set Width to {editor.bedFixes.x}
                 </button>
@@ -302,7 +294,7 @@
               {#if editor.bedFixes.y}
                 <button
                   type="button"
-                  onclick={() => (editor.params.units_y = editor.bedFixes.y)}
+                  onclick={() => editor.setUnits("y", editor.bedFixes.y)}
                 >
                   Set Depth to {editor.bedFixes.y}
                 </button>
