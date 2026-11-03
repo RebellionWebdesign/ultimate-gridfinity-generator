@@ -17,7 +17,7 @@ Source: spec sections 2, 3, 6.2, 7 (incl. 7.3) and 9 (`docs/spec/gridfinity-gene
 |---|---|---|
 | A | MakerWorld script (OpenSCAD, Parametric Model Maker) | Done by the owner (outside this repo); serves as oracle |
 | B | Web app (PWA), lids | This repository, not started |
-| C | Bins and baseplates, sliding lid, filler for free space; one feature at a time | In progress: baseplate (C-01 to C-03) |
+| C | Bins and baseplates, sliding lid, filler for free space; one feature at a time | In progress: baseplate (C-01 to C-03) and bin (C-04 to C-08) built; sliding lid and filler next |
 | D | SolidCraft plugin | Later, only when the plugin system is mature |
 
 Rejected or postponed (spec section 2): desktop app with Tauri or Electron.
@@ -51,7 +51,7 @@ Released by the owner on 3 November 2026: the baseplate ("Base"), first; built a
 
 Not in this feature: fit to a drawer (own feature, below), bins, sliding lid.
 
-### Bin (released by the owner on 3 November 2026, branch `bin-feature`)
+### Bin (released by the owner on 3 November 2026; built and merged into `main` the same day)
 
 Scope (spec 3.2, Open decision 3): width and depth in cells, height in 7 mm units, top edge, walls and floor, magnets and foot. No compartments, no scoop, no label tab. The sliding lid and the filler are their own features. The owner tests after each step that shows in the app.
 
