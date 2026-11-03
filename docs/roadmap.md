@@ -39,7 +39,7 @@ Rejected or postponed (spec section 2): desktop app with Tauri or Electron.
 - [x] **B-13 Static hosting.** Dropped (owner, 2 November 2026): hosting is not a task of this repository. `npm run build` makes the static site; see the README for what the server needs. Depends on: B-12.
 - [x] **B-14 OSS Licenses page.** A page in the app that lists bundled fonts and packages with licence and a link to the official source; the list is kept in `skills/licences-and-credits/SKILL.md`. Licence texts are bundled with the font files. Depends on: B-10. *AC:* every bundled font and runtime package appears with name, licence and link; the page works offline.
 
-Status 2 November 2026: B-01 to B-12 and B-14 built, B-13 dropped (owner decisions made in testing: `docs/spec/gridfinity-generator-spec.de.md` 7.1, "Stand Phase B"). Open: issue 7 (phone layout, after deployment); text size against MakerWorld not checked; the owner has not yet released the lid for the next feature.
+Status 2 November 2026: B-01 to B-12 and B-14 built, B-13 dropped (owner decisions made in testing: `docs/spec/gridfinity-generator-spec.de.md` 7.1, "Stand Phase B"). Open: issue 7 (phone layout, after deployment). The owner released the lid on 3 November 2026 (tested, delivers well); the next feature is Phase C.
 
 ## Phase C (later)
 
