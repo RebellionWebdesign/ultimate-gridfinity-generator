@@ -6,6 +6,7 @@
     maxHeightUnits,
     type BinLimitedKey,
   } from "../model/binParams";
+  import DrawerHeight from "./DrawerHeight.svelte";
   import Field from "./Field.svelte";
   import NumberField from "./NumberField.svelte";
   import ParamGroup from "./ParamGroup.svelte";
@@ -13,20 +14,26 @@
   import Switch from "./Switch.svelte";
   import { PART_NAME, mmText } from "./parts";
   import { editor } from "./store.svelte";
+  import { binMaxUnits } from "../geometry/drawer";
 
   const p = editor.bin;
 
   /** The whole build height of the chosen printer may be used (bed check on). */
   const heightMax = $derived(
-    editor.bedCheck
-      ? Math.max(
-          BIN_LIMITS.height_units.min,
-          Math.min(
-            BIN_LIMITS.height_units.max,
-            maxHeightUnits(editor.printerInfo.bed[2], p.lip_style),
-          ),
-        )
-      : BIN_LIMITS.height_units.max,
+    Math.min(
+      editor.bedCheck
+        ? Math.max(
+            BIN_LIMITS.height_units.min,
+            Math.min(
+              BIN_LIMITS.height_units.max,
+              maxHeightUnits(editor.printerInfo.bed[2], p.lip_style),
+            ),
+          )
+        : BIN_LIMITS.height_units.max,
+      editor.drawerHeight > 0
+        ? binMaxUnits(p, editor.drawerHeight)
+        : BIN_LIMITS.height_units.max,
+    ),
   );
 
   const sizeSummary = $derived(`${p.units_x} × ${p.units_y} × ${p.height_units}`);
@@ -76,10 +83,13 @@
       step={1}
       def={DEFAULT_BIN.height_units}
       unit="× 7 mm"
-      why={editor.bedCheck
-        ? `The build height of ${editor.printer} (${editor.printerInfo.bed[2]} mm) is the limit`
-        : BIN_LIMITS.height_units.why}
+      why={editor.drawerHeight > 0
+        ? `The drawer (${editor.drawerHeight} mm) is the limit`
+        : editor.bedCheck
+          ? `The build height of ${editor.printer} (${editor.printerInfo.bed[2]} mm) is the limit`
+          : BIN_LIMITS.height_units.why}
     />
+    <DrawerHeight />
     <p class="t-caption">The stacking lip is extra and does not count in the height.</p>
   </ParamGroup>
 

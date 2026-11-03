@@ -26,4 +26,6 @@ Checks the spec asks for (section 6.2). They become automated tests once code ex
 
 - **Split baseplate:** the pieces together have the volume of the whole plate; every piece is a closed mesh and within the bed; cuts run along cell boundaries, so every cell stays whole; a plate that fits the bed is not split; the ZIP has one file per piece.
 
+- **Drawer height:** a bin has at most the units that fit (7 × n, plus 4.4 with a lip) in the drawer, a lid at most the units or the plate thickness that fit with its lip or raised label; 0 switches the lock off; a taller part is lowered, never raised.
+
 Report what you measured and with which tool. Do not report a check as passed that was not run.

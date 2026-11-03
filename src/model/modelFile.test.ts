@@ -182,3 +182,22 @@ describe("C-07 bin model file", () => {
     expect(p).toEqual(DEFAULT_BIN);
   });
 });
+
+describe("C-13 drawer height in the model file", () => {
+  it("is saved with every part type and read back", () => {
+    for (const text of [
+      serializeModel("a", DEFAULT_LID, "", 90),
+      serializeBin("b", DEFAULT_BIN, 90),
+      serializeBaseplate("c", DEFAULT_BASEPLATE, 90),
+    ]) {
+      expect(parseModel(text).drawerHeight).toBe(90);
+    }
+  });
+
+  it("is 0 in files that have none, and kept within 0 to 1000", () => {
+    const old = JSON.stringify({ type: "lid", schemaVersion: 1, params: {} });
+    expect(parseModel(old).drawerHeight).toBe(0);
+    expect(parseModel(serializeBin("b", DEFAULT_BIN, 5000)).drawerHeight).toBe(1000);
+    expect(parseModel(serializeBin("b", DEFAULT_BIN, -3)).drawerHeight).toBe(0);
+  });
+});

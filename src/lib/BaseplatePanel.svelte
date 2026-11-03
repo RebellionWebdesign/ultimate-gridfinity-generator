@@ -5,6 +5,7 @@
     baseOf,
     type BaseplateLimitedKey,
   } from "../model/baseplateParams";
+  import DrawerHeight from "./DrawerHeight.svelte";
   import Field from "./Field.svelte";
   import NumberField from "./NumberField.svelte";
   import ParamGroup from "./ParamGroup.svelte";
@@ -90,6 +91,7 @@
     {/if}
     {@render num("plate_min_x_mm", "Drawer width", "mm")}
     {@render num("plate_min_y_mm", "Drawer depth", "mm")}
+    <DrawerHeight />
     <p class="t-caption">
       0 switches it off. Where the plate is smaller than the drawer, the rest is filled
       solid.

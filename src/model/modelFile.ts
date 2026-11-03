@@ -26,6 +26,8 @@ import {
 export const SCHEMA_VERSION = 1;
 
 interface ModelFileBase {
+  /** the drawer height that locks bins and lids (mm, 0 = off); files without it have 0 */
+  drawerHeight: number;
   schemaVersion: number;
   name: string;
   savedAt: string;
@@ -161,8 +163,10 @@ export const serializeModel = (
   name: string,
   params: LidParams,
   svgName: string,
+  drawerHeight = 0,
 ): string => {
   const file: ModelFile = {
+    drawerHeight,
     type: "lid",
     schemaVersion: SCHEMA_VERSION,
     name,
@@ -173,8 +177,13 @@ export const serializeModel = (
   return JSON.stringify(file, null, 2);
 };
 
-export const serializeBin = (name: string, params: BinParams): string => {
+export const serializeBin = (
+  name: string,
+  params: BinParams,
+  drawerHeight = 0,
+): string => {
   const file: ModelFile = {
+    drawerHeight,
     type: "bin",
     schemaVersion: SCHEMA_VERSION,
     name,
@@ -185,8 +194,13 @@ export const serializeBin = (name: string, params: BinParams): string => {
   return JSON.stringify(file, null, 2);
 };
 
-export const serializeBaseplate = (name: string, params: BaseplateParams): string => {
+export const serializeBaseplate = (
+  name: string,
+  params: BaseplateParams,
+  drawerHeight = 0,
+): string => {
   const file: ModelFile = {
+    drawerHeight,
     type: "baseplate",
     schemaVersion: SCHEMA_VERSION,
     name,
@@ -234,7 +248,12 @@ export const parseModel = (text: string, fileName = "the file"): ModelFile => {
     );
   }
   const migrated = migrate(file);
+  const drawer = migrated.drawerHeight;
   const base = {
+    drawerHeight:
+      typeof drawer === "number" && Number.isFinite(drawer)
+        ? Math.min(1000, Math.max(0, drawer))
+        : 0,
     schemaVersion: SCHEMA_VERSION,
     savedAt:
       typeof migrated.savedAt === "string"

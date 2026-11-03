@@ -47,8 +47,9 @@
   // every change goes to the worker; the name follows the lid until it is renamed
   let touched = false;
   $effect(() => {
-    JSON.stringify([editor.part, editor.active, editor.maxTile]);
+    JSON.stringify([editor.part, editor.active, editor.maxTile, editor.drawerHeight]);
     untrack(() => {
+      editor.lockHeights();
       editor.syncName();
       editor.requestBuild();
       if (touched) editor.autosave();

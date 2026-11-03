@@ -7,6 +7,7 @@ import {
   validateBin,
   type BinParams,
 } from "../model/binParams";
+import { lockBin, lockLid } from "../geometry/drawer";
 import {
   DEFAULT_BASEPLATE,
   validateBaseplate,
@@ -21,7 +22,7 @@ import {
   type ModelFile,
 } from "../model/modelFile";
 import { GeometryClient, InputBuildError } from "../worker/client";
-import type { PartType } from "./parts";
+import { mmText, type PartType } from "./parts";
 import {
   CUSTOM_LIMITS,
   CUSTOM_PRINTER,
@@ -70,6 +71,8 @@ class Editor {
   params = $state<LidParams>({ ...DEFAULT_LID });
   baseplate = $state<BaseplateParams>({ ...DEFAULT_BASEPLATE });
   bin = $state<BinParams>({ ...DEFAULT_BIN });
+  /** the height of the drawer in mm: bins and lids are kept lower than it (0 = off) */
+  drawerHeight = $state(0);
   name = $state("Lid 1 × 1");
   model = $state.raw<ModelMesh | null>(null);
   status = $state<Status>("computing");
@@ -179,6 +182,17 @@ class Editor {
       b.units_y = Math.max(1, Math.floor(b.plate_min_y_mm / 42));
   }
 
+  /** Lowers the lid and the bin to the drawer height where they are taller. */
+  lockHeights(): void {
+    const drawer = this.drawerHeight;
+    if (drawer <= 0) return;
+    const lid = lockLid($state.snapshot(this.params) as LidParams, drawer);
+    this.params.height_units_auto = lid.height_units_auto;
+    this.params.plate_thickness = lid.plate_thickness;
+    const bin = lockBin($state.snapshot(this.bin) as BinParams, drawer);
+    this.bin.height_units = bin.height_units;
+  }
+
   setUnits(axis: "x" | "y", cells: number): void {
     const p = this.active;
     if (axis === "x") p.units_x = cells;
@@ -194,7 +208,21 @@ class Editor {
   );
 
   /** hints about the current model (not errors), shown while it is ready */
-  warnings = $derived(this.status === "ready" && this.model ? this.model.warnings : []);
+  warnings = $derived(
+    this.status === "ready" && this.model
+      ? [...this.model.warnings, ...this.drawerWarning]
+      : [],
+  );
+
+  /** The part is taller than the drawer (only when it cannot be lowered any further). */
+  private get drawerWarning(): string[] {
+    const height = this.model?.size[2] ?? 0;
+    return this.drawerHeight > 0 && height > this.drawerHeight + 1e-6
+      ? [
+          `This ${this.current} is ${mmText(height)} mm tall, the drawer is ${mmText(this.drawerHeight)} mm high.`,
+        ]
+      : [];
+  }
 
   /** a bed the user typed in: a square with rounded corners, plus the build height */
   customSize = $state<number>(CUSTOM_LIMITS.size.def);
@@ -421,18 +449,24 @@ class Editor {
   /** The model as a file's text, for "Save file". */
   toFileText(): string {
     if (this.current === "bin") {
-      return serializeBin(this.name, $state.snapshot(this.bin) as BinParams);
+      return serializeBin(
+        this.name,
+        $state.snapshot(this.bin) as BinParams,
+        this.drawerHeight,
+      );
     }
     if (this.current === "baseplate") {
       return serializeBaseplate(
         this.name,
         $state.snapshot(this.baseplate) as BaseplateParams,
+        this.drawerHeight,
       );
     }
     return serializeModel(
       this.name,
       $state.snapshot(this.params) as LidParams,
       this.svgName,
+      this.drawerHeight,
     );
   }
 
@@ -447,6 +481,7 @@ class Editor {
     }
     this.loadError = "";
     this.part = file.type;
+    this.drawerHeight = file.drawerHeight;
     if (file.type === "baseplate") Object.assign(this.baseplate, file.params);
     else if (file.type === "bin") Object.assign(this.bin, file.params);
     else Object.assign(this.params, file.params);

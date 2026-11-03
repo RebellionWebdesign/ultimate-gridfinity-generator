@@ -6,6 +6,7 @@
     offsetLimit,
     type LimitedKey,
   } from "../model/lidParams";
+  import DrawerHeight from "./DrawerHeight.svelte";
   import Field from "./Field.svelte";
   import Icon from "./Icon.svelte";
   import NumberField from "./NumberField.svelte";
@@ -14,6 +15,7 @@
   import Switch from "./Switch.svelte";
   import { PART_NAME } from "./parts";
   import { editor } from "./store.svelte";
+  import { lidMaxPlate, lidMaxUnits } from "../geometry/drawer";
 
   const p = editor.params;
 
@@ -84,12 +86,18 @@
   );
 </script>
 
-{#snippet num(key: LimitedKey, label: string, unit: string, minWhy = "")}
+{#snippet num(
+  key: LimitedKey,
+  label: string,
+  unit: string,
+  minWhy = "",
+  max = LID_LIMITS[key].max,
+)}
   <NumberField
     {label}
     bind:value={p[key]}
     min={LID_LIMITS[key].min}
-    max={LID_LIMITS[key].max}
+    {max}
     step={LID_LIMITS[key].step}
     def={DEFAULT_LID[key]}
     {unit}
@@ -120,6 +128,7 @@
   <ParamGroup name="Size" summary={sizeSummary}>
     {@render num("units_x", "Width", "cells")}
     {@render num("units_y", "Depth", "cells")}
+    <DrawerHeight />
   </ParamGroup>
 
   <ParamGroup name="Shape" summary={shapeSummary}>
@@ -175,7 +184,15 @@
       ]}
     />
     {#if p.plate_thickness_mode === "auto"}
-      {@render num("height_units_auto", "Total height", "× 7 mm")}
+      {@render num(
+        "height_units_auto",
+        "Total height",
+        "× 7 mm",
+        "",
+        editor.drawerHeight > 0
+          ? lidMaxUnits(p, editor.drawerHeight)
+          : LID_LIMITS.height_units_auto.max,
+      )}
       <p class="t-caption">Auto makes the total height a multiple of 7 mm.</p>
     {:else}
       {@render num(
@@ -183,6 +200,9 @@
         "Plate",
         "mm",
         "2.25 mm is what is left of the first 7 mm layer",
+        editor.drawerHeight > 0
+          ? lidMaxPlate(p, editor.drawerHeight)
+          : LID_LIMITS.plate_thickness.max,
       )}
     {/if}
     <Segmented
