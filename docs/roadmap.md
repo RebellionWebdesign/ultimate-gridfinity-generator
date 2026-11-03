@@ -43,7 +43,7 @@ Status 2 November 2026: B-01 to B-12 and B-14 built, B-13 dropped (owner decisio
 
 ## Phase C: one feature at a time
 
-Released by the owner on 3 November 2026: the baseplate ("Base"), first. Branch `base-feature`.
+Released by the owner on 3 November 2026: the baseplate ("Base"), first; built and merged into `main` the same day.
 
 - [x] **C-01 Baseplate constants and parameters.** Profile 0.7 / 1.8 / 2.15 (wall 4.65), widths 2.85 and 2.15 per side, radii R4 outside and R1.85 / R1.15 inside, with sources, and a test per number. Baseplate parameters with limits (size, style, solid base, corner and centre magnets, ribs). *AC:* a test per spec number; every value below its minimum is rejected.
 - [x] **C-02 Baseplate geometry.** Solid and skeleton style, corner magnets in every cell, centre magnet (on a hub with four ribs in the skeleton style), solid base raised automatically under the magnets. Depends on: C-01. *AC:* 1x1 is 42 × 42 × 5.05 with the default base (solid base 0.4); closed mesh for 1x1 up to 4x4 in both styles; a lid 1x1 fits a baseplate cell with about 0.25 mm of gap; pockets keep the 0.4 mm of base under the magnet.
