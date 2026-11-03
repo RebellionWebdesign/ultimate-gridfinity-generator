@@ -114,3 +114,28 @@ describe("bed check", () => {
     expect(maxCells("x", [5, 1], 7, custom)).toBe(4);
   });
 });
+
+describe("H3C (owner, 3 November 2026)", () => {
+  it("has a 330 x 320 x 325 mm build volume", () => {
+    expect(printer("Bambu Lab H3C").bed).toEqual([330, 320, 325]);
+  });
+
+  it("its plate has the printable area as body, two back tabs and two front lips", () => {
+    const plate = printer("Bambu Lab H3C").plate;
+    expect(plate?.body).toBeUndefined();
+    expect(plate?.backTabs).toHaveLength(2);
+    expect(plate?.frontLips).toHaveLength(2);
+    // the tabs and lips stay inside the 330 mm of the body and do not overlap
+    for (const piece of [...(plate?.backTabs ?? []), ...(plate?.frontLips ?? [])]) {
+      expect(piece.from).toBeGreaterThanOrEqual(0);
+      expect(piece.to).toBeLessThanOrEqual(330);
+    }
+    const [left, right] = plate?.frontLips ?? [];
+    expect(left?.to).toBeLessThan(right?.from ?? 0);
+  });
+
+  it("fits a part of the printable size", () => {
+    expect(checkBed([330, 320, 325], printer("Bambu Lab H3C")).fits).toBe(true);
+    expect(checkBed([331, 320, 325], printer("Bambu Lab H3C")).turned).toBe(false);
+  });
+});

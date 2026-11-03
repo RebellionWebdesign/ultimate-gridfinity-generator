@@ -49,6 +49,23 @@ const PLATE_H2: PlateShape = {
   ],
 };
 
+/**
+ * The plate of the H3C (owner's picture and size, 3 November 2026): the body is the printable
+ * 330 x 320 mm, two raised tabs at the back corners and two lips at the front corners. The
+ * lengths are measured from the picture (330 mm = 480 px), about 1 mm accurate.
+ */
+const PLATE_H3C: PlateShape = {
+  cornerRadius: 3,
+  backTabs: [
+    { from: 0, to: 34, flank: 6, height: 4.8 },
+    { from: 296, to: 330, flank: 6, height: 4.8 },
+  ],
+  frontLips: [
+    { from: 0, to: 120, flank: 8, depth: 10 },
+    { from: 210, to: 330, flank: 8, depth: 10 },
+  ],
+};
+
 /** The A1 mini plate (owner's picture, 2 November 2026): two tabs at the back, a lip at the front. */
 const PLATE_A1_MINI: PlateShape = {
   cornerRadius: 3,
@@ -98,6 +115,7 @@ export const PRINTERS: Printer[] = [
   { name: "Bambu Lab H2D Pro", bed: [325, 320, 325], plate: PLATE_H2 },
   { name: "Bambu Lab H2C", bed: [325, 320, 325], plate: PLATE_H2 },
   { name: "Bambu Lab H2S", bed: [340, 320, 340], plate: PLATE_H2 },
+  { name: "Bambu Lab H3C", bed: [330, 320, 325], plate: PLATE_H3C },
   { name: "Bambu Lab X2D", bed: [256, 256, 261], plate: PLATE_256 },
 ];
 
