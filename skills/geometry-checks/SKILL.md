@@ -20,4 +20,6 @@ Checks the spec asks for (section 6.2). They become automated tests once code ex
 
 - **Baseplate:** 1x1 is 42 × 42 × 5.05 with the default base (0.4); closed mesh for 1x1 to 4x4, solid and skeleton, with and without magnets; four corner pockets and one centre pocket per cell; the base is raised so 0.4 mm of material stays under every pocket; the foot of a lid is 0.25 mm smaller per side than the pocket wall.
 
+- **Bin:** 1x1x3 is 41.5 × 41.5 × 25.4 with the lip and 21 without; 2x2 is 83.5 wide; foot bottom edge 35.6; the cavity wall equals the wall setting; closed mesh from 1x1x1 to 4x4x6 for every top edge, with and without magnets; four corner pockets in the whole bin and one centre pocket per corner foot; the floor rises so 0.8 mm stays above the tallest magnet; the lip is its own part only with its own colour.
+
 Report what you measured and with which tool. Do not report a check as passed that was not run.

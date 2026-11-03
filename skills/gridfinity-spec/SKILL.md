@@ -29,7 +29,7 @@ Source: spec section 4 (`docs/spec/gridfinity-generator-spec.de.md`). All values
 | Example with lip | 1x1x3 = 25.4 tall; 2u = 18.4 | in practice the lip is also built with 3.75 or 3.69 (0.5 rounding) |
 | Baseplate profile | 0.7 / 1.8 / 2.15 | wall 4.65 tall, nominally "~5", 0.25 offset |
 | Magnet | 6 × 2 | pocket 6.1 Ø × 2.1 deep as the start value, changeable by the user (owner decision); 6 × 2 plus 0.1 mm clearance, which everyone adds (owner) |
-| Screw hole | 3.0 Ø | with screws selected, a 3 mm hole is punched through the centre of the magnet pocket (boolean), nothing more; dropped on lids (owner, 2 November 2026), bins only |
+| Screw hole | 3.0 Ø | with screws selected, a 3 mm hole is punched through the centre of the magnet pocket (boolean), nothing more; dropped on lids (owner, 2 November 2026) and on bins (owner, 3 November 2026): only the baseplate makes sense |
 | Baseplate radii | R4 outside, R1.85 and R1.15 inside | all corners equal, holes symmetrical |
 | Baseplate hole position | 26 spacing, 8 from the cell edge, 5.15 from the foot edge | 8 = (42 − 26) / 2; 5.15 = 8 − 2.85 |
 | Baseplate profile widths | 2.85 per side at the bottom, 2.15 per side at the wall; 36.3 and 37.7; ridge 5.7 at the bottom | 36.3 = 42 − 2 × 2.85; 37.7 = 42 − 2 × 2.15 |
@@ -59,7 +59,7 @@ Wall thickness, floor thickness, lid plate, clearance, hollow-foot wall, corner 
 | Corner lip length (`corner_len`) | 10 |
 | Emboss depth | 0.6 |
 | Sliding-lid clearance | 0.3 |
-| Centre magnet | 5.0 × 2.0, clearance 0.2 (baseplate: 0.1, owner, 3 November 2026) |
+| Centre magnet | 6.1 × 2.0, clearance 0.2 (owner, 3 November 2026: diameter from 6.1 like the corner pocket, it was 5.0; baseplate clearance 0.1) |
 | Text height (`text_size`) | 5.0, also the minimum (owner, 2 November 2026; it was 8, but then a word like ENGRAVED was too wide for a 1x1 lid); upper limit 30 from the script |
 | Colours | Until the user chooses a colour, parts stay Stone `#9DA39A`; text is black (placeholder) |
 

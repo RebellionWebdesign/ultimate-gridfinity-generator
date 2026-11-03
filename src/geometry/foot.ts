@@ -56,6 +56,28 @@ export const footLayers = (extraX = 0, extraY = 0): Layer[] => {
   ];
 };
 
+/**
+ * Extra floor inside a hollow foot: the cavity stops this far below the top of the foot, so
+ * the plate (or the floor of a bin) and this floor together carry the magnet pockets
+ * (owner, 2 November 2026).
+ */
+export const HOLLOW_FLOOR = 1.45;
+
+/**
+ * Cavity of an open hollow foot: one straight cut from below, inset from the narrowest
+ * part of the foot (its bottom edge) by the wall, ending `HOLLOW_FLOOR` below the top of
+ * the foot. No profile steps, no lip inside (owner, 2 November 2026).
+ */
+export const cavityLayers = (inset: number, extraX = 0, extraY = 0): Layer[] => {
+  const ring = (z: number): Layer => ({
+    z,
+    hx: footHalf(0) - inset + extraX,
+    hy: footHalf(0) - inset + extraY,
+    r: Math.max(footRadius(0) - inset, 0.3),
+  });
+  return [ring(-0.5), ring(c("footHeight") - HOLLOW_FLOOR)];
+};
+
 /** Solid foot centred on the x/y origin, z = 0 to 4.76. */
 export const solidFoot = (kernel: Kernel, extraX = 0, extraY = 0): Manifold =>
   loft(kernel, footLayers(extraX, extraY));

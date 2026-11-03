@@ -50,10 +50,10 @@ export const BASEPLATE_LIMITS = {
     why: "3.9 mm is the script's limit",
   },
   center_magnet_d: {
-    min: 5,
+    min: CONSTANTS.magnetPocketDiameter.value,
     max: 10,
     step: 0.1,
-    why: "5 mm is the project's default; 10 mm is the largest the cell holds",
+    why: "6.1 mm like the corner pocket (owner, 3 November 2026); 10 mm is the largest the cell holds",
   },
   center_magnet_h: {
     min: 2,

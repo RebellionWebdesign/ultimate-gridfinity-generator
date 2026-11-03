@@ -2,8 +2,10 @@
 // Runs inside the worker; also used directly by the tests.
 import type { Manifold } from "manifold-3d";
 import { validateBaseplate, type BaseplateParams } from "../model/baseplateParams";
+import { validateBin, type BinParams } from "../model/binParams";
 import { validateLid, type LidParams } from "../model/lidParams";
 import { buildBaseplate } from "./baseplate";
+import { buildBin } from "./bin";
 import type { LabelAssets } from "./label";
 import { buildLid, type LabelArea } from "./lid";
 import { Scope, type Kernel } from "./kernel";
@@ -95,6 +97,21 @@ export const buildBaseplateModel = (
   try {
     const plate = buildBaseplate(kernel, scope, params);
     return toModelMesh(kernel, scope, [["plate", plate]], []);
+  } finally {
+    scope.dispose();
+  }
+};
+
+export const buildBinModel = (kernel: Kernel, params: BinParams): ModelMesh => {
+  const errors = validateBin(params);
+  if (errors.length > 0) throw new Error(errors.join(" "));
+
+  const scope = new Scope();
+  try {
+    const { body, lip } = buildBin(kernel, scope, params);
+    const named: [PartName, Manifold][] = [["plate", body]];
+    if (lip) named.push(["lip", lip]);
+    return toModelMesh(kernel, scope, named, []);
   } finally {
     scope.dispose();
   }

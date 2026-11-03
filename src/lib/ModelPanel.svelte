@@ -114,7 +114,9 @@
               <div>
                 <p class="t-label">{item.name}</p>
                 <p class="n-s t-caption">
-                  {date(item.savedAt)} · {item.part === "baseplate" ? "base" : "lid"}
+                  {date(item.savedAt)} · {item.part === "baseplate"
+                    ? "base"
+                    : (item.part ?? "lid")}
                 </p>
               </div>
               <button

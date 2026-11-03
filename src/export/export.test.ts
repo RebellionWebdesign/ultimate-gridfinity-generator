@@ -6,11 +6,13 @@ import { prepareAssets, type AssetLoaders } from "../geometry/assets";
 import { initKernel, type Kernel } from "../geometry/kernel";
 import {
   buildBaseplateModel,
+  buildBinModel,
   buildModel,
   type ModelMesh,
   type PartMesh,
 } from "../geometry/model";
 import { DEFAULT_BASEPLATE } from "../model/baseplateParams";
+import { DEFAULT_BIN } from "../model/binParams";
 import { DEFAULT_LID, type LidParams } from "../model/lidParams";
 import { writeStl } from "./stl";
 import { write3mf, type PartColours } from "./threeMf";
@@ -254,5 +256,46 @@ describe("C-02 baseplate meshes and export", () => {
     );
     const file = await write3mf(m.parts, colours, "Base 2 × 1", "Base");
     expect(file.byteLength).toBeGreaterThan(1000);
+  });
+});
+
+describe("C-05 bin meshes and export", () => {
+  it("every bin from 1x1x1 up to 4x4x6 is a closed mesh with positive volume", () => {
+    for (const lip of ["with_lip", "flat_same_height", "flat_lower"] as const) {
+      for (const magnets of [false, true]) {
+        for (const [n, units] of [
+          [1, 1],
+          [2, 3],
+          [4, 6],
+        ] as const) {
+          const m = buildBinModel(kernel, {
+            ...DEFAULT_BIN,
+            foot_hollow: magnets ? "open" : "none",
+            units_x: n,
+            units_y: n,
+            height_units: units,
+            lip_style: lip,
+            corner_magnets: magnets,
+            center_magnet: magnets,
+          });
+          const label = `${n}x${n}x${units} ${lip} magnets ${magnets}`;
+          for (const part of m.parts) {
+            expect(edgesAreClosed(part), label).toBe(true);
+            expect(signedVolume(part), label).toBeGreaterThan(0);
+          }
+        }
+      }
+    }
+  });
+
+  it("the stacking lip is its own part only with its own colour, and the 3MF keeps it apart", async () => {
+    const together = buildBinModel(kernel, DEFAULT_BIN);
+    expect(together.parts.map((part) => part.name)).toEqual(["plate"]);
+    const split = buildBinModel(kernel, { ...DEFAULT_BIN, lip_color_enabled: true });
+    expect(split.parts.map((part) => part.name)).toEqual(["plate", "lip"]);
+    const file = await write3mf(split.parts, colours, "Bin 1 × 1 × 3", "Bin");
+    const xml = unzip(file)["3D/3dmodel.model"] ?? "";
+    expect(xml.match(/<m:colorgroup /g)).toHaveLength(2);
+    expect(xml.match(/<component /g)).toHaveLength(2);
   });
 });

@@ -4,7 +4,7 @@
 import type { Manifold } from "manifold-3d";
 import { CONSTANTS, holeOffset, outerSize } from "../gridfinity/constants";
 import { plateThicknessOf, type LidParams } from "../model/lidParams";
-import { cellHalf, footHalf, footRadius, solidFoot } from "./foot";
+import { HOLLOW_FLOOR, cavityLayers, cellHalf, solidFoot } from "./foot";
 import type { Kernel, Scope } from "./kernel";
 import {
   LABEL_EDGE_MARGIN,
@@ -107,26 +107,7 @@ const cylinderAt = (
   return move(scope, raw, at.x, at.y, at.z);
 };
 
-/**
- * Extra floor inside a hollow foot: the cavity stops this far below the plate, so the
- * plate and this floor together carry the magnet pockets (owner, 2 November 2026).
- */
-export const HOLLOW_FLOOR = 1.45;
-
-/**
- * Cavity of an open hollow foot: one straight cut from below, inset from the narrowest
- * part of the foot (its bottom edge) by the wall, ending `HOLLOW_FLOOR` below the plate.
- * No profile steps, no lip inside (owner, 2 November 2026).
- */
-const cavityLayers = (inset: number, extraX: number, extraY: number): Layer[] => {
-  const ring = (z: number): Layer => ({
-    z,
-    hx: footHalf(0) - inset + extraX,
-    hy: footHalf(0) - inset + extraY,
-    r: Math.max(footRadius(0) - inset, 0.3),
-  });
-  return [ring(-0.5), ring(c("footHeight") - HOLLOW_FLOOR)];
-};
+export { HOLLOW_FLOOR };
 
 interface FootSpec {
   /** centre of the foot on the lid */

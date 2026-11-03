@@ -120,7 +120,7 @@ describe("C-02 magnets", () => {
     const base = 3;
     const plain = measure({ units_x: 3, baseplate_base: base });
     const magnets = measure({ units_x: 3, baseplate_base: base, center_magnet: true });
-    const expected = 3 * pocketVolume(5.0 + 0.1, 2.0);
+    const expected = 3 * pocketVolume(6.1 + 0.1, 2.0);
     expect(plain.volume - magnets.volume).toBeCloseTo(expected, 2);
   });
 

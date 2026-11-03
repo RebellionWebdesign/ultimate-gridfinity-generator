@@ -51,6 +51,16 @@ Released by the owner on 3 November 2026: the baseplate ("Base"), first; built a
 
 Not in this feature: fit to a drawer (own feature, below), bins, sliding lid.
 
+### Bin (released by the owner on 3 November 2026, branch `bin-feature`)
+
+Scope (spec 3.2, Open decision 3): width and depth in cells, height in 7 mm units, top edge, walls and floor, magnets and foot. No compartments, no scoop, no label tab. The sliding lid and the filler are their own features. The owner tests after each step that shows in the app.
+
+- [x] **C-04 Bin parameters.** Height 1–12 units, top edge `with_lip | flat_same_height | flat_lower`, wall 1.2–2.5 (below 2.6 with a lip), floor 0.8–5, corner and centre magnets, screw holes, colours; limits and defaults per `docs/design/ui-spec.md` section 8. *AC:* every value below its minimum is rejected, the minimum and the limit are accepted.
+- [x] **C-05 Bin geometry.** Per-cell foot, outer body, cavity with the wall and the floor above the foot, stacking lip. Depends on: C-04. *AC (spec 6.2):* 1x1x3 is 41.5 × 41.5 × 25.4 with the lip and 21 without; 2x2 is 83.5 wide; foot bottom edge 35.6; closed mesh from 1x1x1 up to 4x4x6; the cavity wall is the wall setting.
+- [x] **C-06 Bin magnets.** Corner pockets in the foot in the four outermost corners, centre magnet in the corner feet, floor raised so 0.8 mm stays above the tallest magnet. No screw holes in bins (owner, 3 November 2026: they only make sense in the baseplate). Depends on: C-05. *AC:* 1x1 has four corner pockets, 4x4 only the outer four; pocket depth and diameter as set.
+- [x] **C-07 Bin in the app.** Part switch enables "Bin", parameter groups, preview, bed check, STL and 3MF (body and stacking lip as separate parts when the lip has its own colour), save and load with `type: "bin"`. Depends on: C-05. *AC:* lid, baseplate and bin keep their own values while the page is open.
+- [x] **C-08 Hollow foot for the bin.** As on the lid (owner, 3 November 2026): `none | open`, wall 1.2–3, one straight cut from below ending 1.45 mm below the top of the foot; around each magnet pocket a column of the foot stays (pocket plus the wall on each side). Depends on: C-06. *AC:* closed mesh from 1x1 to 4x4 with and without magnets; the cavity ends 1.45 mm below the foot top.
+
 ## Phase C, later features
 
 Bins and baseplates in the standard, sliding lid, filler for free space. Bin scope is given by the grid (Open decision 3). Filler: the user enters the width and length of the drawer, the baseplate is generated and, where it is too small, filled solid (fit to drawer, as in the script); later the drawer height is added so that the height of bins and lids stays locked to what fits. The reference script already contains more than Phase B (bin, baseplate, sliding lid, label); the owner accepts that. Extras come once the web app runs, and some may be paid.

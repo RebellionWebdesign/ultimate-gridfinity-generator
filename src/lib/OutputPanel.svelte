@@ -128,7 +128,9 @@
       {format === "3mf"
         ? editor.part === "baseplate"
           ? "The baseplate is one part with its colour. Your slicer may ask which filament the colour gets."
-          : "Lid, text and symbol stay separate parts of one object, each with its colour. Your slicer may ask which filament each colour gets."
+          : editor.part === "bin"
+            ? "The bin and its stacking lip stay separate parts of one object when the lip has its own colour. Your slicer may ask which filament each colour gets."
+            : "Lid, text and symbol stay separate parts of one object, each with its colour. Your slicer may ask which filament each colour gets."
         : "Geometry only: no colours, all parts in one file."}
     </p>
     <label class="t-label" for="file-name">File name</label>

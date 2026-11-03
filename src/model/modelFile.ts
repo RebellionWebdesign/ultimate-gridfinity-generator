@@ -1,6 +1,13 @@
 // Saved model: JSON with model type, schema version, parameters, text, colours and the
 // SVG as a string (ADR-0003). A schema change needs a version bump and a migration step.
 import {
+  BIN_LIMITS,
+  DEFAULT_BIN,
+  clampBin,
+  type BinLimitedKey,
+  type BinParams,
+} from "./binParams";
+import {
   BASEPLATE_LIMITS,
   DEFAULT_BASEPLATE,
   clampBaseplate,
@@ -27,12 +34,14 @@ interface ModelFileBase {
 
 export type ModelFile =
   | (ModelFileBase & { type: "lid"; params: LidParams })
-  | (ModelFileBase & { type: "baseplate"; params: BaseplateParams });
+  | (ModelFileBase & { type: "baseplate"; params: BaseplateParams })
+  | (ModelFileBase & { type: "bin"; params: BinParams });
 
 export class ModelFileError extends Error {}
 
 const ENUMS: Partial<Record<string, readonly string[]>> = {
   baseplate_style: ["solid", "skeleton"],
+  lip_style: ["with_lip", "flat_same_height", "flat_lower"],
   variant: ["dust_cover", "stackable"],
   lip_mode: ["full", "corners_only"],
   foot_layout: ["merged", "per_cell"],
@@ -122,6 +131,32 @@ export const sanitizeBaseplate = (raw: unknown): BaseplateParams => {
   return plate;
 };
 
+/** Bin parameters of unknown origin to valid ones, like `sanitizeParams`. */
+export const sanitizeBin = (raw: unknown): BinParams => {
+  const input = (typeof raw === "object" && raw !== null ? raw : {}) as Record<
+    string,
+    unknown
+  >;
+  const out = { ...DEFAULT_BIN } as Record<string, unknown>;
+  for (const [key, fallback] of Object.entries(DEFAULT_BIN)) {
+    const value = input[key];
+    if (typeof fallback === "number") {
+      if (typeof value !== "number" || !Number.isFinite(value)) continue;
+      out[key] = key in BIN_LIMITS ? clampBin(key as BinLimitedKey, value) : value;
+    } else if (typeof fallback === "boolean") {
+      if (typeof value === "boolean") out[key] = value;
+    } else if (typeof value === "string") {
+      const choices = ENUMS[key];
+      if (choices ? choices.includes(value) : true) out[key] = value;
+    }
+  }
+  const bin = out as unknown as BinParams;
+  for (const key of ["plate_color", "lip_color"] as const) {
+    if (!/^#[0-9a-fA-F]{6}$/.test(bin[key])) bin[key] = DEFAULT_BIN[key];
+  }
+  return bin;
+};
+
 export const serializeModel = (
   name: string,
   params: LidParams,
@@ -133,6 +168,18 @@ export const serializeModel = (
     name,
     savedAt: new Date().toISOString(),
     svgName,
+    params,
+  };
+  return JSON.stringify(file, null, 2);
+};
+
+export const serializeBin = (name: string, params: BinParams): string => {
+  const file: ModelFile = {
+    type: "bin",
+    schemaVersion: SCHEMA_VERSION,
+    name,
+    savedAt: new Date().toISOString(),
+    svgName: "",
     params,
   };
   return JSON.stringify(file, null, 2);
@@ -166,9 +213,12 @@ export const parseModel = (text: string, fileName = "the file"): ModelFile => {
     );
   }
   const type = (data as { type?: unknown } | null)?.type;
-  if (typeof data !== "object" || (type !== "lid" && type !== "baseplate")) {
+  if (
+    typeof data !== "object" ||
+    (type !== "lid" && type !== "baseplate" && type !== "bin")
+  ) {
     throw new ModelFileError(
-      `${fileName} is not a lid or a baseplate. Only those can be opened in this version.`,
+      `${fileName} is not a lid, a baseplate or a bin. Only those can be opened in this version.`,
     );
   }
   const file = data as Record<string, unknown>;
@@ -193,6 +243,9 @@ export const parseModel = (text: string, fileName = "the file"): ModelFile => {
     svgName: typeof migrated.svgName === "string" ? migrated.svgName : "",
   };
   const name = typeof migrated.name === "string" ? migrated.name : "";
+  if (type === "bin") {
+    return { ...base, type, name: name || "Bin", params: sanitizeBin(migrated.params) };
+  }
   if (type === "baseplate") {
     return {
       ...base,

@@ -2,6 +2,12 @@
 import type { ModelMesh } from "../geometry/model";
 import { parseSvg, SvgError, type SvgShapes } from "../geometry/svg";
 import {
+  DEFAULT_BIN,
+  maxHeightUnits,
+  validateBin,
+  type BinParams,
+} from "../model/binParams";
+import {
   DEFAULT_BASEPLATE,
   validateBaseplate,
   type BaseplateParams,
@@ -10,6 +16,7 @@ import { DEFAULT_LID, validateLid, type LidParams } from "../model/lidParams";
 import {
   parseModel,
   serializeBaseplate,
+  serializeBin,
   serializeModel,
   type ModelFile,
 } from "../model/modelFile";
@@ -32,7 +39,7 @@ const MAX_STORED = 12;
 export interface StoredModel {
   id: string;
   /** missing in entries saved before baseplates existed: those are lids */
-  part?: "lid" | "baseplate";
+  part?: PartType;
   name: string;
   savedAt: string;
   json: string;
@@ -58,10 +65,11 @@ export const slug = (name: string): string =>
 export type Status = "computing" | "ready" | "needs-fix" | "worker-error";
 
 class Editor {
-  /** the part type being edited: the lid or the baseplate in this version */
+  /** the part type being edited */
   private current = $state<PartType>("lid");
   params = $state<LidParams>({ ...DEFAULT_LID });
   baseplate = $state<BaseplateParams>({ ...DEFAULT_BASEPLATE });
+  bin = $state<BinParams>({ ...DEFAULT_BIN });
   name = $state("Lid 1 × 1");
   model = $state.raw<ModelMesh | null>(null);
   status = $state<Status>("computing");
@@ -90,9 +98,15 @@ class Editor {
 
   /** name, file name and id of the part that is not being edited */
   private parked: Record<
-    "lid" | "baseplate",
+    PartType,
     { name: string; fileName: string; renamed: boolean; modelId: string }
   > = {
+    bin: {
+      name: "Bin 1 × 1 × 3",
+      fileName: "bin-1x1x3",
+      renamed: false,
+      modelId: crypto.randomUUID(),
+    },
     lid: { name: "", fileName: "", renamed: false, modelId: "" },
     baseplate: {
       name: "Base 1 × 1",
@@ -108,8 +122,8 @@ class Editor {
 
   /** Each part keeps its own values and name while the page is open. */
   set part(next: PartType) {
-    if (next === this.current || (next !== "lid" && next !== "baseplate")) return;
-    const here = this.current as "lid" | "baseplate";
+    if (next === this.current) return;
+    const here = this.current;
     const [name, fileName, renamed, modelId] = [
       this.name,
       this.fileName,
@@ -124,8 +138,9 @@ class Editor {
   }
 
   /** The values of the part being edited. */
-  get active(): LidParams | BaseplateParams {
-    return this.current === "baseplate" ? this.baseplate : this.params;
+  get active(): LidParams | BaseplateParams | BinParams {
+    if (this.current === "baseplate") return this.baseplate;
+    return this.current === "bin" ? this.bin : this.params;
   }
 
   /** Width and depth in cells of the part being edited. */
@@ -157,7 +172,9 @@ class Editor {
   errors = $derived(
     this.current === "baseplate"
       ? validateBaseplate(this.baseplate)
-      : validateLid(this.params),
+      : this.current === "bin"
+        ? validateBin(this.bin)
+        : validateLid(this.params),
   );
 
   /** hints about the current model (not errors), shown while it is ready */
@@ -177,23 +194,30 @@ class Editor {
 
   /** colours of the parts for the preview and the 3MF; a baseplate has only its plate */
   colours = $derived(
-    this.current === "baseplate"
+    this.current === "bin"
       ? {
-          plate: this.baseplate.plate_color,
-          lip: this.baseplate.plate_color,
-          text: this.baseplate.plate_color,
-          symbol: this.baseplate.plate_color,
+          plate: this.bin.plate_color,
+          lip: this.bin.lip_color,
+          text: this.bin.plate_color,
+          symbol: this.bin.plate_color,
         }
-      : {
-          plate: this.params.plate_color,
-          lip: this.params.lip_color,
-          text: this.params.text_color,
-          symbol: this.params.symbol_color,
-        },
+      : this.current === "baseplate"
+        ? {
+            plate: this.baseplate.plate_color,
+            lip: this.baseplate.plate_color,
+            text: this.baseplate.plate_color,
+            symbol: this.baseplate.plate_color,
+          }
+        : {
+            plate: this.params.plate_color,
+            lip: this.params.lip_color,
+            text: this.params.text_color,
+            symbol: this.params.symbol_color,
+          },
   );
 
   /** What the part is called in sentences: "lid" or "baseplate". */
-  noun = $derived(this.current === "baseplate" ? "baseplate" : "lid");
+  noun = $derived(this.current);
 
   bedResult = $derived(this.model ? checkBed(this.model.size, this.printerInfo) : null);
 
@@ -202,14 +226,23 @@ class Editor {
    * changing that axis alone does not help), for the buttons of the bed-check alert.
    */
   bedFixes = $derived.by(() => {
-    if (!this.model) return { x: 0, y: 0 };
+    if (!this.model) return { x: 0, y: 0, height: 0 };
     const units = this.units;
     const height = this.model.size[2];
     const fix = (axis: "x" | "y") => {
       const n = maxCells(axis, units, height, this.printerInfo, this.tolerance);
       return n >= 1 && n < units[axis === "x" ? 0 : 1] ? n : 0;
     };
-    return { x: fix("x"), y: fix("y") };
+    // a bin may be too tall: the most height units the printer's build height allows
+    const tall =
+      this.current === "bin"
+        ? maxHeightUnits(this.printerInfo.bed[2], this.bin.lip_style)
+        : 0;
+    return {
+      x: fix("x"),
+      y: fix("y"),
+      height: tall > 0 && tall < this.bin.height_units ? tall : 0,
+    };
   });
 
   /** What blocks export, in words; empty when export is possible. */
@@ -249,17 +282,23 @@ class Editor {
   }
 
   private build(): void {
-    const baseplate = this.current === "baseplate";
+    const lid = this.current === "lid";
     const params = $state.snapshot(this.params) as LidParams;
     const plate = $state.snapshot(this.baseplate) as BaseplateParams;
-    const errors = baseplate ? validateBaseplate(plate) : validateLid(params);
+    const bin = $state.snapshot(this.bin) as BinParams;
+    const errors =
+      this.current === "baseplate"
+        ? validateBaseplate(plate)
+        : this.current === "bin"
+          ? validateBin(bin)
+          : validateLid(params);
     if (errors.length > 0) {
       this.status = "needs-fix";
       this.message = errors.join(" ");
       return;
     }
     if (
-      !baseplate &&
+      lid &&
       params.symbol_mode !== "none" &&
       params.symbol_source === "upload" &&
       !this.svgShapes
@@ -278,9 +317,12 @@ class Editor {
     this.slowTimer = setTimeout(() => {
       if (this.status === "computing") this.slow = true;
     }, 150);
-    const { id, result } = baseplate
-      ? this.client.buildBaseplate(plate)
-      : this.client.build(params, this.svgShapes);
+    const { id, result } =
+      this.current === "baseplate"
+        ? this.client.buildBaseplate(plate)
+        : this.current === "bin"
+          ? this.client.buildBin(bin)
+          : this.client.build(params, this.svgShapes);
     this.latest = id;
     result.then(
       (model) => {
@@ -303,6 +345,10 @@ class Editor {
 
   /** Name for the model and the file, from what the lid is. */
   describe(): string {
+    if (this.current === "bin") {
+      const b = this.bin;
+      return `Bin ${b.units_x} × ${b.units_y} × ${b.height_units}`;
+    }
     if (this.current === "baseplate") {
       const b = this.baseplate;
       return `Base ${b.units_x} × ${b.units_y}${b.baseplate_style === "skeleton" ? " · skeleton" : ""}`;
@@ -327,7 +373,7 @@ class Editor {
     const json = this.toFileText();
     const entry: StoredModel = {
       id: this.modelId,
-      part: this.current === "baseplate" ? "baseplate" : "lid",
+      part: this.current,
       name: this.name,
       savedAt: new Date().toISOString(),
       json,
@@ -357,6 +403,9 @@ class Editor {
 
   /** The model as a file's text, for "Save file". */
   toFileText(): string {
+    if (this.current === "bin") {
+      return serializeBin(this.name, $state.snapshot(this.bin) as BinParams);
+    }
     if (this.current === "baseplate") {
       return serializeBaseplate(
         this.name,
@@ -382,6 +431,7 @@ class Editor {
     this.loadError = "";
     this.part = file.type;
     if (file.type === "baseplate") Object.assign(this.baseplate, file.params);
+    else if (file.type === "bin") Object.assign(this.bin, file.params);
     else Object.assign(this.params, file.params);
     this.name = file.name;
     this.modelId = id ?? crypto.randomUUID();

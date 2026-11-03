@@ -3,7 +3,7 @@
 import wasmUrl from "manifold-3d/manifold.wasm?url";
 import { InputError, prepareAssets, type AssetLoaders } from "../geometry/assets";
 import { initKernel } from "../geometry/kernel";
-import { buildBaseplateModel, buildModel } from "../geometry/model";
+import { buildBaseplateModel, buildBinModel, buildModel } from "../geometry/model";
 import type { BundledFont } from "../model/lidParams";
 import type { BuildRequest, BuildResponse } from "./protocol";
 
@@ -36,11 +36,13 @@ self.onmessage = async (event: MessageEvent<BuildRequest>) => {
     const model =
       request.part === "baseplate"
         ? buildBaseplateModel(await kernel, request.params)
-        : buildModel(
-            await kernel,
-            request.params,
-            await prepareAssets(request.params, loaders, request.svg),
-          );
+        : request.part === "bin"
+          ? buildBinModel(await kernel, request.params)
+          : buildModel(
+              await kernel,
+              request.params,
+              await prepareAssets(request.params, loaders, request.svg),
+            );
     for (const part of model.parts) {
       transfer.push(part.positions.buffer, part.indices.buffer);
     }

@@ -4,6 +4,7 @@
   import LicencesDialog from "./lib/LicencesDialog.svelte";
   import OutputPanel from "./lib/OutputPanel.svelte";
   import BaseplatePanel from "./lib/BaseplatePanel.svelte";
+  import BinPanel from "./lib/BinPanel.svelte";
   import ParamsPanel from "./lib/ParamsPanel.svelte";
   import PreviewStage from "./lib/PreviewStage.svelte";
   import Segmented from "./lib/Segmented.svelte";
@@ -164,13 +165,7 @@
         bind:value={editor.part}
         options={[
           { value: "baseplate", label: PART_NAME.baseplate },
-          {
-            value: "bin",
-            label: "Bin",
-            note: "Later",
-            disabled: true,
-            title: "Bins come in a later version",
-          },
+          { value: "bin", label: PART_NAME.bin },
           { value: "lid", label: "Lid" },
         ]}
       />
@@ -223,6 +218,8 @@
       <div class="panel-body">
         {#if editor.part === "baseplate"}
           <BaseplatePanel />
+        {:else if editor.part === "bin"}
+          <BinPanel />
         {:else}
           <ParamsPanel />
         {/if}
@@ -242,6 +239,7 @@
               plate: editor.printerInfo.plate,
             }
           : undefined}
+        bedFits={!editor.bedResult || editor.bedResult.fits}
         units={editor.units}
         dimmed={editor.slow && !!editor.model}
         {theme}
@@ -292,6 +290,14 @@
                   onclick={() => editor.setUnits("x", editor.bedFixes.x)}
                 >
                   Set Width to {editor.bedFixes.x}
+                </button>
+              {/if}
+              {#if editor.bedFixes.height}
+                <button
+                  type="button"
+                  onclick={() => (editor.bin.height_units = editor.bedFixes.height)}
+                >
+                  Set Height to {editor.bedFixes.height}
                 </button>
               {/if}
               {#if editor.bedFixes.y}
