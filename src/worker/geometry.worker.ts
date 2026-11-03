@@ -35,7 +35,7 @@ self.onmessage = async (event: MessageEvent<BuildRequest>) => {
   try {
     const model =
       request.part === "baseplate"
-        ? buildBaseplateModel(await kernel, request.params)
+        ? buildBaseplateModel(await kernel, request.params, request.maxTile)
         : request.part === "bin"
           ? buildBinModel(await kernel, request.params)
           : buildModel(
@@ -43,7 +43,10 @@ self.onmessage = async (event: MessageEvent<BuildRequest>) => {
               request.params,
               await prepareAssets(request.params, loaders, request.svg),
             );
-    for (const part of model.parts) {
+    for (const part of [
+      ...model.parts,
+      ...(model.tiles ?? []).flatMap((t) => t.parts),
+    ]) {
       transfer.push(part.positions.buffer, part.indices.buffer);
     }
     response = { id, ok: true, model };

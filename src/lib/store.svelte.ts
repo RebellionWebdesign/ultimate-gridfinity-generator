@@ -154,13 +154,29 @@ class Editor {
     return this.current === "baseplate" ? 0 : LID_TOLERANCE;
   }
 
-  /** The baseplate gets as many cells as fit the bed along each axis (at most 12). */
+  /** The printable width and depth when the baseplate is cut to fit the bed, else null. */
+  get maxTile(): [number, number] | null {
+    return this.current === "baseplate" && this.baseplate.split_to_bed
+      ? [this.printerInfo.bed[0], this.printerInfo.bed[1]]
+      : null;
+  }
+
+  /** The baseplate gets as many cells as fit the bed along each axis (at most 24). */
   fitBed(): void {
     const height = this.model?.size[2] ?? 5;
     const most = (axis: "x" | "y") =>
-      maxCells(axis, axis === "x" ? [12, 1] : [1, 12], height, this.printerInfo, 0);
+      maxCells(axis, axis === "x" ? [24, 1] : [1, 24], height, this.printerInfo, 0);
     this.baseplate.units_x = Math.max(1, most("x"));
     this.baseplate.units_y = Math.max(1, most("y"));
+  }
+
+  /** The baseplate gets as many whole cells as fit the drawer (the rest becomes filler). */
+  fitDrawer(): void {
+    const b = this.baseplate;
+    if (b.plate_min_x_mm > 0)
+      b.units_x = Math.max(1, Math.floor(b.plate_min_x_mm / 42));
+    if (b.plate_min_y_mm > 0)
+      b.units_y = Math.max(1, Math.floor(b.plate_min_y_mm / 42));
   }
 
   setUnits(axis: "x" | "y", cells: number): void {
@@ -319,7 +335,7 @@ class Editor {
     }, 150);
     const { id, result } =
       this.current === "baseplate"
-        ? this.client.buildBaseplate(plate)
+        ? this.client.buildBaseplate(plate, this.maxTile ?? undefined)
         : this.current === "bin"
           ? this.client.buildBin(bin)
           : this.client.build(params, this.svgShapes);
@@ -351,7 +367,8 @@ class Editor {
     }
     if (this.current === "baseplate") {
       const b = this.baseplate;
-      return `Base ${b.units_x} × ${b.units_y}${b.baseplate_style === "skeleton" ? " · skeleton" : ""}`;
+      const drawer = b.plate_min_x_mm > 0 || b.plate_min_y_mm > 0 ? " · drawer" : "";
+      return `Base ${b.units_x} × ${b.units_y}${b.baseplate_style === "skeleton" ? " · skeleton" : ""}${drawer}`;
     }
     const p = this.params;
     const label =

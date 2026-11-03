@@ -8,7 +8,7 @@
   import ParamsPanel from "./lib/ParamsPanel.svelte";
   import PreviewStage from "./lib/PreviewStage.svelte";
   import Segmented from "./lib/Segmented.svelte";
-  import { ISSUES_URL, PART_NAME, formatSize } from "./lib/parts";
+  import { ISSUES_URL, KOFI_URL, PART_NAME, formatSize } from "./lib/parts";
   import { editor } from "./lib/store.svelte";
 
   type Theme = "light" | "dark";
@@ -47,7 +47,7 @@
   // every change goes to the worker; the name follows the lid until it is renamed
   let touched = false;
   $effect(() => {
-    JSON.stringify([editor.part, editor.active]);
+    JSON.stringify([editor.part, editor.active, editor.maxTile]);
     untrack(() => {
       editor.syncName();
       editor.requestBuild();
@@ -66,9 +66,11 @@
 
   const elapsed = $derived(((now - editor.startedAt) / 1000).toFixed(1));
   const readout = $derived(
-    editor.model
-      ? `${editor.units[0]} × ${editor.units[1]} ${editor.noun} · ${formatSize(editor.model.size)} mm`
-      : PART_NAME[editor.part],
+    editor.model?.tiles
+      ? `${editor.model.tiles.length} baseplates · up to ${formatSize(editor.model.size)} mm each`
+      : editor.model
+        ? `${editor.units[0]} × ${editor.units[1]} ${editor.noun} · ${formatSize(editor.model.size)} mm`
+        : PART_NAME[editor.part],
   );
 
   const onDrop = async (event: DragEvent) => {
@@ -193,9 +195,15 @@
       >
         <Icon name="download" /><span class="long">Export</span>
       </button>
-      <button type="button" class="ghost" onclick={() => (licences = true)}>
-        <Icon name="info" /><span class="long">Licenses</span>
-      </button>
+      <a
+        class="ghost"
+        href={KOFI_URL}
+        target="_blank"
+        rel="noopener"
+        title="Support the project on Ko-fi"
+      >
+        <Icon name="coffee" /><span class="long">Support</span>
+      </a>
       <input
         bind:this={openInput}
         class="visually-hidden"
@@ -224,7 +232,12 @@
           <ParamsPanel />
         {/if}
       </div>
-      <p class="version t-caption n-s">Version {__APP_VERSION__}</p>
+      <p class="version t-caption n-s">
+        <span>Version {__APP_VERSION__}</span>
+        <button type="button" class="link" onclick={() => (licences = true)}>
+          Licenses
+        </button>
+      </p>
     </aside>
 
     <section class="preview" aria-label="Preview">
@@ -232,7 +245,7 @@
         model={editor.model}
         colours={editor.colours}
         labelArea={editor.model?.labelArea}
-        bed={editor.bedCheck
+        bed={editor.bedCheck && !editor.model?.tiles
           ? {
               x: editor.bed[0],
               y: editor.bed[1],
@@ -284,6 +297,14 @@
                 : ""}, also when turned 90°.
             </p>
             <div class="fixes">
+              {#if editor.part === "baseplate" && !editor.baseplate.split_to_bed}
+                <button
+                  type="button"
+                  onclick={() => (editor.baseplate.split_to_bed = true)}
+                >
+                  Split into pieces that fit
+                </button>
+              {/if}
               {#if editor.bedFixes.x}
                 <button
                   type="button"
@@ -410,6 +431,15 @@
   .ghost:hover {
     background: var(--surface-2);
   }
+  .link {
+    border: 0;
+    background: none;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+  }
   .export-btn {
     display: none;
   }
@@ -433,6 +463,10 @@
     flex: none;
   }
   .version {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-3);
     margin-top: auto;
     padding: var(--space-5);
     color: var(--text-3);

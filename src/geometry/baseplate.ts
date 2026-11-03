@@ -27,8 +27,12 @@ const CORNER_PAD_REACH = 19.5;
 const RIB_LENGTH = 27;
 
 export interface BaseplateLayout {
+  /** the whole plate: the cells, or the drawer when that is larger */
   width: number;
   depth: number;
+  /** where the grid of cells starts, measured from the plate corner */
+  gridX: number;
+  gridY: number;
   /** solid base under the pocket floor, after the automatic raise for magnets */
   base: number;
   /** z of the highest point */
@@ -37,9 +41,17 @@ export interface BaseplateLayout {
 
 export const layoutOf = (p: BaseplateParams): BaseplateLayout => {
   const base = baseOf(p);
+  const [cellsX, cellsY] = [p.units_x * c("grid"), p.units_y * c("grid")];
+  const [width, depth] = [
+    Math.max(cellsX, p.plate_min_x_mm),
+    Math.max(cellsY, p.plate_min_y_mm),
+  ];
   return {
-    width: p.units_x * c("grid"),
-    depth: p.units_y * c("grid"),
+    width,
+    depth,
+    // the extra width goes to the left at -1, to both sides at 0, to the right at 1
+    gridX: ((width - cellsX) * (1 - p.fit_x)) / 2,
+    gridY: ((depth - cellsY) * (1 - p.fit_y)) / 2,
     base,
     top: base + c("baseplateProfileHeight"),
   };
@@ -144,16 +156,92 @@ const skeletonOpening = (
   return scope.add(inward.offset(OPENING_RADIUS, "Round", 2, OPENING_SEGMENTS));
 };
 
+/** A part of the plate, in mm from the plate corner (the whole plate when left out). */
+export interface Region {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
+/**
+ * Where to cut a length so no piece is longer than `maxLength`: at the boundaries of the
+ * cells where possible (so every cell stays whole), inside the filler where a stretch
+ * without a boundary is longer than that. Returns the cut positions including 0 and the
+ * length. Greedy: every piece is as long as it may be, so there are as few as possible.
+ */
+export const splitPoints = (
+  length: number,
+  gridStart: number,
+  cells: number,
+  maxLength: number,
+): number[] => {
+  const boundaries = [
+    0,
+    ...Array.from({ length: cells + 1 }, (_, k) => gridStart + c("grid") * k),
+    length,
+  ]
+    .filter((b) => b >= 0 && b <= length + 1e-9)
+    .sort((a, b) => a - b);
+  const cuts = [0];
+  let at = 0;
+  while (at < length - 1e-9) {
+    const reach = boundaries.filter((b) => b > at + 1e-9 && b - at <= maxLength + 1e-9);
+    const next =
+      reach.length > 0 ? Math.max(...reach) : Math.min(at + maxLength, length);
+    cuts.push(next);
+    at = next;
+  }
+  return cuts;
+};
+
+/** A piece of a split plate with its place in the grid of pieces. */
+export interface Tile extends Region {
+  col: number;
+  row: number;
+  cols: number;
+  rows: number;
+}
+
+/** The pieces a plate is cut into so that each fits `max` (width, depth); row by row from the front left. */
+export const tileRegions = (p: BaseplateParams, max: [number, number]): Tile[] => {
+  const { width, depth, gridX, gridY } = layoutOf(p);
+  const xs = splitPoints(width, gridX, p.units_x, max[0]);
+  const ys = splitPoints(depth, gridY, p.units_y, max[1]);
+  const regions: Tile[] = [];
+  for (let j = 0; j < ys.length - 1; j++) {
+    for (let i = 0; i < xs.length - 1; i++) {
+      regions.push({
+        col: i,
+        row: j,
+        cols: xs.length - 1,
+        rows: ys.length - 1,
+        x0: xs[i] as number,
+        x1: xs[i + 1] as number,
+        y0: ys[j] as number,
+        y1: ys[j + 1] as number,
+      });
+    }
+  }
+  return regions;
+};
+
+/**
+ * The baseplate, or only a `region` of it, centred on the middle of the whole plate (so
+ * the pieces of a split plate fit together). A region keeps the cells that lie inside it
+ * and cuts the outline with straight sides; the rounded corners stay on the plate's own.
+ */
 export const buildBaseplate = (
   kernel: Kernel,
   scope: Scope,
   p: BaseplateParams,
+  region?: Region,
 ): Manifold => {
-  const { width: w, depth: h, base, top } = layoutOf(p);
+  const { width: w, depth: h, base, top, gridX, gridY } = layoutOf(p);
   const move = (part: Manifold, x: number, y: number, z: number) =>
     scope.add(part.translate(x, y, z));
 
-  const block = move(
+  const whole = move(
     scope.add(
       loft(kernel, [
         { z: 0, hx: w / 2, hy: h / 2, r: c("baseplateCornerRadius") },
@@ -164,6 +252,31 @@ export const buildBaseplate = (
     h / 2,
     0,
   );
+  const block = region
+    ? scope.add(
+        kernel.Manifold.intersection(
+          whole,
+          move(
+            scope.add(
+              kernel.Manifold.cube([
+                region.x1 - region.x0,
+                region.y1 - region.y0,
+                top + 2,
+              ]),
+            ),
+            region.x0,
+            region.y0,
+            -1,
+          ),
+        ),
+      )
+    : whole;
+  const inside = (i: number, j: number): boolean =>
+    !region ||
+    (gridX + c("grid") * i >= region.x0 - 1e-6 &&
+      gridX + c("grid") * (i + 1) <= region.x1 + 1e-6 &&
+      gridY + c("grid") * j >= region.y0 - 1e-6 &&
+      gridY + c("grid") * (j + 1) <= region.y1 + 1e-6);
   const pocket = scope.add(loft(kernel, pocketLayers()));
   const skeleton = p.baseplate_style === "skeleton";
   // the openings go straight down through the base and 0.1 above the pocket floor
@@ -181,8 +294,9 @@ export const buildBaseplate = (
     );
   for (let i = 0; i < p.units_x; i++) {
     for (let j = 0; j < p.units_y; j++) {
-      const cx = cellCentre(i);
-      const cy = cellCentre(j);
+      if (!inside(i, j)) continue;
+      const cx = gridX + cellCentre(i);
+      const cy = gridY + cellCentre(j);
       cutters.push(move(pocket, cx, cy, base));
       if (opening) cutters.push(move(opening, cx, cy, -1));
       if (p.corner_magnets) {

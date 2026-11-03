@@ -45,8 +45,11 @@ export class GeometryClient {
     return this.send((id) => ({ id, part: "lid", params, svg }));
   }
 
-  buildBaseplate(params: BaseplateParams): { id: number; result: Promise<ModelMesh> } {
-    return this.send((id) => ({ id, part: "baseplate", params }));
+  buildBaseplate(
+    params: BaseplateParams,
+    maxTile?: [number, number],
+  ): { id: number; result: Promise<ModelMesh> } {
+    return this.send((id) => ({ id, part: "baseplate", params, maxTile }));
   }
 
   buildBin(params: BinParams): { id: number; result: Promise<ModelMesh> } {

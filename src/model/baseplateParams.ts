@@ -21,14 +21,22 @@ export interface BaseplateParams {
   magnet_clearance: number;
   /** skeleton style: the centre magnet's pad is held to the frame by four ribs */
   rib_width: number;
+  /** fit to a drawer: the plate is at least this wide and deep (mm, 0 = off), the rest is solid */
+  plate_min_x_mm: number;
+  plate_min_y_mm: number;
+  /** where the extra goes: -1 left / front, 0 both sides, 1 right / back */
+  fit_x: number;
+  fit_y: number;
+  /** cut the plate into pieces that each fit the printer bed (one file per piece) */
+  split_to_bed: boolean;
   plate_color: string;
 }
 
 const MAG_WALL = 0.75;
 
 export const BASEPLATE_LIMITS = {
-  units_x: { min: 1, max: 12, step: 1, why: "12 cells is the script's limit" },
-  units_y: { min: 1, max: 12, step: 1, why: "12 cells is the script's limit" },
+  units_x: { min: 1, max: 24, step: 1, why: "24 cells are 1008 mm, a drawer of 1 m" },
+  units_y: { min: 1, max: 24, step: 1, why: "24 cells are 1008 mm, a drawer of 1 m" },
   baseplate_base: {
     min: 0.4,
     max: 8,
@@ -73,6 +81,20 @@ export const BASEPLATE_LIMITS = {
     step: 0.5,
     why: "2 to 10 mm is the script's range",
   },
+  plate_min_x_mm: {
+    min: 0,
+    max: 1000,
+    step: 0.5,
+    why: "0 switches it off; 1000 mm is a drawer of 1 m",
+  },
+  plate_min_y_mm: {
+    min: 0,
+    max: 1000,
+    step: 0.5,
+    why: "0 switches it off; 1000 mm is a drawer of 1 m",
+  },
+  fit_x: { min: -1, max: 1, step: 0.1, why: "-1 left, 0 both sides, 1 right" },
+  fit_y: { min: -1, max: 1, step: 0.1, why: "-1 front, 0 both sides, 1 back" },
 } as const satisfies Record<string, NumberLimit>;
 
 export type BaseplateLimitedKey = keyof typeof BASEPLATE_LIMITS;
@@ -90,6 +112,11 @@ export const DEFAULT_BASEPLATE: BaseplateParams = {
   center_magnet_h: BASEPLATE_LIMITS.center_magnet_h.min,
   magnet_clearance: BASEPLATE_LIMITS.magnet_clearance.min,
   rib_width: 4,
+  plate_min_x_mm: 0,
+  plate_min_y_mm: 0,
+  fit_x: 0,
+  fit_y: 0,
+  split_to_bed: false,
   plate_color: STONE,
 };
 

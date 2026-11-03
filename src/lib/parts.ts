@@ -13,5 +13,8 @@ export const mmText = (value: number): string => String(Math.round(value * 100) 
 export const formatSize = (size: readonly number[]): string =>
   size.map(mmText).join(" × ");
 
+/** Where supporters go. A placeholder until the project has its own Ko-fi page. */
+export const KOFI_URL = "https://ko-fi.com/";
+
 export const ISSUES_URL =
   "https://github.com/RebellionWebdesign/ultimate-gridfinity-generator/issues/new";

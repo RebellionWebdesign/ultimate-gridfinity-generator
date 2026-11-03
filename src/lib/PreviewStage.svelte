@@ -91,6 +91,44 @@
     under: [0, -0.0001, -1, 1],
   };
 
+  /**
+   * Radius of a sphere around the view target that holds everything shown: every vertex of
+   * the model (the pieces of a split plate included) and the whole bed with its tabs. Seen
+   * from any side, nothing leaves the viewport while the sphere fits.
+   */
+  const sceneRadius = () => {
+    const z0 = model ? model.size[2] / 2 : 3.5;
+    let r = model ? 0 : radius();
+    for (const part of model?.parts ?? []) {
+      const p = part.positions;
+      for (let i = 0; i < p.length; i += 3) {
+        r = Math.max(r, Math.hypot(p[i] ?? 0, p[i + 1] ?? 0, (p[i + 2] ?? 0) - z0));
+      }
+    }
+    if (bed) r = Math.max(r, Math.hypot(bed.x / 2, bed.y / 2, z0) + 15);
+    return r;
+  };
+
+  /** Distance at which a sphere of radius r fits the narrower side of the viewport. */
+  const fitSphere = (r: number) => {
+    const half = (camera.fov * Math.PI) / 360;
+    const narrow = Math.min(half, Math.atan(Math.tan(half) * camera.aspect));
+    return r / Math.sin(narrow);
+  };
+
+  /**
+   * How far the camera may go: far enough that the whole scene fits with a margin all
+   * around, so it does not hide behind the panels over the preview, but no farther, or the
+   * scene shrinks to a speck.
+   */
+  const updateLimits = () => {
+    controls.minDistance = 8;
+    controls.maxDistance = fitSphere(sceneRadius()) * 1.4;
+    camera.far = controls.maxDistance * 4;
+    camera.updateProjectionMatrix();
+    controls.update();
+  };
+
   const radius = () => {
     const [x, y, z] = model?.size ?? [41.5, 41.5, 7];
     return Math.hypot(x, y, z) / 2;
@@ -357,6 +395,17 @@
         ),
       );
     }
+    // The floor never takes part in the depth test: it is drawn first, and the part is drawn
+    // over it. Floor and part are a fraction of a millimetre apart; zoomed far out the depth
+    // buffer cannot tell them apart and the floor flickers through the part.
+    gridGroup.children.forEach((child, index) => {
+      const item = child as Mesh | LineSegments;
+      const material = item.material as LineBasicMaterial | MeshBasicMaterial;
+      material.depthTest = false;
+      material.depthWrite = false;
+      // in the order they were made: bed, outline, bars, grid
+      item.renderOrder = -100 + index;
+    });
     draw();
   };
 
@@ -378,6 +427,7 @@
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+      updateLimits();
       // setSize clears the canvas: draw in the same frame, or the preview flashes
       renderer.render(scene, camera);
     };
@@ -407,6 +457,10 @@
   $effect(() => {
     const deps = [labelArea, theme];
     if (renderer && deps.length > 0) rebuildBand();
+  });
+  $effect(() => {
+    const deps = [model, bed];
+    if (controls && deps.length > 0) updateLimits();
   });
   $effect(() => {
     const deps = [showGrid, units[0], units[1], theme, bed, bedFits];

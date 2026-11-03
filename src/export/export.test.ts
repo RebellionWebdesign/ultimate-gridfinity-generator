@@ -14,6 +14,8 @@ import {
 import { DEFAULT_BASEPLATE } from "../model/baseplateParams";
 import { DEFAULT_BIN } from "../model/binParams";
 import { DEFAULT_LID, type LidParams } from "../model/lidParams";
+import { buildTilesFile, buildTilesZip } from "../lib/exporter";
+import { centreOf, tileOffsets } from "./tileLayout";
 import { writeStl } from "./stl";
 import { write3mf, type PartColours } from "./threeMf";
 import { crc32 } from "./zip";
@@ -297,5 +299,118 @@ describe("C-05 bin meshes and export", () => {
     const xml = unzip(file)["3D/3dmodel.model"] ?? "";
     expect(xml.match(/<m:colorgroup /g)).toHaveLength(2);
     expect(xml.match(/<component /g)).toHaveLength(2);
+  });
+});
+
+describe("C-12 split baseplate export", () => {
+  it("every piece is its own file in the ZIP, and the largest piece fits the bed", async () => {
+    const model = buildBaseplateModel(
+      kernel,
+      {
+        ...DEFAULT_BASEPLATE,
+        units_x: 6,
+        units_y: 3,
+        plate_min_x_mm: 260,
+        plate_min_y_mm: 140,
+        split_to_bed: true,
+      },
+      [130, 130],
+    );
+    const tiles = model.tiles ?? [];
+    expect(tiles.length).toBeGreaterThan(2);
+    expect(model.size[0]).toBeLessThanOrEqual(130 + 1e-6);
+    expect(model.size[1]).toBeLessThanOrEqual(130 + 1e-6);
+    // the preview parts are moved apart, the export parts are not: same shape, other place
+    expect(model.parts).toHaveLength(tiles.length);
+    const blob = await buildTilesZip("3mf", tiles, colours, "Base", "Base", "base");
+    const files = unzip(new Uint8Array(await blob.arrayBuffer()));
+    expect(Object.keys(files).sort()).toEqual(
+      tiles.map((_, i) => `base-${i + 1}-of-${tiles.length}.3mf`).sort(),
+    );
+    for (const part of tiles.flatMap((t) => t.parts)) {
+      expect(edgesAreClosed(part)).toBe(true);
+    }
+  });
+
+  it("a plate that fits the bed is not split", () => {
+    const model = buildBaseplateModel(
+      kernel,
+      { ...DEFAULT_BASEPLATE, units_x: 2, split_to_bed: true },
+      [256, 256],
+    );
+    expect(model.tiles).toBeUndefined();
+  });
+});
+
+describe("C-12 all pieces in one file", () => {
+  const split = () =>
+    buildBaseplateModel(
+      kernel,
+      {
+        ...DEFAULT_BASEPLATE,
+        units_x: 6,
+        units_y: 3,
+        plate_min_x_mm: 260,
+        plate_min_y_mm: 140,
+        split_to_bed: true,
+      },
+      [130, 130],
+    );
+
+  it("a 3MF holds every piece as its own object with its own colour group", async () => {
+    const tiles = split().tiles ?? [];
+    const blob = await buildTilesFile(
+      "3mf",
+      tiles,
+      colours,
+      "Base",
+      "Base",
+      [130, 130],
+    );
+    const xml =
+      unzip(new Uint8Array(await blob.arrayBuffer()))["3D/3dmodel.model"] ?? "";
+    expect(xml.match(/<item /g)).toHaveLength(tiles.length);
+    expect(xml.match(/<m:colorgroup /g)).toHaveLength(tiles.length);
+    // every resource id is used once
+    const ids = [...xml.matchAll(/<(?:m:colorgroup|object) id="(\d+)"/g)].map(
+      (m) => m[1],
+    );
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("the pieces sit one bed apart (a fifth of a bed of gap), none on top of another", () => {
+    const tiles = split().tiles ?? [];
+    const offsets = tileOffsets(
+      tiles.map((tile) => centreOf(tile.parts)),
+      [130, 130],
+    );
+    const centres = tiles.map((tile, i) => {
+      const [cx, cy] = centreOf(tile.parts);
+      const [dx, dy] = offsets[i] as [number, number];
+      return [cx + dx, cy + dy];
+    });
+    const pitch = 130 * 1.2;
+    centres.forEach(([x, y], k) => {
+      const cols = Math.ceil(Math.sqrt(tiles.length));
+      expect(x).toBeCloseTo((k % cols) * pitch, 6);
+      expect(y).toBeCloseTo(Math.floor(k / cols) * pitch, 6);
+    });
+  });
+
+  it("an STL holds the meshes of all pieces", async () => {
+    const tiles = split().tiles ?? [];
+    const blob = await buildTilesFile(
+      "stl",
+      tiles,
+      colours,
+      "Base",
+      "Base",
+      [130, 130],
+    );
+    const triangles = tiles.reduce(
+      (n, t) => n + (t.parts[0] as PartMesh).indices.length / 3,
+      0,
+    );
+    expect(blob.size).toBe(84 + 50 * triangles);
   });
 });

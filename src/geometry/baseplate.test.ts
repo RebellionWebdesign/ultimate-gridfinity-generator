@@ -7,10 +7,16 @@ import {
   validateBaseplate,
   type BaseplateParams,
 } from "../model/baseplateParams";
-import { buildBaseplate, layoutOf, pocketLayers } from "./baseplate";
+import {
+  buildBaseplate,
+  layoutOf,
+  pocketLayers,
+  splitPoints,
+  tileRegions,
+} from "./baseplate";
 import { footHalf } from "./foot";
 import { initKernel, Scope, type Kernel } from "./kernel";
-import { isClosed, sizeOf } from "./mesh";
+import { isClosed, sizeOf, vertices } from "./mesh";
 
 let kernel: Kernel;
 beforeAll(async () => {
@@ -216,5 +222,169 @@ describe("C-01 baseplate limits", () => {
     expect(
       validateBaseplate({ ...DEFAULT_BASEPLATE, plate_color: "red" }),
     ).toHaveLength(1);
+  });
+});
+
+describe("C-10 solid filler for a drawer", () => {
+  const verticesAt = (overrides: Partial<BaseplateParams>, z: number) => {
+    const scope = new Scope();
+    try {
+      const plate = buildBaseplate(kernel, scope, {
+        ...DEFAULT_BASEPLATE,
+        ...overrides,
+      });
+      return vertices(plate).filter(([, , vz]) => Math.abs(vz - z) < 1e-6);
+    } finally {
+      scope.dispose();
+    }
+  };
+
+  it("a 3x2 plate in a 300 x 250 drawer is 300 x 250 x 5.05", () => {
+    const m = measure({
+      units_x: 3,
+      units_y: 2,
+      plate_min_x_mm: 300,
+      plate_min_y_mm: 250,
+    });
+    expect(m.size.x).toBeCloseTo(300, 4);
+    expect(m.size.y).toBeCloseTo(250, 4);
+    expect(m.size.z).toBeCloseTo(5.05, 4);
+    expect(m.closed).toBe(true);
+  });
+
+  it("the extra area is solid: the volume grows by the area times the height", () => {
+    const plain = measure({ units_x: 3, units_y: 2 });
+    const drawer = measure({
+      units_x: 3,
+      units_y: 2,
+      plate_min_x_mm: 300,
+      plate_min_y_mm: 250,
+    });
+    const extra = 300 * 250 - 126 * 84;
+    expect(drawer.volume - plain.volume).toBeCloseTo(extra * 5.05, 1);
+  });
+
+  it("a drawer smaller than the cells changes nothing", () => {
+    const plain = measure({ units_x: 3, units_y: 2 });
+    const small = measure({
+      units_x: 3,
+      units_y: 2,
+      plate_min_x_mm: 100,
+      plate_min_y_mm: 50,
+    });
+    expect(small.volume).toBeCloseTo(plain.volume, 6);
+    expect(small.size.x).toBeCloseTo(126, 4);
+  });
+
+  it("the factor says where the cells sit: -1 right, 0 centred, 1 left", () => {
+    // the lowest vertex of the pocket floor is the cell's left edge at the floor, 18.15 left
+    // of its centre; the plate is centred, so its left edge is at -150
+    const floor = 0.4;
+    const left = (fit_x: number) =>
+      Math.min(...verticesAt({ plate_min_x_mm: 300, fit_x }, floor).map(([x]) => x));
+    expect(left(1)).toBeCloseTo(-150 + 21 - 18.15, 4);
+    expect(left(0)).toBeCloseTo(-18.15, 4);
+    expect(left(-1)).toBeCloseTo(150 - 21 - 18.15, 4);
+  });
+
+  it("works along the depth as well", () => {
+    const floor = 0.4;
+    const front = Math.min(
+      ...verticesAt({ plate_min_y_mm: 200, fit_y: 1 }, floor).map(([, y]) => y),
+    );
+    expect(front).toBeCloseTo(-100 + 21 - 18.15, 4);
+  });
+
+  it("is closed in the skeleton style, with magnets and an off-centre fit", () => {
+    const m = measure({
+      units_x: 2,
+      units_y: 2,
+      baseplate_style: "skeleton",
+      corner_magnets: true,
+      center_magnet: true,
+      plate_min_x_mm: 200,
+      plate_min_y_mm: 150,
+      fit_x: -0.5,
+      fit_y: 0.3,
+    });
+    expect(m.closed).toBe(true);
+    expect(m.size.x).toBeCloseTo(200, 4);
+  });
+});
+
+describe("C-12 splitting a plate to fit the bed", () => {
+  it("cuts at cell boundaries and no piece is longer than the maximum", () => {
+    // 6 cells = 252 mm on a 130 mm bed: three cells (126 mm) per piece
+    expect(splitPoints(252, 0, 6, 130)).toEqual([0, 126, 252]);
+    // 10 cells = 420 mm on a 256 mm bed: six and four cells
+    expect(splitPoints(420, 0, 10, 256)).toEqual([0, 252, 420]);
+  });
+
+  it("is one piece when it fits", () => {
+    expect(splitPoints(126, 0, 3, 256)).toEqual([0, 126]);
+  });
+
+  it("cuts inside the filler where it is longer than the bed", () => {
+    // 2 cells in the middle of a 600 mm drawer, 258 mm of filler on each side
+    const cuts = splitPoints(600, 258, 2, 256);
+    expect(cuts[0]).toBe(0);
+    expect(cuts[cuts.length - 1]).toBe(600);
+    for (let i = 1; i < cuts.length; i++) {
+      expect((cuts[i] as number) - (cuts[i - 1] as number)).toBeLessThanOrEqual(
+        256 + 1e-9,
+      );
+    }
+  });
+
+  it("the number of pieces is about the drawer area over the bed area", () => {
+    const p = { ...DEFAULT_BASEPLATE, units_x: 12, units_y: 8 };
+    // 504 x 336 mm on a 256 x 256 bed: two across and two deep
+    expect(tileRegions(p, [256, 256])).toHaveLength(4);
+    // a bed that holds the whole plate: one piece
+    expect(tileRegions(p, [600, 600])).toHaveLength(1);
+  });
+
+  it("the pieces together are the plate: same volume, every piece closed and within the bed", () => {
+    const p: BaseplateParams = {
+      ...DEFAULT_BASEPLATE,
+      units_x: 5,
+      units_y: 3,
+      corner_magnets: true,
+      plate_min_x_mm: 230,
+      plate_min_y_mm: 140,
+      fit_x: -0.4,
+    };
+    const scope = new Scope();
+    try {
+      const whole = buildBaseplate(kernel, scope, p);
+      const regions = tileRegions(p, [100, 100]);
+      expect(regions.length).toBeGreaterThan(4);
+      let sum = 0;
+      for (const region of regions) {
+        const tile = buildBaseplate(kernel, scope, p, region);
+        const size = sizeOf(tile);
+        expect(isClosed(tile)).toBe(true);
+        expect(size.x).toBeLessThanOrEqual(100 + 1e-6);
+        expect(size.y).toBeLessThanOrEqual(100 + 1e-6);
+        sum += tile.volume();
+      }
+      expect(sum).toBeCloseTo(whole.volume(), 1);
+    } finally {
+      scope.dispose();
+    }
+  });
+
+  it("a piece keeps its place in the plate, so the pieces fit together", () => {
+    const p: BaseplateParams = { ...DEFAULT_BASEPLATE, units_x: 4 };
+    const scope = new Scope();
+    try {
+      const regions = tileRegions(p, [100, 100]);
+      const first = buildBaseplate(kernel, scope, p, regions[0]);
+      const { min } = first.boundingBox();
+      // the plate is 168 wide and centred: its left edge is at -84
+      expect(min[0]).toBeCloseTo(-84, 4);
+    } finally {
+      scope.dispose();
+    }
   });
 });

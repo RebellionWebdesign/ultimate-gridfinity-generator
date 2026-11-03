@@ -1,7 +1,9 @@
 // Turns the built model into a file and hands it to the user.
 import { writeStl } from "../export/stl";
-import { write3mf, type PartColours } from "../export/threeMf";
-import type { ModelMesh } from "../geometry/model";
+import { write3mf, write3mfPieces, type PartColours } from "../export/threeMf";
+import { shifted, type ModelMesh, type TileMesh } from "../geometry/model";
+import { centreOf, tileOffsets } from "../export/tileLayout";
+import { zip } from "../export/zip";
 
 export type Format = "3mf" | "stl";
 
@@ -37,6 +39,76 @@ export const buildFile = async (
       ? new Uint8Array(writeStl(model.parts))
       : await write3mf(model.parts, colours, title, bodyName);
   return new Blob([data as BlobPart], { type: MIME[format] });
+};
+
+/**
+ * Every piece of a split baseplate in ONE file, each as its own object, in a grid with one
+ * bed per piece (see `tileOffsets`). A 3MF keeps the colours; an STL holds the meshes.
+ */
+export const buildTilesFile = async (
+  format: Format,
+  tiles: readonly TileMesh[],
+  colours: PartColours,
+  title: string,
+  bodyName: string,
+  bed: [number, number],
+): Promise<Blob> => {
+  const offsets = tileOffsets(
+    tiles.map((tile) => centreOf(tile.parts)),
+    bed,
+  );
+  const data =
+    format === "stl"
+      ? new Uint8Array(
+          writeStl(
+            tiles.flatMap((tile, i) =>
+              tile.parts.map((part) =>
+                shifted(part, ...(offsets[i] as [number, number])),
+              ),
+            ),
+          ),
+        )
+      : await write3mfPieces(
+          tiles.map((tile, i) => ({
+            parts: tile.parts,
+            name: `${title} ${i + 1} of ${tiles.length}`,
+            offset: offsets[i],
+          })),
+          colours,
+          title,
+          bodyName,
+        );
+  return new Blob([data as BlobPart], { type: MIME[format] });
+};
+
+/**
+ * Every piece of a split baseplate as its own file, all in one ZIP. The pieces keep their
+ * place in the plate; the slicer centres each one itself.
+ */
+export const buildTilesZip = async (
+  format: Format,
+  tiles: readonly TileMesh[],
+  colours: PartColours,
+  title: string,
+  bodyName: string,
+  fileName: string,
+): Promise<Blob> => {
+  const entries = await Promise.all(
+    tiles.map(async (tile, i) => ({
+      name: `${fileName}-${i + 1}-of-${tiles.length}.${format}`,
+      data:
+        format === "stl"
+          ? new Uint8Array(writeStl(tile.parts))
+          : await write3mf(
+              tile.parts,
+              colours,
+              `${title} ${i + 1} of ${tiles.length}`,
+              bodyName,
+            ),
+    })),
+  );
+  const archive = await zip(entries);
+  return new Blob([archive as BlobPart], { type: "application/zip" });
 };
 
 /** Saves with the folder picker where the browser has one, else as a download. */

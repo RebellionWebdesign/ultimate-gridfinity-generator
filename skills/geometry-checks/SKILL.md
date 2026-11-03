@@ -22,4 +22,8 @@ Checks the spec asks for (section 6.2). They become automated tests once code ex
 
 - **Bin:** 1x1x3 is 41.5 × 41.5 × 25.4 with the lip and 21 without; 2x2 is 83.5 wide; foot bottom edge 35.6; the cavity wall equals the wall setting; closed mesh from 1x1x1 to 4x4x6 for every top edge, with and without magnets; four corner pockets in the whole bin and one centre pocket per corner foot; the floor rises so 0.8 mm stays above the tallest magnet; the lip is its own part only with its own colour.
 
+- **Filler (fit to a drawer):** a 3x2 plate in a 300 × 250 drawer is 300 × 250 × 5.05; the extra area is solid (volume grows by area times height); the factor −1 puts the cells to the right, 0 centres them, 1 puts them to the left; a drawer smaller than the cells changes nothing; closed mesh in both styles.
+
+- **Split baseplate:** the pieces together have the volume of the whole plate; every piece is a closed mesh and within the bed; cuts run along cell boundaries, so every cell stays whole; a plate that fits the bed is not split; the ZIP has one file per piece.
+
 Report what you measured and with which tool. Do not report a check as passed that was not run.

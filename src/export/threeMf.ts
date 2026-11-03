@@ -24,21 +24,30 @@ const colourValue = (hex: string): string => hex.toUpperCase();
 const partName = (name: PartName, bodyName: string): string =>
   ({ plate: bodyName, lip: "Stacking lip", text: "Text", symbol: "Symbol" })[name];
 
+/** One object of a 3MF with several: its parts, its name, and where to put it (mm). */
+export interface Piece {
+  parts: readonly PartMesh[];
+  name: string;
+  offset?: [number, number];
+}
+
 /**
- * Resource ids: colour group of part i is `i + 1`, its mesh object is `parts + i + 1`,
- * the assembled object is `2 * parts + 1`.
+ * The resources and the build item of one piece. Resource ids from `base` on: the colour
+ * group of part i is `base + i + 1`, its mesh object `base + parts + i + 1`, the assembled
+ * object `base + 2 * parts + 1`.
  */
-export const modelXml = (
-  parts: readonly PartMesh[],
+const pieceXml = (
+  piece: Piece,
   colours: PartColours,
-  title: string,
-  bodyName = "Lid",
-): string => {
+  bodyName: string,
+  base: number,
+): { resources: string; item: string; used: number } => {
+  const { parts } = piece;
   const count = parts.length;
   const groups = parts
     .map(
       (part, i) =>
-        `  <m:colorgroup id="${i + 1}"><m:color color="${colourValue(colours[part.name])}"/></m:colorgroup>`,
+        `  <m:colorgroup id="${base + i + 1}"><m:color color="${colourValue(colours[part.name])}"/></m:colorgroup>`,
     )
     .join("\n");
   const objects = parts
@@ -64,28 +73,72 @@ export const modelXml = (
         triangles.push(`<triangle v1="${v1}" v2="${v2}" v3="${v3}"/>`);
       }
       return (
-        `  <object id="${count + i + 1}" name="${escapeXml(partName(part.name, bodyName))}" type="model" pid="${i + 1}" pindex="0">\n` +
-        `   <mesh><vertices>${vertices.join("")}</vertices><triangles>${triangles.join("")}</triangles></mesh>\n` +
+        `  <object id="${base + count + i + 1}" name="${escapeXml(partName(part.name, bodyName))}" type="model" pid="${base + i + 1}" pindex="0">
+` +
+        `   <mesh><vertices>${vertices.join("")}</vertices><triangles>${triangles.join("")}</triangles></mesh>
+` +
         `  </object>`
       );
     })
     .join("\n");
-  const root = 2 * count + 1;
+  const root = base + 2 * count + 1;
   const components = parts
-    .map((_, i) => `<component objectid="${count + i + 1}"/>`)
+    .map((_, i) => `<component objectid="${base + count + i + 1}"/>`)
     .join("");
+  const transform = piece.offset
+    ? ` transform="1 0 0 0 1 0 0 0 1 ${num(piece.offset[0])} ${num(piece.offset[1])} 0"`
+    : "";
+  return {
+    resources:
+      `${groups}
+${objects}
+` +
+      `  <object id="${root}" name="${escapeXml(piece.name)}" type="model"><components>${components}</components></object>`,
+    item: `<item objectid="${root}"${transform}/>`,
+    used: 2 * count + 1,
+  };
+};
+
+/** A 3MF with every piece as its own object, each with its parts and colours. */
+export const modelXmlPieces = (
+  pieces: readonly Piece[],
+  colours: PartColours,
+  title: string,
+  bodyName = "Lid",
+): string => {
+  let base = 0;
+  const built = pieces.map((piece) => {
+    const one = pieceXml(piece, colours, bodyName, base);
+    base += one.used;
+    return one;
+  });
   return (
-    `<?xml version="1.0" encoding="UTF-8"?>\n` +
-    `<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:m="http://schemas.microsoft.com/3dmanufacturing/material/2015/02">\n` +
-    ` <metadata name="Title">${escapeXml(title)}</metadata>\n` +
-    ` <metadata name="Application">Ultimate Gridfinity Generator</metadata>\n` +
-    ` <resources>\n${groups}\n${objects}\n` +
-    `  <object id="${root}" name="${escapeXml(title)}" type="model"><components>${components}</components></object>\n` +
-    ` </resources>\n` +
-    ` <build><item objectid="${root}"/></build>\n` +
-    `</model>\n`
+    `<?xml version="1.0" encoding="UTF-8"?>
+` +
+    `<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:m="http://schemas.microsoft.com/3dmanufacturing/material/2015/02">
+` +
+    ` <metadata name="Title">${escapeXml(title)}</metadata>
+` +
+    ` <metadata name="Application">Ultimate Gridfinity Generator</metadata>
+` +
+    ` <resources>
+${built.map((one) => one.resources).join("\n")}
+ </resources>
+` +
+    ` <build>${built.map((one) => one.item).join("")}</build>
+` +
+    `</model>
+`
   );
 };
+
+/** The 3MF of one object, named `title`. */
+export const modelXml = (
+  parts: readonly PartMesh[],
+  colours: PartColours,
+  title: string,
+  bodyName = "Lid",
+): string => modelXmlPieces([{ parts, name: title }], colours, title, bodyName);
 
 const CONTENT_TYPES =
   `<?xml version="1.0" encoding="UTF-8"?>\n` +
@@ -114,3 +167,21 @@ export const write3mf = async (
     text("3D/3dmodel.model", modelXml(parts, colours, title, bodyName)),
   ]);
 };
+
+const package3mf = async (model: string): Promise<Uint8Array> => {
+  const encoder = new TextEncoder();
+  const text = (name: string, data: string) => ({ name, data: encoder.encode(data) });
+  return zip([
+    text("[Content_Types].xml", CONTENT_TYPES),
+    text("_rels/.rels", RELS),
+    text("3D/3dmodel.model", model),
+  ]);
+};
+
+/** One 3MF with every piece as its own object, at the given offsets. */
+export const write3mfPieces = async (
+  pieces: readonly Piece[],
+  colours: PartColours,
+  title: string,
+  bodyName = "Lid",
+): Promise<Uint8Array> => package3mf(modelXmlPieces(pieces, colours, title, bodyName));

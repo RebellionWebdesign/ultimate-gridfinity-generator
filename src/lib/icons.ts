@@ -21,6 +21,7 @@ import arrowRight from "lucide-static/icons/arrow-right.svg?raw";
 import loaderCircle from "lucide-static/icons/loader-circle.svg?raw";
 import sun from "lucide-static/icons/sun.svg?raw";
 import moon from "lucide-static/icons/moon.svg?raw";
+import coffee from "lucide-static/icons/coffee.svg?raw";
 
 export const icons = {
   bug: bug,
@@ -45,6 +46,7 @@ export const icons = {
   "loader-circle": loaderCircle,
   sun: sun,
   moon: moon,
+  coffee: coffee,
 } as const;
 
 export type IconName = keyof typeof icons;

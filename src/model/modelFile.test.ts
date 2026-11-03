@@ -105,7 +105,7 @@ describe("C-03 baseplate model file", () => {
     expect(p.corner_magnet_d).toBe(6.1);
     expect(p.baseplate_base).toBe(0.4);
     expect(p.center_magnet_d).toBe(6.1);
-    expect(p.units_x).toBe(12);
+    expect(p.units_x).toBe(24);
     expect(validateBaseplate(p)).toEqual([]);
   });
 
@@ -117,6 +117,24 @@ describe("C-03 baseplate model file", () => {
       corner_magnets: "yes",
     });
     expect(p).toEqual(DEFAULT_BASEPLATE);
+  });
+
+  it("a baseplate saved before the drawer options opens with their defaults", () => {
+    const { plate_min_x_mm, plate_min_y_mm, fit_x, fit_y, ...old } = DEFAULT_BASEPLATE;
+    expect([plate_min_x_mm, plate_min_y_mm, fit_x, fit_y]).toEqual([0, 0, 0, 0]);
+    expect(sanitizeBaseplate({ ...old, units_x: 4 })).toEqual({
+      ...DEFAULT_BASEPLATE,
+      units_x: 4,
+    });
+  });
+
+  it("clamps the drawer values into their limits", () => {
+    const p = sanitizeBaseplate({
+      plate_min_x_mm: 9999,
+      fit_x: -5,
+      plate_min_y_mm: -3,
+    });
+    expect([p.plate_min_x_mm, p.fit_x, p.plate_min_y_mm]).toEqual([1000, -1, 0]);
   });
 
   it("opens a lid file as a lid and a baseplate file as a baseplate", () => {

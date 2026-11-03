@@ -12,7 +12,13 @@ export type BuildRequest =
       /** the uploaded SVG, already read into shapes (the worker has no DOM parser) */
       svg?: SvgShapes;
     }
-  | { id: number; part: "baseplate"; params: BaseplateParams }
+  | {
+      id: number;
+      part: "baseplate";
+      params: BaseplateParams;
+      /** printable width and depth: a plate with `split_to_bed` is cut to fit */
+      maxTile?: [number, number];
+    }
   | { id: number; part: "bin"; params: BinParams };
 
 export type BuildResponse =

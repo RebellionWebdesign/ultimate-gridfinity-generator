@@ -6,6 +6,8 @@
   import { editor } from "./store.svelte";
   import {
     buildFile,
+    buildTilesFile,
+    buildTilesZip,
     exportExtensions,
     hasSavePicker,
     saveBlob,
@@ -14,6 +16,8 @@
   import ModelPanel from "./ModelPanel.svelte";
 
   let format = $state<Format>("3mf");
+  /** a split baseplate: all pieces in one file, or one file per piece in a ZIP */
+  let tileFile = $state<"one" | "zip">("one");
   let busy = $state(false);
   let failure = $state("");
 
@@ -25,19 +29,51 @@
     busy = true;
     failure = "";
     try {
-      const blob = await buildFile(
-        format,
-        editor.model,
-        editor.colours,
-        editor.name,
-        PART_NAME[editor.part],
-      );
-      await saveBlob(
-        blob,
-        `${editor.fileName}.${format}`,
-        format === "3mf" ? "3MF model" : "STL model",
-        exportExtensions(format),
-      );
+      const tiles = editor.model.tiles;
+      if (tiles && tileFile === "one") {
+        // a split baseplate: every piece is its own object in one file
+        const blob = await buildTilesFile(
+          format,
+          tiles,
+          editor.colours,
+          editor.name,
+          PART_NAME[editor.part],
+          [editor.printerInfo.bed[0], editor.printerInfo.bed[1]],
+        );
+        await saveBlob(
+          blob,
+          `${editor.fileName}.${format}`,
+          format === "3mf" ? "3MF model" : "STL model",
+          exportExtensions(format),
+        );
+      } else if (tiles) {
+        // a split baseplate: one file per piece, in one ZIP
+        const blob = await buildTilesZip(
+          format,
+          tiles,
+          editor.colours,
+          editor.name,
+          PART_NAME[editor.part],
+          editor.fileName,
+        );
+        await saveBlob(blob, `${editor.fileName}.zip`, "ZIP archive", {
+          "application/zip": [".zip"],
+        });
+      } else {
+        const blob = await buildFile(
+          format,
+          editor.model,
+          editor.colours,
+          editor.name,
+          PART_NAME[editor.part],
+        );
+        await saveBlob(
+          blob,
+          `${editor.fileName}.${format}`,
+          format === "3mf" ? "3MF model" : "STL model",
+          exportExtensions(format),
+        );
+      }
     } catch (error) {
       failure = error instanceof Error ? error.message : String(error);
     } finally {
@@ -49,7 +85,7 @@
     editor.blocked ||
       (busy
         ? "Saving…"
-        : `${picker ? "Save" : "Download"} ${format.toUpperCase()}${picker ? "…" : ""}`),
+        : `${picker ? "Save" : "Download"} ${editor.model?.tiles && tileFile === "zip" ? "ZIP" : format.toUpperCase()}${picker ? "…" : ""}`),
   );
 </script>
 
@@ -57,7 +93,13 @@
   <section>
     <h2 class="t-label">Size</h2>
     <p class="n-l n" aria-live="polite">{sizeText}</p>
-    <p class="t-caption">Width × depth × height in mm, label included</p>
+    {#if editor.model?.tiles}
+      <p class="t-caption">
+        {editor.model.tiles.length} pieces; this is the largest one. Each piece fits the printer.
+      </p>
+    {:else}
+      <p class="t-caption">Width × depth × height in mm, label included</p>
+    {/if}
     <label class="t-label" for="printer">Printer for the bed check</label>
     <select id="printer" bind:value={editor.printer} disabled={!editor.bedCheck}>
       {#each PRINTERS as printer (printer.name)}
@@ -133,10 +175,31 @@
             : "Lid, text and symbol stay separate parts of one object, each with its colour. Your slicer may ask which filament each colour gets."
         : "Geometry only: no colours, all parts in one file."}
     </p>
+    {#if editor.model?.tiles}
+      <div class="seg" role="group" aria-label="Pieces in the file">
+        {#each [["one", "One file"], ["zip", "ZIP of files"]] as const as [value, text] (value)}
+          <button
+            type="button"
+            class:on={tileFile === value}
+            aria-pressed={tileFile === value}
+            onclick={() => (tileFile = value)}
+          >
+            {text}
+          </button>
+        {/each}
+      </div>
+      <p class="t-caption">
+        {tileFile === "one"
+          ? "Every piece is its own object, one printer bed apart. In Bambu Studio press A (Arrange) to put them on plates."
+          : "One file per piece in a ZIP; import them one by one."}
+      </p>
+    {/if}
     <label class="t-label" for="file-name">File name</label>
     <div class="name">
       <input id="file-name" class="n-s" bind:value={editor.fileName} />
-      <span class="n-s ext">.{format}</span>
+      <span class="n-s ext"
+        >.{editor.model?.tiles && tileFile === "zip" ? "zip" : format}</span
+      >
     </div>
     <button
       type="button"

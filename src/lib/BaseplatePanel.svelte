@@ -17,6 +17,16 @@
 
   const mm = (v: number) => `${mmText(v)} mm`;
   const base = $derived(baseOf(p));
+  const drawerOn = $derived(p.plate_min_x_mm > 0 || p.plate_min_y_mm > 0);
+  /** the plate is larger than its cells: there is filler to place */
+  const hasFiller = $derived(
+    p.plate_min_x_mm > p.units_x * 42 || p.plate_min_y_mm > p.units_y * 42,
+  );
+  const drawerSummary = $derived(
+    drawerOn
+      ? `${mmText(Math.max(p.plate_min_x_mm, p.units_x * 42))} × ${mmText(Math.max(p.plate_min_y_mm, p.units_y * 42))} mm`
+      : "off",
+  );
   const sizeSummary = $derived(`${p.units_x} × ${p.units_y} cells`);
   const styleSummary = $derived(p.baseplate_style);
   const magnetSummary = $derived(
@@ -43,6 +53,19 @@
   />
 {/snippet}
 
+{#snippet signedNum(key: "fit_x" | "fit_y", label: string)}
+  <NumberField
+    {label}
+    bind:value={p[key]}
+    min={BASEPLATE_LIMITS[key].min}
+    max={BASEPLATE_LIMITS[key].max}
+    step={BASEPLATE_LIMITS[key].step}
+    def={DEFAULT_BASEPLATE[key]}
+    why={BASEPLATE_LIMITS[key].why}
+    signed
+  />
+{/snippet}
+
 <div class="panel">
   <ParamGroup name="Size" summary={sizeSummary}>
     {@render num("units_x", "Width", "cells")}
@@ -51,9 +74,38 @@
       Fill the bed of the chosen printer
     </button>
     <p class="t-caption">
-      Sets as many cells as fit the printer you chose under Output, at most 12 along
+      Sets as many cells as fit the printer you chose under Output, at most 24 along
       each side.
     </p>
+  </ParamGroup>
+
+  <ParamGroup name="Fit a drawer" summary={drawerSummary}>
+    <Switch
+      label="Split to fit the printer bed"
+      bind:checked={p.split_to_bed}
+      hint="A plate larger than the bed is cut into pieces that each fit {editor.printer}. The cuts run between the cells where possible."
+    />
+    {#if p.split_to_bed && editor.model?.tiles}
+      <p class="t-caption">{editor.model.tiles.length} pieces.</p>
+    {/if}
+    {@render num("plate_min_x_mm", "Drawer width", "mm")}
+    {@render num("plate_min_y_mm", "Drawer depth", "mm")}
+    <p class="t-caption">
+      0 switches it off. Where the plate is smaller than the drawer, the rest is filled
+      solid.
+    </p>
+    {#if drawerOn}
+      <button type="button" class="fit" onclick={() => editor.fitDrawer()}>
+        Use as many cells as fit the drawer
+      </button>
+    {/if}
+    {#if hasFiller}
+      {@render signedNum("fit_x", "Filler left / right")}
+      {@render signedNum("fit_y", "Filler front / back")}
+      <p class="t-caption">
+        -1 puts the filler on the left (front), 1 on the right (back), 0 on both sides.
+      </p>
+    {/if}
   </ParamGroup>
 
   <ParamGroup name="Style" summary={styleSummary}>
