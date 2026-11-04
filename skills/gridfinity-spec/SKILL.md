@@ -64,3 +64,6 @@ Wall thickness, floor thickness, lid plate, clearance, hollow-foot wall, corner 
 | Colours | Until the user chooses a colour, parts stay Stone `#9DA39A`; text is black (placeholder) |
 
 **Rule (owner):** the spec value is always the minimum and the default. The user can only increase it, up to an upper limit per parameter (a geometry limit where the parts do not collide yet); smaller is not allowed. This applies to every value with a spec or default value (the tables above and below), including the plate thickness (default and minimum from the spec; auto: total height a multiple of 7, 1u gives 2.25; manual only larger) and the magnet pocket (6.1 × 2.1 and up). The UI and the validation must enforce the minimum. The reference script still allows smaller values (for example `plate_thickness` from 0.6, `corner_magnet_d` from 3, `corner_len` from 5, `text_size` from 2); the web app does not follow it there. Compare against the script only at or above the minimum.
+
+## Values not decided yet (owner, 4 November 2026)
+Snap connectors for filled baseplate segments (stud and socket, Lego-like): diameter, height, depth and clearance depend on the owner's test prints; the user can set the clearance afterwards. Do not invent values; report that they are missing. Same for the engraving depth and position of text on bin walls.

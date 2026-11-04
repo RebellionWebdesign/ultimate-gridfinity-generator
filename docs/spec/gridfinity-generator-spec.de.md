@@ -23,6 +23,7 @@
 | B | Web-App (PWA), Deckel | Stack und Toolchain entschieden (ADR-0004), Design entschieden (`docs/design/`), Prompt noch nicht geschrieben |
 | C | Bins und Baseplates (Standard), Schiebedeckel, Füller für freien Platz, jeweils als nächstes Feature nach dem Test des vorigen | später |
 | D | SolidCraft-Plugin | später, wenn Plugin-System ausgereift |
+| E | Schubladen-Planer, Druckknopf-Verbinder für aufgefüllte Platten, Text an Bin-Wänden | geplant, erst nach Deploy und Veröffentlichung (Nutzer, 4. November 2026) |
 
 **Zurückgestellt/verworfen:** Desktop-App mit Tauri oder Electron (Entscheidung: Web-App).
 
@@ -52,6 +53,14 @@
 - **Bins und Baseplates im Standard** (Mittenmagnet optional). Die Parametergruppen je Teil stehen in `docs/design/ui-spec.md` Abschnitt 8. Der Umfang eines Bins ist durch das Raster vorgegeben (Nutzer, 2. November 2026): Breite und Tiefe in Zellen, Höhe in 7-mm-Einheiten, dazu die Optionen aus dem Script (Lip-Stil, Fuß, Magnete, Wand und Boden); keine Fächer, kein Scoop, kein Label-Tab.
 - **Schiebedeckel** (Bin mit Nut, Deckel bündig mit Bin-Oberkante). Referenz: Gridfinity Extended (Parameter: Deckeldicke, Mindestwand, Auflage, Spiel, Ausschnitt, später Griffstil, Rastnase, Text). Bei Schiebedeckel nur Lip-Variante „none“ (Überhänge, Stapeln).
 - **Füller für freien Platz** (Schubladen), entschieden (Nutzer, 2. November 2026): Der Füller gehört zum Umfang. Der Nutzer gibt Breite und Länge seiner Schublade an. Die Baseplate wird erzeugt; ist sie zu klein für das Maß, wird der Rest massiv aufgefüllt (Fit-to-Drawer wie in rebuilt-openscad: Mindestmaß in mm, massiver Füllrand, Lage per Faktor −1 bis 1). Das Script macht das bereits. Später kommt die Höhe der Schublade dazu: Sie sperrt die Höhe von Bins und Deckeln auf das, was in die Schublade passt. Verlängerte Bins und Halbzellen-Taschen sind nicht geplant. Umsetzung als eigenes Feature in Phase C.
+
+### 3.3 Nach Deploy und Veröffentlichung (Phase E)
+
+Entscheidung des Nutzers, 4. November 2026: Diese Funktionen kommen erst nach dem Deploy und der Veröffentlichung der App, jeweils eine nach der anderen und nach dem Test des Nutzers.
+
+- **Schubladen-Planer.** Wenn der Nutzer eine Baseplate hat und weiß, was hineinkommt, plant er Bins und Deckel direkt in der Software für die Schublade (Platzierung auf dem Zellraster, Höhe durch die Schubladenhöhe begrenzt). Export: eine 3MF oder alle STLs gezippt (eine Datei je Teil). Offen: ob die 3MF die Schublade wie geplant oder die Teile für den Druck auf dem Bett zeigt (Abschnitt 9, Punkt 10).
+- **Verbinder für aufgefüllte Basen.** Druckknöpfe wie bei Lego (Zapfen und Buchse), die in die aufgefüllten (massiven) Segmente kommen und geteilte oder aufgefüllte Platten verbinden. Welches Spiel passt, weiß der Nutzer erst nach Testdrucken; das Spiel ist danach vom Nutzer einstellbar (custom). Bis dahin werden keine Werte erfunden (Abschnitt 9, Punkt 12).
+- **Text an Bin-Wänden.** Text wird in die Wände eines Bins eingestanzt (graviert), mit den eingebauten Schriften oder einer hochgeladenen Schriftdatei wie beim Deckel-Label. Die Gravurtiefe lässt immer Wandmaterial stehen (Abschnitt 9, Punkt 11).
 
 ## 4. Gridfinity-Spec: Konstanten (alle in mm)
 
@@ -203,6 +212,10 @@
 6. **UI-Schrift:** Vorerst Inter für Text und IBM Plex Mono für Zahlen (Entscheidung vom 2. November 2026, später änderbar). Die Shortlist in Abschnitt 7.3 ist zurückgestellt.
 7. Eigene Lizenz des Projekts: ~~offen~~ entschieden, CC BY-NC-SA 4.0 (2. November 2026, Abschnitt 5). Offen bleiben Ausgabedateien, Beiträge Dritter und der Zeitpunkt der `LICENSE`-Datei.
 8. Wann Prompt für Claude Code (Web-App): Nutzer sagt Bescheid.
+9. Phase E (Abschnitt 3.3) startet erst nach Deploy und Veröffentlichung; der Nutzer sagt Bescheid.
+10. **Export des Schubladen-Planers:** 3MF als geplante Schublade (alle Teile an ihrem Platz) oder Teile für den Druck auf dem Bett angeordnet? Enthält der Plan die Baseplate? Entscheidet der Nutzer.
+11. **Text an Bin-Wänden:** Welche Wände (alle vier, nur vorne, je Wand), Position und Ausrichtung, Standard und Grenze der Gravurtiefe, gemeinsame Texteinstellungen mit dem Deckel-Label. Entscheidet der Nutzer.
+12. **Werte der Druckknopf-Verbinder:** Zapfendurchmesser und -höhe, Buchsentiefe, Standard und Grenzen des Spiels. Der Nutzer entscheidet nach Testdrucken; bis dahin wird kein Wert erfunden.
 
 ## 10. Arbeitsregeln für den KI-Assistenten (aus den Vorgaben des Nutzers)
 
