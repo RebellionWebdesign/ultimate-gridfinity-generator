@@ -10,32 +10,11 @@
   import Segmented from "./lib/Segmented.svelte";
   import { ISSUES_URL, KOFI_URL, PART_NAME, formatSize } from "./lib/parts";
   import { editor } from "./lib/store.svelte";
+  import { theme } from "./lib/theme.svelte";
 
-  type Theme = "light" | "dark";
-  const systemTheme = (): Theme =>
-    matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  const storedTheme = (): Theme | null => {
-    try {
-      const value = localStorage.getItem("ugg.theme");
-      return value === "light" || value === "dark" ? value : null;
-    } catch {
-      return null;
-    }
-  };
-
-  let theme = $state<Theme>(storedTheme() ?? systemTheme());
-  const toggleTheme = () => {
-    theme = theme === "dark" ? "light" : "dark";
-    // set it now: the preview reads the theme's colours in the same update
-    document.documentElement.dataset.theme = theme;
-    try {
-      localStorage.setItem("ugg.theme", theme);
-    } catch {
-      // storage may be blocked; the theme still applies for this visit
-    }
-  };
+  const toggleTheme = () => theme.toggle();
   $effect(() => {
-    document.documentElement.dataset.theme = theme;
+    document.documentElement.dataset.theme = theme.value;
   });
 
   let exportDialog: HTMLDialogElement;
@@ -111,28 +90,30 @@
 >
   <header class="topbar">
     <div class="brand">
-      <svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true" fill="none">
-        <rect
-          x="3"
-          y="3"
-          width="34"
-          height="34"
-          rx="8"
-          stroke="currentColor"
-          stroke-width="3"
-        />
-        <path d="M20 3v34M3 20h34" stroke="currentColor" stroke-width="3" />
-        <rect
-          x="20"
-          y="3"
-          width="17"
-          height="17"
-          rx="8"
-          fill="var(--accent)"
-          stroke="currentColor"
-          stroke-width="3"
-        />
-      </svg>
+      <a class="logo" href="#/" aria-label="Ultimate Gridfinity Generator, home">
+        <svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true" fill="none">
+          <rect
+            x="3"
+            y="3"
+            width="34"
+            height="34"
+            rx="8"
+            stroke="currentColor"
+            stroke-width="3"
+          />
+          <path d="M20 3v34M3 20h34" stroke="currentColor" stroke-width="3" />
+          <rect
+            x="20"
+            y="3"
+            width="17"
+            height="17"
+            rx="8"
+            fill="var(--accent)"
+            stroke="currentColor"
+            stroke-width="3"
+          />
+        </svg>
+      </a>
       <div class="name">
         {#if renaming}
           <!-- svelte-ignore a11y_autofocus -->
@@ -179,9 +160,9 @@
         type="button"
         class="ghost"
         onclick={toggleTheme}
-        aria-label="Switch to {theme === 'dark' ? 'light' : 'dark'} theme"
+        aria-label="Switch to {theme.value === 'dark' ? 'light' : 'dark'} theme"
       >
-        <Icon name={theme === "dark" ? "sun" : "moon"} />
+        <Icon name={theme.value === "dark" ? "sun" : "moon"} />
       </button>
       <button type="button" class="ghost" onclick={() => openInput.click()}>
         <Icon name="folder-open" /><span class="long">Open</span>
@@ -256,7 +237,7 @@
         bedFits={!editor.bedResult || editor.bedResult.fits}
         units={editor.units}
         dimmed={editor.slow && !!editor.model}
-        {theme}
+        theme={theme.value}
       />
       <p class="pill readout n-s">{readout}</p>
       <div class="live" aria-live="polite">
@@ -391,6 +372,10 @@
     align-items: center;
     gap: var(--space-3);
     min-width: 0;
+  }
+  .logo {
+    display: inline-flex;
+    color: inherit;
   }
   .name {
     display: flex;

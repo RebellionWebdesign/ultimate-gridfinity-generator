@@ -25,7 +25,7 @@ export default defineConfig({
         description:
           "Generates Gridfinity lids in the browser and exports STL and 3MF.",
         lang: "en",
-        start_url: "./",
+        start_url: "./#/editor",
         scope: "./",
         display: "standalone",
         background_color: "#111210",

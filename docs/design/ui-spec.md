@@ -6,7 +6,7 @@ Handoff: the canvas holds every screen and state as artboards, the stylesheet `p
 
 Images of the artboards (WebP, lossy, 1× scale) are in `docs/design/mockups/`. Names follow `<screen>-<device>-<theme>-<state>.webp`:
 - Foundations and components: `foundations.webp`, `components-light.webp`, `components-dark.webp`.
-- Landing: `landing-desktop-light.webp`, `landing-desktop-dark.webp`, `landing-phone-light.webp`, `landing-phone-dark.webp`, `landing-oss-licenses-dialog-dark.webp`.
+- Landing: `landing-desktop-light.webp`, `landing-desktop-dark.webp`, `landing-phone-light.webp`, `landing-phone-dark.webp`, `landing-oss-licenses-dialog-dark.webp`; `landing-desktop-dark_changes.webp` marks the changes the owner wanted (4 November 2026).
 - Editor, desktop: `editor-desktop-light-ready.webp`, `editor-desktop-dark-ready.webp`, `editor-desktop-light-empty.webp`, `editor-desktop-dark-computing.webp`, `editor-desktop-light-error-bed-check.webp`.
 - Editor, phone: `editor-phone-light-ready.webp`, `editor-phone-dark-ready.webp`, `editor-phone-light-export-sheet-no-picker.webp`, `editor-phone-dark-computing.webp`, `editor-phone-dark-error-worker.webp`.
 - Parts: `params-lid.webp`, `output-column.webp`, `preview-lid-drawing.webp`.
@@ -16,18 +16,18 @@ Exported: every artboard of the canvas except the Bin and Baseplate parameter se
 See `brand.md`. Regions are separated by hairlines; one accent; Lucide icons; Inter for words, IBM Plex Mono for numbers.
 
 ## 2. Screens and layout
-**Dropped (owner, 2 November 2026): the landing page.** The built app has one screen, the editor; the "OSS Licenses" dialog lives in the editor. Section 2.1 and the landing images are kept only as design record and are not built.
+**Landing page (owner, 4 November 2026: dropped on 2 November, then wanted again).** The app has two screens: the landing page (address without a hash, or `#how`, `#spec`) and the editor (`#/editor`). The editor loads only when it is opened, so the landing page does not pull in the geometry kernel. The logo in the editor links to the landing page, and the installed app starts in the editor (`start_url` `./#/editor`). Changes to the first mockups are in `landing-desktop-dark_changes.webp`.
 
-### 2.1 Landing page (dropped, not built)
+### 2.1 Landing page
 Content column max 1160 px, gutter 32 px (16 px on phones). Sections are separated by a hairline and padded 64 px top and bottom (48 px on phones). Order:
 1. Header, 56 px: logo mark + name, navigation (How it works, The spec, OSS Licenses; hidden below 960 px), light/dark toggle, primary button "Open editor".
-2. Hero: two columns (text 1fr, picture 1.15fr, gap 48), one column below 960 px. Display title, lead text, primary CTA "Open the editor" and a quiet "How it works", a mono line "No account · nothing uploaded · works offline". Picture: the lid preview with the label lifted off the plate (plate, text, symbol as three 3MF objects), in a frame with radius 12, caption in mono below. Padding 64 top, 96 bottom (48 / 48 on phones).
-3. What it makes: three columns divided by hairlines, 32 px on both sides of each divider; Lid ("First"), Bin and Baseplate ("Next"), each with its line drawing, heading, status tag and one sentence.
-4. How it works (surface background): Set, Check, Print, each with a small real component as illustration (stepper, readout pill, format choice + button).
-5. Made to the spec: text left with a sample rail (min / limit), spec table right (grid 42, height unit 7, outer size n × 42 − 0.5, foot 4.75, stacking lip 4.4, magnet pocket 6.1 Ø × 2.1, screw hole 3.0 Ø).
+2. Hero: two columns (text 1fr, picture 1.15fr, gap 48), one column below 960 px. Display title, lead text, primary CTA "Open the editor" and a quiet "How it works", a mono line "No account · nothing uploaded · works offline". Picture (owner, 4 November 2026): a looping isometric animation in the same style: a 3 × 2 base builds up cell by cell, bins drop into it and two lids with labels land on top. The parts are drawn from the real Gridfinity dimensions (foot profile, baseplate pockets, stacking lip, wall) and the colours of the editor; it stands still, finished, with reduced motion. Caption in mono below.
+3. What it makes: six boxes in two rows of three, divided by hairlines: Base, Bin, Lid (line drawings), Fill a drawer, Exportable colours, Base connectors (Lucide icons `layout-grid`, `palette`, `puzzle`; "Soon" tag, the connectors are not built yet). The old "First" and "Next" tags are gone: all three parts exist.
+4. How it works (surface background): Set, Check, Print as three cards with a step number; each holds a small working control (cell stepper, readout pill that follows it and checks the 256 mm P2S bed, 3MF/STL choice + Save).
+5. Made to the spec: text left with a working slider for the magnet pocket (6.1 up to the limit 8.1) above a top view of one cell with its four pockets; spec table right (grid 42, height unit 7, outer size n × 42 − 0.5, foot 4.75, stacking lip 4.4, magnet pocket, wall at the foot edge, screw hole 3.0 Ø). Moving the slider changes the pocket row and the wall row, which light up.
 6. Yours, on your device (surface background): three facts with Lucide icons (`laptop`, `wifi-off`, `file`).
 7. Closing line with "Open the editor".
-8. Footer: Gridfinity credit with link to the specification, licence, OSS Licenses, source repository.
+8. Footer: Gridfinity credit and licence as text; the last line holds the links side by side, right-aligned: Gridfinity specification, OSS Licenses, Source repository.
 
 ### 2.2 Editor
 Grid of two rows: top bar (56 px) and the main area.

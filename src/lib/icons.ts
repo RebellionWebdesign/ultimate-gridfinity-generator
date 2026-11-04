@@ -22,6 +22,10 @@ import loaderCircle from "lucide-static/icons/loader-circle.svg?raw";
 import sun from "lucide-static/icons/sun.svg?raw";
 import moon from "lucide-static/icons/moon.svg?raw";
 import coffee from "lucide-static/icons/coffee.svg?raw";
+import laptop from "lucide-static/icons/laptop.svg?raw";
+import wifiOff from "lucide-static/icons/wifi-off.svg?raw";
+import puzzle from "lucide-static/icons/puzzle.svg?raw";
+import layoutGrid from "lucide-static/icons/layout-grid.svg?raw";
 
 export const icons = {
   bug: bug,
@@ -47,6 +51,10 @@ export const icons = {
   sun: sun,
   moon: moon,
   coffee: coffee,
+  laptop: laptop,
+  "wifi-off": wifiOff,
+  puzzle: puzzle,
+  "layout-grid": layoutGrid,
 } as const;
 
 export type IconName = keyof typeof icons;
