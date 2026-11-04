@@ -7,7 +7,7 @@
 
 ## 1. Ziel und Rahmen
 
-- Offene App, Bezahlfunktionen vielleicht später. Wenn die Web-App läuft, kommen Extras dazu, die evtl. kostenpflichtig sind. Der Umfang des MakerWorld-Scripts (auch Bin, Baseplate, Schiebedeckel, Beschriftung) ist ausdrücklich in Ordnung.
+- Offene App. Wenn die Web-App läuft, kommen Extras dazu. Der Umfang des MakerWorld-Scripts (auch Bin, Baseplate, Schiebedeckel, Beschriftung) ist ausdrücklich in Ordnung.
 - Erster Schritt: ein **MakerWorld-Customizer** (OpenSCAD-Script) für **Gridfinity-Deckel**, um dort Punkte zu sammeln.
 - Danach: eigene **Web-App (PWA)** mit derselben Funktion. Ablauf (Nutzer, 2. November 2026): Claude Code baut die App zuerst mit den Deckeln und zeigt nur diese Optionen. Der Nutzer testet; ist alles gut, geht Claude Code das nächste Feature an (Bin, Baseplate, Schiebedeckel und so weiter, eines nach dem anderen).
 - **Unabhängig bleiben:** keine Abhängigkeit von fremden Roadmaps (SolidCraft-Plugins erst später, wenn sie ausgereift sind).
@@ -20,12 +20,13 @@
 |---|---|---|
 | A | MakerWorld-Script (OpenSCAD, Parametric Model Maker) | Fertig (vom Nutzer, außerhalb der Web-App entstanden); dient als Test-Orakel, Kopie in `reference/gridfinity_generator.scad` |
 | A-Fix | Mehrzellen-Deckel: Fuß durchgehend statt Kreuz in der Mitte, `foot_layout` mit `merged` (Standard) und `per_cell` | Erledigt, im Script enthalten |
-| B | Web-App (PWA), Deckel | Stack und Toolchain entschieden (ADR-0004), Design entschieden (`docs/design/`), Prompt noch nicht geschrieben |
-| C | Bins und Baseplates (Standard), Schiebedeckel, Füller für freien Platz, jeweils als nächstes Feature nach dem Test des vorigen | später |
+| B | Web-App (PWA), Deckel | Gebaut und vom Nutzer veröffentlicht (3. November 2026); Deploy und Veröffentlichung als Nächstes |
+| C | Bins und Baseplates (Standard), Schiebedeckel, Füller für freien Platz, jeweils als nächstes Feature nach dem Test des vorigen | in Arbeit: Baseplate (C-01 bis C-03), Bin (C-04 bis C-08) und Schublade mit Füller, geteilter Platte und Schubladenhöhe (C-09 bis C-13) gebaut; Schiebedeckel offen |
 | D | SolidCraft-Plugin | später, wenn Plugin-System ausgereift |
 | E | Schubladen-Planer, Druckknopf-Verbinder für aufgefüllte Platten, Text an Bin-Wänden, Farbe nach Höhe, Bin-Innenraum, eigenes Druckbett, Druckknöpfe statt Magnete | geplant, erst nach Deploy und Veröffentlichung (Nutzer, 4. November 2026) |
 | F | Desktop-App (Tauri oder Electron) | ferne Zukunft, nur wenn alles gut läuft (Nutzer, 4. November 2026) |
 | G | Das MakerWorld-Script neu aus der Web-App: Der OpenSCAD-Teil für MakerWorld wird auf Basis der App neu gemacht. MakerWorld lässt Software per Crowdfunding finanzieren (Nutzer hat es am 4. November 2026 geprüft; Beispiel: Wall Art Generator) | ferne Zukunft (Nutzer, 4. November 2026) |
+| H | Werkzeug-Einsätze aus Fotos | ferne Zukunft, nur eine Idee (Nutzer, 4. November 2026) |
 
 **Zurückgestellt:** Desktop-App mit Tauri oder Electron (Entscheidung: zuerst Web-App; die Desktop-App ist Phase F, ferne Zukunft).
 
@@ -66,6 +67,12 @@ Entscheidung des Nutzers, 4. November 2026: Diese Funktionen kommen erst nach de
 - **Farbe nach Höhe.** In den Farbeinstellungen kommt eine Sektion mit Farbbändern, daneben ein Plus für ein weiteres Band. Die Basis ist die vom Nutzer gewählte Teilfarbe: Wo kein Band eine Farbe vergibt, behält das Teil sie. Färbt der Nutzer die Lippe nicht, hat sie die Farbe des ganzen Teils, und ein oberstes Band ohne Farbe bleibt in der Teilfarbe. Die Bänder liegen von unten nach oben über die ganze Höhe: Jedes Band hat eine Höhe, das erste beginnt am Druckbett, das nächste darauf, und das oberste nimmt den Rest. Beispiel: Bei einem 20 mm hohen Teil mit den untersten zwei Bändern zu je 5 mm und dem dritten mit 3 mm bleiben 7 mm für das oberste. Ein Band lässt sich auf „Lip only“ schalten und nimmt dann die Höhe der Lippe, sodass der Nutzer sie nicht raten muss. Farbe nach Höhe ersetzt die getrennte Lippenfarbe des Editors, die dann entfällt (gespeicherte Modelle werden übernommen). Idee und Regeln des Nutzers, 4. November 2026 (Abschnitt 9, Punkt 13).
 - **Bin-Innenraum.** Trennwände teilen den Bin in Fächer, dazu Schaufelrampe und Label-Fahne. Maße und Eingabe entscheidet der Nutzer (Abschnitt 9, Punkt 14).
 - **Eigenes Druckbett.** Der Nutzer gibt Breite, Tiefe und Höhe seines Druckers ein; Bed-Check, roter Rand und Warnung lesen diese Werte und rechnen live (Abschnitt 9, Punkt 15). Heute vorhanden: quadratisches Bett mit abgerundeten Ecken und Bauhöhe.
+
+### 3.4 Ferne Zukunft (Phase H)
+
+Nur eine Idee des Nutzers, 4. November 2026; nichts davon beginnt vor Phase C und E und vor dem Bescheid des Nutzers.
+
+- **Werkzeug-Einsatz aus einem Foto.** Der Nutzer liefert ein Foto eines Werkzeugs, die App leitet die Kontur ab und schneidet sie als Tasche in ein Bin. Der Einsatz ist eine dünne Schale (1 bis 2 mm Wand) statt eines Vollblocks und spart Filament. Offen: Abschnitt 9, Punkt 16.
 
 ## 4. Gridfinity-Spec: Konstanten (alle in mm)
 
@@ -165,7 +172,7 @@ Entscheidung des Nutzers, 4. November 2026: Diese Funktionen kommen erst nach de
 - **Stand Phase B (Deckel), 2. November 2026, Entscheidungen des Nutzers im Test:** Labels (Raised, Flush) sitzen direkt auf der Platte, kein Spalt (`flush_gap` entfällt); die Teile bleiben getrennte Meshes. Schrift „Other“ = eigene Schriftdatei des Nutzers (.ttf, .otf, .woff, bis 2 MB), base64 in der Modell-Datei; die Lizenz liegt beim Nutzer. Landing-Seite zuerst gestrichen (2. November), am 4. November 2026 vom Nutzer wieder gewünscht und gebaut (`docs/design/ui-spec.md` 2.1; Editor unter `#/editor`; der Dialog „OSS Licenses“ liegt auf beiden Seiten). Hosting ist nicht Aufgabe dieses Repos. Parametergruppen sind standardmäßig geschlossen. Plattendicke-Standard „Auto“. Label-Standardwerte bestätigt: `icon_size` 14, `label_gap` 3, `symbol_scale` 1, Offset-Grenze ± halbe Deckelgröße. Bed-Check mit den Druckbereichen der offiziellen Bambu-Studio-Maschinenprofile (P2S 256 × 256 × 256 ohne Sperrzone; P1S, P1P, X1, X1C, X1E 250 mm Höhe mit Sperrzone 18 × 28 mm vorne links; dazu A2L, H2D Pro, H2C, X2D; H3C und P3S fehlen bewusst, nicht released). Modelle im Browser: „Download as ZIP and clear“. Modell-Datei: JSON, Schemaversion 1, Werte werden auf das Limit geklemmt, nie unter das Spec-Minimum. Text: glyphenweise mit Kerning, ohne Ligaturen (opentype.js stürzt bei Inter ab). Eigene SVG: 96 dpi. Zusätzlich gebaut: Report-Bug-Button (GitHub-Issues), Kamera-Animation 240 ms. Label-Randabstand: Text und Symbol halten 3 mm zur Deckelkante (gemessen am abgerundeten Umriss); darunter erscheint eine Warnung, und die Vorschau zeichnet den Streifen als diagonale Balken in `#84161C` und `#3F0709`; Engraved bleibt mit dieser Warnung erhalten. Vorschau-Boden: das Druckbett des gewählten Druckers, immer dunkel, mit der echten Plattenform (256-mm-Drucker wie P2S, H2-Familie und A1 mini mit eigener Form, aus Bildern des Nutzers gemessen, etwa 1 mm genau), dazu „Custom size“ (Quadrat mit abgerundeten Ecken, 50 bis 600 mm, plus Bauhöhe 20 bis 600 mm); der vom Drucker freigehaltene Bereich wird nicht gezeichnet, der Bed-Check beachtet ihn weiter. Ausgabespalte 340 px breit. Teiltyp-Schalter in der Reihenfolge Base, Bin, Lid. Hohlfuß-Boden: der Hohlraum endet 1,45 mm unter der Platte. Nach dem Passtest: der Fuß passt. Technische Entscheidungen: ADR 0005 bis 0008. Oracle-Abweichungen (ADR-0006): Labels ohne Spalt, Hohlfuß ohne Stütze unter den Taschen, keine Schraubenlöcher am Deckel, Text nicht verglichen.
 - **STL:** eigener Binär-Writer.
 - **3MF (Stand ADR-0008):** reines 3MF Core, ein Objekt aus Komponenten (Lid, Lip, Text, Symbol), Farben als `m:colorgroup` (Bambu Studio liest `basematerials` nicht); ursprünglich geplant: Teile als **getrennte Objekte** mit Basismaterial-Farbe. Manifold bringt `lib/export-3mf` mit, alternativ JSZip (3MF = ZIP mit XML). Bambu Studio speichert die Filamentzuordnung in eigenen Metadaten (`project_settings.config`), die Zuordnung der Farben ist slicer-abhängig. Die Teile dürfen nicht zu einem Körper verschmelzen.
-- **Speichern:** Modelle als JSON (Modelltyp, Schemaversion, Parameter, Text, Farben, SVG als String). Vorerst im Browser (localStorage/IndexedDB) und als Datei zum Herunterladen/Laden. Teilen per URL-Zustand wäre möglich (Scadder-Prinzip). Konten und Server-Speicher erst bei Bezahlfunktionen (Django + allauth wäre ein Weg).
+- **Speichern:** Modelle als JSON (Modelltyp, Schemaversion, Parameter, Text, Farben, SVG als String). Vorerst im Browser (localStorage/IndexedDB) und als Datei zum Herunterladen/Laden. Teilen per URL-Zustand wäre möglich (Scadder-Prinzip). Konten und Server-Speicher erst später (Django + allauth wäre ein Weg).
 - **Datei speichern:** `<a download>` funktioniert in allen gängigen Browsern. `showSaveFilePicker` (Speicherort wählen) gibt es nur in Chrome und Edge (ab 86), Firefox und Safari nicht → Fallback nötig.
 - **PWA:** HTTPS ist Pflicht (Service Worker, Installierbarkeit). Manifest mit `name`, `icons`, `start_url`, `display`. Chrome und Edge installieren PWAs unter Windows, Linux, macOS. Firefox und Safari installieren auf dem Desktop keine PWAs (Safari unter macOS 14: „Zum Dock hinzufügen“). Offline-Betrieb braucht einen Service Worker.
 - **Test-Orakel:** Die .scad-Datei dient als Referenz (gleiche Parameternamen, Maße und Volumen gegeneinander prüfen). Die Geometrie existiert dadurch zweimal (OpenSCAD und JS), das ist ein bewusster Preis.
@@ -224,6 +231,7 @@ Entscheidung des Nutzers, 4. November 2026: Diese Funktionen kommen erst nach de
 13. **Farbe nach Höhe:** Entschieden (4. November 2026): Basis ist die Teilfarbe des Nutzers; die Bänder liegen von unten über die ganze Höhe, jedes mit eigener Höhe, das oberste nimmt den Rest; ein Band ohne Farbe (auch das oberste) behält die Teilfarbe; die Lippe hat die Teilfarbe, solange kein Band sie färbt; „Lip only“ setzt ein Band auf die Lippenhöhe; die getrennte Lippenfarbe entfällt. Offen: Höchstzahl der Bänder, Einrasten auf die Schichthöhe, Bänder für alle Teile oder je Teil (Platte, Text). STL hat keine Farben und bleibt eine Datei. Entscheidet der Nutzer.
 14. **Bin-Innenraum:** Eingabe der Fächer (Anzahl je Achse mit gleicher Teilung oder freie Wandpositionen), Mindest- und Standardwert für Dicke und Höhe der Trennwände, Größe der Schaufelrampe und welche Fächer sie bekommen, Größe und Winkel der Label-Fahne. Entscheidet der Nutzer; es wird kein Wert erfunden.
 15. **Eigenes Druckbett:** nur quadratisch oder auch rechteckig, ob eine freigehaltene Ecke eingegeben werden kann, ob es auch die Bauhöhe festlegt. Entscheidet der Nutzer.
+16. **Werkzeug-Einsatz aus Foto (Phase H):** Wie der Maßstab des Fotos bekannt wird, wie die Kontur gefunden und vom Nutzer korrigiert wird, Grenzen der Schalenwand. Entscheidet der Nutzer, wenn die Phase beginnt.
 
 ## 10. Arbeitsregeln für den KI-Assistenten (aus den Vorgaben des Nutzers)
 

@@ -22,6 +22,7 @@ Source: spec sections 2, 3, 6.2, 7 (incl. 7.3) and 9 (`docs/spec/gridfinity-gene
 | E | Drawer planner, snap connectors for filled plates, text on bin walls, colour by height, bin compartments, scoop, label tab, custom print bed, snap studs instead of magnets | Planned, only after deploy and publication (owner, 4 November 2026) |
 | F | Desktop app (Tauri or Electron) | Far future, only if everything goes well (owner, 4 November 2026) |
 | G | The MakerWorld script rebuilt from the web app: the OpenSCAD part for MakerWorld is made new on the basis of the app. MakerWorld lets users crowdfund software (owner checked on 4 November 2026; example: the Wall Art Generator) | Far future (owner, 4 November 2026) |
+| H | Tool inserts from a photo | Far future, idea only (owner, 4 November 2026) |
 
 Postponed (spec section 2): the desktop app with Tauri or Electron, to phase F. Phases D, F and G are later; do not start them before the owner says so.
 
@@ -78,7 +79,7 @@ Spec 3.2 (decided 2 November 2026): the user gives the width and depth of the dr
 
 ## Phase C, later features
 
-Bins and baseplates in the standard, sliding lid, filler for free space. Bin scope is given by the grid (Open decision 3). Filler: the user enters the width and length of the drawer, the baseplate is generated and, where it is too small, filled solid (fit to drawer, as in the script); later the drawer height is added so that the height of bins and lids stays locked to what fits. The reference script already contains more than Phase B (bin, baseplate, sliding lid, label); the owner accepts that. Extras come once the web app runs, and some may be paid.
+Bins and baseplates in the standard, sliding lid, filler for free space. Bin scope is given by the grid (Open decision 3). Filler: the user enters the width and length of the drawer, the baseplate is generated and, where it is too small, filled solid (fit to drawer, as in the script); later the drawer height is added so that the height of bins and lids stays locked to what fits. The reference script already contains more than Phase B (bin, baseplate, sliding lid, label); the owner accepts that. Extras come once the web app runs.
 
 ## Phase E: after deploy and publication (owner, 4 November 2026)
 
@@ -95,6 +96,12 @@ Planned features. **Do not start them before the owner has deployed and publishe
 - [ ] **E-08 Bin scoop.** A ramp at the front of a compartment so small parts slide out. Depends on: E-07. *AC:* closed mesh; the scoop never reaches into the walls or the label tab. Size and which compartments get one are decision 14.
 - [ ] **E-09 Bin label tab.** A label tab along the front of a compartment for a printed or stuck-on label. Depends on: E-07. *AC:* closed mesh; the tab is printable without support. Size and angle are decision 14.
 - [ ] **E-10 Custom print bed.** The user types the width, depth and height of their own printer's bed (any printer, not only the Bambu list), and the bed check, the red band in the preview and the warning read these values and update live as the numbers change; the entered bed is kept in the browser. Depends on: the bed check of the editor (built in phases B and C, task C-12 for the split). *AC:* a part that is too large for the typed bed shows the red band and the warning at once; the buttons that offer a fix use the typed values. What exists (4 November 2026): a square custom bed with rounded corners and a build height. Whether the bed may be rectangular and whether a keep-free corner can be entered is decision 15.
+
+## Phase H: far future (idea only, owner, 4 November 2026)
+
+No tasks yet, and nothing here is started before phases C and E are done and the owner says so. (Phases F and G are also far-future items, see the table.)
+
+- **Tool insert from a photo.** The user supplies a photo of a tool; the app derives its outline and cuts it as a pocket into a bin. The insert is a thin shell (1 to 2 mm wall) instead of a solid block, which saves filament. Open points are in "Open decisions" 16.
 
 ## Open decisions (spec section 9)
 
@@ -113,5 +120,6 @@ Planned features. **Do not start them before the owner has deployed and publishe
 13. **Colour by height (E-06).** Decided (4 November 2026): the base is the user's part colour; bands are stacked from the bottom over the whole height, each with its own height, the top band takes the rest; a band without a colour (also the top one) keeps the part colour; the lip has the part colour unless a band colours it; a "Lip only" switch sets a band to the lip height; the separate lip colour option goes away. Open: how many bands at most, whether band edges snap to the layer height of the printer, and whether bands apply to every part of a model or per part (plate, text). STL has no colours and stays one file. Owner decides.
 14. **Bin interior (E-07 to E-09).** How compartments are entered (a count per axis with equal split, or free divider positions), minimum and default divider thickness and height, scoop size and which compartments get one, label tab size and angle. Owner decides; no value is invented.
 15. **Custom print bed (E-10).** Rectangular or square only, whether a keep-free corner can be entered, and whether it also fixes the build height. Owner decides.
+16. **Tool insert from a photo (phase H).** How the scale of the photo is known, how the outline is found and corrected by the user, shell wall limits. Owner decides when the phase starts.
 
 Added by this setup (not in the spec): Vite with Svelte, Prettier, ESLint and npm are decided (2 November 2026, ADR-0004).
