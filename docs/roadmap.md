@@ -20,8 +20,10 @@ Source: spec sections 2, 3, 6.2, 7 (incl. 7.3) and 9 (`docs/spec/gridfinity-gene
 | C | Bins and baseplates, sliding lid, filler for free space; one feature at a time | In progress: baseplate (C-01 to C-03), bin (C-04 to C-08) and drawer fit with solid filler, split plate and drawer height (C-09 to C-13) built; sliding lid still open |
 | D | SolidCraft plugin | Later, only when the plugin system is mature |
 | E | Drawer planner, snap connectors for filled plates, text on bin walls, colour by height, bin compartments, scoop, label tab, custom print bed, snap studs instead of magnets | Planned, only after deploy and publication (owner, 4 November 2026) |
+| F | Desktop app (Tauri or Electron) | Far future, only if everything goes well (owner, 4 November 2026) |
+| G | The MakerWorld script rebuilt from the web app: the OpenSCAD part for MakerWorld is made new on the basis of the app. MakerWorld lets users crowdfund software (owner checked on 4 November 2026; example: the Wall Art Generator) | Far future (owner, 4 November 2026) |
 
-Rejected or postponed (spec section 2): desktop app with Tauri or Electron.
+Postponed (spec section 2): the desktop app with Tauri or Electron, to phase F. Phases D, F and G are later; do not start them before the owner says so.
 
 ## Phase B: web app
 

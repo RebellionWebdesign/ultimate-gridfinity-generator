@@ -24,8 +24,10 @@
 | C | Bins und Baseplates (Standard), Schiebedeckel, Füller für freien Platz, jeweils als nächstes Feature nach dem Test des vorigen | später |
 | D | SolidCraft-Plugin | später, wenn Plugin-System ausgereift |
 | E | Schubladen-Planer, Druckknopf-Verbinder für aufgefüllte Platten, Text an Bin-Wänden, Farbe nach Höhe, Bin-Innenraum, eigenes Druckbett, Druckknöpfe statt Magnete | geplant, erst nach Deploy und Veröffentlichung (Nutzer, 4. November 2026) |
+| F | Desktop-App (Tauri oder Electron) | ferne Zukunft, nur wenn alles gut läuft (Nutzer, 4. November 2026) |
+| G | Das MakerWorld-Script neu aus der Web-App: Der OpenSCAD-Teil für MakerWorld wird auf Basis der App neu gemacht. MakerWorld lässt Software per Crowdfunding finanzieren (Nutzer hat es am 4. November 2026 geprüft; Beispiel: Wall Art Generator) | ferne Zukunft (Nutzer, 4. November 2026) |
 
-**Zurückgestellt/verworfen:** Desktop-App mit Tauri oder Electron (Entscheidung: Web-App).
+**Zurückgestellt:** Desktop-App mit Tauri oder Electron (Entscheidung: zuerst Web-App; die Desktop-App ist Phase F, ferne Zukunft).
 
 ## 3. Funktionsumfang
 
