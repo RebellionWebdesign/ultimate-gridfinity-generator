@@ -5,7 +5,7 @@ A browser app (PWA) that generates Gridfinity parts (lids first; bins and basepl
 The full planning record is `docs/spec/gridfinity-generator-spec.de.md` (German, the source of truth for requirements and numbers). Everything else in `docs/` is derived from it and written in English.
 
 ## Start here
-Work: `docs/roadmap.md` (take the first unchecked task whose dependencies are done). Decisions already taken: `docs/adr/`, with the rules a change must keep in `docs/agent/adr-digest.md`. Open questions: "Open decisions" in the roadmap. Phase E (drawer planner, snap connectors for filled plates, text on bin walls, colour by height) is planned for after deploy and publication; do not start it before the owner says so. When something is not settled by the spec, the ADRs or the code, ask the owner; do not guess.
+Work: `docs/roadmap.md` (take the first unchecked task whose dependencies are done). Decisions already taken: `docs/adr/`, with the rules a change must keep in `docs/agent/adr-digest.md`. Open questions: "Open decisions" in the roadmap. Phase E (drawer planner, snap connectors for filled plates, text on bin walls, colour by height, bin compartments and scoop and label tab, custom print bed) is planned for after deploy and publication; do not start it before the owner says so. When something is not settled by the spec, the ADRs or the code, ask the owner; do not guess.
 
 ## Hard rules
 - **No code until the owner says so.** Until then, only Markdown. The owner announces when code gets written (spec section 10). **Released on 2 November 2026: Phase B (web app, lids only).** Bins, baseplates and every later feature stay Markdown-only until the owner releases them.

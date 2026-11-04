@@ -23,7 +23,7 @@
 | B | Web-App (PWA), Deckel | Stack und Toolchain entschieden (ADR-0004), Design entschieden (`docs/design/`), Prompt noch nicht geschrieben |
 | C | Bins und Baseplates (Standard), Schiebedeckel, Füller für freien Platz, jeweils als nächstes Feature nach dem Test des vorigen | später |
 | D | SolidCraft-Plugin | später, wenn Plugin-System ausgereift |
-| E | Schubladen-Planer, Druckknopf-Verbinder für aufgefüllte Platten, Text an Bin-Wänden, Farbe nach Höhe | geplant, erst nach Deploy und Veröffentlichung (Nutzer, 4. November 2026) |
+| E | Schubladen-Planer, Druckknopf-Verbinder für aufgefüllte Platten, Text an Bin-Wänden, Farbe nach Höhe, Bin-Innenraum, eigenes Druckbett | geplant, erst nach Deploy und Veröffentlichung (Nutzer, 4. November 2026) |
 
 **Zurückgestellt/verworfen:** Desktop-App mit Tauri oder Electron (Entscheidung: Web-App).
 
@@ -61,7 +61,9 @@ Entscheidung des Nutzers, 4. November 2026: Diese Funktionen kommen erst nach de
 - **Schubladen-Planer.** Wenn der Nutzer eine Baseplate hat und weiß, was hineinkommt, plant er Bins und Deckel direkt in der Software für die Schublade (Platzierung auf dem Zellraster, Höhe durch die Schubladenhöhe begrenzt). Export: eine 3MF oder alle STLs gezippt (eine Datei je Teil). Offen: ob die 3MF die Schublade wie geplant oder die Teile für den Druck auf dem Bett zeigt (Abschnitt 9, Punkt 10).
 - **Verbinder für aufgefüllte Basen.** Druckknöpfe wie bei Lego (Zapfen und Buchse), die in die aufgefüllten (massiven) Segmente kommen und geteilte oder aufgefüllte Platten verbinden. Welches Spiel passt, weiß der Nutzer erst nach Testdrucken; das Spiel ist danach vom Nutzer einstellbar (custom). Bis dahin werden keine Werte erfunden (Abschnitt 9, Punkt 12).
 - **Text an Bin-Wänden.** Text wird in die Wände eines Bins eingestanzt (graviert), mit den eingebauten Schriften oder einer hochgeladenen Schriftdatei wie beim Deckel-Label. Die Gravurtiefe lässt immer Wandmaterial stehen (Abschnitt 9, Punkt 11).
-- **Farbe nach Höhe.** In den Farbeinstellungen kommt eine neue Sektion mit Höhenbereichen: je ein Wertepaar (untere und obere Z-Höhe in mm, vom Druckbett aus gemessen) mit einer Farbe, daneben ein Plus für ein weiteres Paar. Das Teil wird an den Grenzen in Streifen geteilt, jeder Streifen hat seine Farbe. Beispiel: Z5 bis Z10 dunkelblau, Z10 bis Z15 hellblau, Z15 bis Z20 weiß. Idee des Nutzers, 4. November 2026 (Abschnitt 9, Punkt 13).
+- **Farbe nach Höhe.** In den Farbeinstellungen kommt eine Sektion mit Farbbändern, daneben ein Plus für ein weiteres Band. Die Basis ist die vom Nutzer gewählte Teilfarbe. Die Bänder liegen von unten nach oben über die ganze Höhe des Teils: Jedes Band hat eine Höhe, das erste beginnt am Druckbett, das nächste darauf, und das oberste Band nimmt den Rest. Beispiel: Bei einem 20 mm hohen Teil mit den untersten zwei Bändern zu je 5 mm und dem dritten mit 3 mm bleiben 7 mm für das oberste. Idee und Regeln des Nutzers, 4. November 2026 (Abschnitt 9, Punkt 13).
+- **Bin-Innenraum.** Trennwände teilen den Bin in Fächer, dazu Schaufelrampe und Label-Fahne. Maße und Eingabe entscheidet der Nutzer (Abschnitt 9, Punkt 14).
+- **Eigenes Druckbett.** Der Nutzer gibt Breite, Tiefe und Höhe seines Druckers ein; Bed-Check, roter Rand und Warnung lesen diese Werte und rechnen live (Abschnitt 9, Punkt 15). Heute vorhanden: quadratisches Bett mit abgerundeten Ecken und Bauhöhe.
 
 ## 4. Gridfinity-Spec: Konstanten (alle in mm)
 
@@ -217,7 +219,9 @@ Entscheidung des Nutzers, 4. November 2026: Diese Funktionen kommen erst nach de
 10. **Export des Schubladen-Planers:** 3MF als geplante Schublade (alle Teile an ihrem Platz) oder Teile für den Druck auf dem Bett angeordnet? Enthält der Plan die Baseplate? Entscheidet der Nutzer.
 11. **Text an Bin-Wänden:** Welche Wände (alle vier, nur vorne, je Wand), Position und Ausrichtung, Standard und Grenze der Gravurtiefe, gemeinsame Texteinstellungen mit dem Deckel-Label. Entscheidet der Nutzer.
 12. **Werte der Druckknopf-Verbinder:** Zapfendurchmesser und -höhe, Buchsentiefe, Standard und Grenzen des Spiels. Der Nutzer entscheidet nach Testdrucken; bis dahin wird kein Wert erfunden.
-13. **Farbe nach Höhe:** Ersetzt ein Bereich die Teilfarbe nur in seinem Bereich (außerhalb gilt die normale Farbe)? Gelten die Bereiche für alle Teile eines Modells oder je Teil (Platte, Lippe, Text)? Höchstzahl der Bereiche. Rasten die Grenzen auf die Schichthöhe des Druckers ein? STL hat keine Farben und bleibt eine Datei. Entscheidet der Nutzer.
+13. **Farbe nach Höhe:** Entschieden (4. November 2026): Basis ist die Teilfarbe des Nutzers, die Bänder liegen von unten über die ganze Höhe, jedes mit eigener Höhe, das oberste nimmt den Rest. Offen: Hat das oberste Band eine eigene Farbwahl (Vorgabe: die Teilfarbe)? Höchstzahl der Bänder, Einrasten auf die Schichthöhe, Bänder für alle Teile oder je Teil (Platte, Lippe, Text). STL hat keine Farben und bleibt eine Datei. Entscheidet der Nutzer.
+14. **Bin-Innenraum:** Eingabe der Fächer (Anzahl je Achse mit gleicher Teilung oder freie Wandpositionen), Mindest- und Standardwert für Dicke und Höhe der Trennwände, Größe der Schaufelrampe und welche Fächer sie bekommen, Größe und Winkel der Label-Fahne. Entscheidet der Nutzer; es wird kein Wert erfunden.
+15. **Eigenes Druckbett:** nur quadratisch oder auch rechteckig, ob eine freigehaltene Ecke eingegeben werden kann, ob es auch die Bauhöhe festlegt. Entscheidet der Nutzer.
 
 ## 10. Arbeitsregeln für den KI-Assistenten (aus den Vorgaben des Nutzers)
 
