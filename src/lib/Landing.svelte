@@ -112,16 +112,19 @@
       icon: "laptop",
       title: "Computed on your device",
       text: "The geometry runs in your browser. No server sees your parts.",
+      chips: ["WebAssembly", "Web Worker", "0 bytes uploaded"],
     },
     {
       icon: "wifi-off",
       title: "Works offline",
       text: "After the first visit. Chrome and Edge can install it as an app.",
+      chips: ["Installable", "No account"],
     },
     {
       icon: "file",
       title: "Files you keep",
       text: "Save a model as a .json file and open it again later, on any device.",
+      chips: [".json", ".stl", ".3mf"],
     },
   ] as const;
 </script>
@@ -401,12 +404,19 @@
   <section class="surface">
     <div class="wrap">
       <h2 class="t-title">Yours, on your device</h2>
+      <p class="t-lead sub">
+        Nothing to sign up for, nothing to upload. The model, the geometry and the files
+        stay with you.
+      </p>
       <ul class="facts">
         {#each facts as f (f.title)}
           <li>
-            <Icon name={f.icon} />
-            <h3 class="t-strong">{f.title}</h3>
+            <span class="tile"><Icon name={f.icon} size={24} /></span>
+            <h3 class="t-heading">{f.title}</h3>
             <p>{f.text}</p>
+            <div class="chips">
+              {#each f.chips as chip (chip)}<span class="chip n-s">{chip}</span>{/each}
+            </div>
           </li>
         {/each}
       </ul>
@@ -954,26 +964,48 @@
   .facts {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1px;
+    gap: var(--space-4);
     margin: var(--space-8) 0 0;
     padding: 0;
     list-style: none;
-    background: var(--line);
   }
-  .facts li {
+  .facts > li {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
-    padding: 0 var(--space-7);
-    background: var(--surface);
+    padding: var(--space-6);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-panel);
+    background: var(--bg);
   }
-  .facts li:first-child {
-    padding-left: 0;
-  }
-  .facts li:last-child {
-    padding-right: 0;
+  .tile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: flex-start;
+    width: 48px;
+    height: 48px;
+    margin-bottom: var(--space-2);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-panel);
+    background: var(--surface-2);
+    color: var(--text);
   }
   .facts p {
+    color: var(--text-2);
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: auto;
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--line);
+  }
+  .chip {
+    padding: var(--space-1) var(--space-3);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-round);
     color: var(--text-2);
   }
 
@@ -1041,14 +1073,6 @@
       padding: var(--space-6) 0;
     }
     .features li:first-child {
-      padding-top: 0;
-    }
-    .facts li,
-    .facts li:first-child,
-    .facts li:last-child {
-      padding: var(--space-6) 0;
-    }
-    .facts li:first-child {
       padding-top: 0;
     }
     .steps li:not(:last-child)::after {
