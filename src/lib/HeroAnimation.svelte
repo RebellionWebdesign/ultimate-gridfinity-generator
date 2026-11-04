@@ -89,8 +89,8 @@
 
   const tone = (f: number): string =>
     f <= 1
-      ? `color-mix(in srgb, var(--part-plate), #000 ${Math.round((1 - f) * 100)}%)`
-      : `color-mix(in srgb, var(--part-plate), #fff ${Math.round((f - 1) * 100)}%)`;
+      ? `color-mix(in srgb, var(--hue), #000 ${Math.round((1 - f) * 100)}%)`
+      : `color-mix(in srgb, var(--hue), #fff ${Math.round((f - 1) * 100)}%)`;
 
   // light from the upper left front: the top is the stone colour, sides are darker
   const LIGHT = [0.25, 0.45, 0.85];
@@ -468,6 +468,14 @@
     stroke-width: 0.6;
     stroke-linejoin: round;
   }
+  /* base and lids in the accent colour of the page, bins in dark grey so the outlines show */
+  .tile,
+  .lid {
+    --hue: var(--accent);
+  }
+  .bin {
+    --hue: #5a5d56;
+  }
   path.line {
     stroke-width: 0.9;
     stroke-linecap: round;
@@ -498,7 +506,7 @@
     opacity: 0;
   }
   .label {
-    fill: var(--part-text);
+    fill: var(--accent-ink);
     font-family: var(--font-num);
     font-weight: 500;
     text-anchor: middle;
