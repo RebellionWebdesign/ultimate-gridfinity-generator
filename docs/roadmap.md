@@ -19,7 +19,7 @@ Source: spec sections 2, 3, 6.2, 7 (incl. 7.3) and 9 (`docs/spec/gridfinity-gene
 | B | Web app (PWA), lids | Built and released by the owner (3 November 2026); deploy and publication next |
 | C | Bins and baseplates, sliding lid, filler for free space; one feature at a time | In progress: baseplate (C-01 to C-03), bin (C-04 to C-08) and drawer fit with solid filler, split plate and drawer height (C-09 to C-13) built; sliding lid still open |
 | D | SolidCraft plugin | Later, only when the plugin system is mature |
-| E | Drawer planner, snap connectors for filled plates, text on bin walls | Planned, only after deploy and publication (owner, 4 November 2026) |
+| E | Drawer planner, snap connectors for filled plates, text on bin walls, colour by height | Planned, only after deploy and publication (owner, 4 November 2026) |
 
 Rejected or postponed (spec section 2): desktop app with Tauri or Electron.
 
@@ -80,13 +80,14 @@ Bins and baseplates in the standard, sliding lid, filler for free space. Bin sco
 
 ## Phase E: after deploy and publication (owner, 4 November 2026)
 
-Planned features. **Do not start them before the owner has deployed and published the app and says so.** One feature at a time, as in phase C; the owner tests each one. Open points are in "Open decisions" 10 to 12; values that depend on test prints (E-04) are the owner's, do not invent them.
+Planned features. **Do not start them before the owner has deployed and published the app and says so.** One feature at a time, as in phase C; the owner tests each one. Open points are in "Open decisions" 10 to 13; values that depend on test prints (E-04) are the owner's, do not invent them.
 
 - [ ] **E-01 Drawer planner: layout model.** For a baseplate (with the drawer size and height from C-09 to C-13) the user plans which bins and lids sit on which cells: placement on the cell grid, size per bin in cells, no overlaps, height limited by the drawer height. The plan is part of the model file (schema version bump and migration, ADR-0003). Depends on: C-13. *AC:* a plan with bins and lids on a 4x3 baseplate saves, loads and rejects overlaps and parts that do not fit.
 - [ ] **E-02 Drawer planner: interface.** Plan view of the plate with the parts on it, add, move and remove a bin or lid, each part uses the parameters of the existing bin and lid panels, list of the planned parts. Design first (`docs/design/ui-spec.md`, mockups by Claude Design). Depends on: E-01. *AC:* the owner can plan a whole drawer without leaving the planner; minimum values and limits as everywhere (spec rule).
 - [ ] **E-03 Drawer planner: export.** One 3MF with all planned parts (each part keeps its colours and separate meshes, ADR-0008) or all STLs in one ZIP, one file per part. Depends on: E-01. *AC:* the 3MF opens in a slicer with every part present; the ZIP holds one STL per part and a readable file name per part. How the parts are arranged in the 3MF (as planned in the drawer or laid out on the bed) is open decision 10.
 - [ ] **E-04 Snap connectors for filled plates.** Lego-style press studs (stud and socket) in the filled (solid) segments of baseplates that are filled or split (C-10, C-12), so the pieces click together. Stud size and clearance depend on test prints by the owner; the user can set the clearance afterwards (custom). Depends on: C-12; the owner's test prints. *AC:* two pieces of a split plate join and hold; the clearance parameter changes the fit; defaults and limits come from the owner after the test prints.
 - [ ] **E-05 Text on bin walls.** Text stamped (engraved) into the walls of a bin, with the built-in fonts or an uploaded font file, like the lid label (B-07). Depends on: C-05, B-07. *AC:* closed mesh; the engraving depth always leaves material in the wall (wall 1.2 to 2.5, engraving only up to a value below the wall); text size minimum as for the lid label. Which walls, position, depth default and orientation are open decision 11.
+- [ ] **E-06 Colour by height.** In the colour settings, a new section of height bands: each band is a pair of values (lower and upper Z in mm, measured up from the bed) and a colour, and a plus button adds another pair. The part is cut at the band heights into stripes, each stripe in its own colour. Example: Z5 to Z10 dark blue, Z10 to Z15 light blue, Z15 to Z20 white. Depends on: B-08 (3MF colour groups). *AC:* the preview shows the stripes; the 3MF holds every stripe as its own component with its colour (ADR-0008), the stripes join without a gap or overlap; bands that overlap, run backwards or lie outside the part are rejected with a message; a part without bands exports as before. Open points are decision 13.
 
 ## Open decisions (spec section 9)
 
@@ -102,5 +103,6 @@ Planned features. **Do not start them before the owner has deployed and publishe
 10. **Drawer planner export (E-03).** Is the 3MF the drawer as planned (all parts in place) or the parts laid out on the bed for printing? Does the plan include the baseplate? Owner decides.
 11. **Text on bin walls (E-05).** Which walls (all four, front only, per wall), position and orientation, engraving depth default and limit, shared text settings with the lid label. Owner decides.
 12. **Snap connector values (E-04).** Stud diameter and height, socket depth, clearance default and limits. Owner decides after test prints; until then no value is invented.
+13. **Colour by height (E-06).** Does a band replace the part colour only inside its range, with the normal colour outside? Do bands apply to every part of a model or per part (plate, lip, text)? Maximum number of bands. Whether band edges snap to the layer height of the printer. How STL is handled (no colours: one file as now). Owner decides.
 
 Added by this setup (not in the spec): Vite with Svelte, Prettier, ESLint and npm are decided (2 November 2026, ADR-0004).
