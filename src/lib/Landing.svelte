@@ -606,7 +606,8 @@
   </div>
 </footer>
 
-<LicencesDialog bind:open={licences} />
+<!-- 15 kB of licence texts: not part of the pre-rendered page, only in the browser -->
+{#if live}<LicencesDialog bind:open={licences} />{/if}
 
 <style>
   :global(html),

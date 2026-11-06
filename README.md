@@ -35,71 +35,8 @@ Needs Node.js 20.19+ or 22.12+.
 
 Serving `dist/`: any static server over HTTPS (needed for the service worker and installing the app), the folder may be anywhere (relative paths). The server must send `application/wasm` for `.wasm` files. The oracle fixture is regenerated with `tools/oracle/` (see ADR-0006).
 
-### Server: Coolify with nginx, and SEO
+### SEO
 
 The build puts the landing page into `index.html` as plain HTML (`prerenderLanding` in `vite.config.ts`, Svelte's own server renderer), so crawlers and link previews see its text; in the browser the app replaces it at once. `index.html` also holds the title, description, canonical URL and the Open Graph and Twitter tags; `public/` holds `robots.txt`, `sitemap.xml` and the preview image `og-image.png` (1200 × 630, a screenshot of the landing page). Routing stays on hashes (`/#/`, `/#/editor`), so there is one URL for search engines.
-
-Coolify (Static site, publish directory `/dist`): under *General > Build pipeline > Custom Nginx configuration* put the file below, then redeploy (the config is copied into the image). It fixes the type of `manifest.webmanifest`, caches the hashed files under `/assets/` for a year and never caches the entry files, compresses text, JSON, SVG and WASM, and sends HSTS. `add_header` does not inherit into a block that sets its own, so HSTS is repeated.
-
-```nginx
-worker_processes auto;
-
-events {
-  worker_connections 1024;
-}
-
-http {
-  include /etc/nginx/mime.types;
-  default_type application/octet-stream;
-  sendfile on;
-
-  gzip on;
-  gzip_comp_level 6;
-  gzip_min_length 1024;
-  gzip_vary on;
-  gzip_types text/plain text/css text/javascript application/javascript application/json application/manifest+json application/xml image/svg+xml application/wasm;
-
-  server {
-    listen 80;
-    server_name _;
-    root /usr/share/nginx/html;
-    index index.html;
-
-    add_header Strict-Transport-Security "max-age=31536000" always;
-
-    # hashed files never change under their name
-    location /assets/ {
-      add_header Cache-Control "public, max-age=31536000, immutable";
-      add_header Strict-Transport-Security "max-age=31536000" always;
-      try_files $uri =404;
-    }
-
-    # the entry files and the service worker must always be checked again
-    location = /index.html {
-      add_header Cache-Control "no-cache";
-      add_header Strict-Transport-Security "max-age=31536000" always;
-    }
-    location = /sw.js {
-      add_header Cache-Control "no-cache";
-      add_header Strict-Transport-Security "max-age=31536000" always;
-    }
-    location = /registerSW.js {
-      add_header Cache-Control "no-cache";
-      add_header Strict-Transport-Security "max-age=31536000" always;
-    }
-    location = /manifest.webmanifest {
-      default_type application/manifest+json;
-      add_header Cache-Control "no-cache";
-      add_header Strict-Transport-Security "max-age=31536000" always;
-    }
-
-    location / {
-      add_header Cache-Control "no-cache";
-      add_header Strict-Transport-Security "max-age=31536000" always;
-      try_files $uri $uri/ =404;
-    }
-  }
-}
-```
 
 Two things are settings, not code: under Domains in Coolify set "www redirect" to the main domain (both host names must be listed), and in Google Search Console and Bing Webmaster Tools verify the domain and submit `https://ultimategridfinity.app/sitemap.xml`. After a deploy the service worker updates itself (`registerType: "autoUpdate"`), so a browser shows the old version for one load at most.

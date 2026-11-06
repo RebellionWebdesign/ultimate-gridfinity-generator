@@ -101,7 +101,7 @@ Planned features. **Do not start them before the owner has deployed and publishe
 
 - [x] **Head tags in `index.html`**: title, description, canonical, Open Graph, Twitter card, `<noscript>` text; `robots.txt`, `sitemap.xml` and `og-image.png` in `public/`.
 - [x] **Prerendered landing page** (option C): the build renders the landing page with Svelte's server renderer into `index.html` (`prerenderLanding` in `vite.config.ts`, no new dependency); the animations and drawings are left out of it and appear in the browser. *AC:* the raw HTML holds the headings and texts (checked in `dist/index.html`).
-- [x] **nginx configuration** (MIME type of the manifest, cache headers, compression, HSTS) and the Coolify notes are in the README. *AC for the owner:* paste it into Coolify, redeploy, check the response headers.
+- [x] **nginx configuration** (MIME type of the manifest, cache headers, compression, HSTS) is the owner's, kept in Coolify and not in this repository (6 November 2026). Coolify copies it to `/etc/nginx/conf.d/default.conf`, inside nginx's `http` block, so it may hold only `server { ... }`: a `worker_processes`, `events` or `http` block makes nginx fail at start and the site answers 502.
 - [ ] **For the owner, not code:** "www redirect" in Coolify; Search Console and Bing Webmaster Tools; look at the link preview in Discord or Slack. Not done by choice: JSON-LD, separate pages per part (they need clean paths, option B), hreflang.
 
 ## After the deploy: the About modal (owner, 6 November 2026)
