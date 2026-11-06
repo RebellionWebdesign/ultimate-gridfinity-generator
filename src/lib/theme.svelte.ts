@@ -1,27 +1,76 @@
-// Light or dark theme, shared by the landing page and the editor.
+// Light or dark theme, shared by the landing page and the editor. The switch in the header
+// goes round three modes: automatic (follows the system and changes with it), light, dark.
 export type Theme = "light" | "dark";
+export type ThemeMode = "auto" | "light" | "dark";
 
-const systemTheme = (): Theme =>
-  matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+const STORAGE_KEY = "ugg.theme";
+const NEXT: Record<ThemeMode, ThemeMode> = {
+  auto: "light",
+  light: "dark",
+  dark: "auto",
+};
 
-const storedTheme = (): Theme | null => {
+// kept in a variable for the life of the page, so the listener is not lost
+const dark = matchMedia("(prefers-color-scheme: dark)");
+const systemTheme = (): Theme => (dark.matches ? "dark" : "light");
+
+const storedMode = (): ThemeMode => {
   try {
-    const value = localStorage.getItem("ugg.theme");
-    return value === "light" || value === "dark" ? value : null;
+    const value = localStorage.getItem(STORAGE_KEY);
+    return value === "light" || value === "dark" ? value : "auto";
   } catch {
-    return null;
+    return "auto";
   }
 };
 
 class ThemeState {
-  value = $state<Theme>(storedTheme() ?? systemTheme());
+  mode = $state<ThemeMode>(storedMode());
+  /** what the system asks for now; only used in the automatic mode */
+  private system = $state<Theme>(systemTheme());
 
-  toggle(): void {
-    this.value = this.value === "dark" ? "light" : "dark";
+  constructor() {
+    // the automatic mode follows the system while the page is open
+    const follow = () => {
+      this.system = systemTheme();
+      if (this.mode === "auto") this.apply();
+    };
+    dark.addEventListener("change", follow);
+    // also when the page comes back to the front, in case a change was missed meanwhile
+    addEventListener("focus", follow);
+    document.addEventListener("visibilitychange", follow);
+  }
+
+  /** The theme that is shown. */
+  get value(): Theme {
+    return this.mode === "auto" ? this.system : this.mode;
+  }
+
+  /** The icon of the switch: the mode it is in. */
+  get icon(): "monitor" | "sun" | "moon" {
+    return { auto: "monitor", light: "sun", dark: "moon" }[this.mode] as
+      "monitor" | "sun" | "moon";
+  }
+
+  /** What the switch says and does, for screen readers and the tooltip. */
+  get label(): string {
+    const now = { auto: `automatic (${this.system})`, light: "light", dark: "dark" }[
+      this.mode
+    ];
+    const next = { auto: "automatic", light: "light", dark: "dark" }[NEXT[this.mode]];
+    return `Theme: ${now}. Switch to ${next}`;
+  }
+
+  private apply(): void {
     // set it now: the preview reads the theme's colours in the same update
     document.documentElement.dataset.theme = this.value;
+  }
+
+  toggle(): void {
+    this.mode = NEXT[this.mode];
+    this.apply();
     try {
-      localStorage.setItem("ugg.theme", this.value);
+      if (this.mode === "auto") localStorage.removeItem(STORAGE_KEY);
+      else localStorage.setItem(STORAGE_KEY, this.mode);
     } catch {
       // storage may be blocked; the theme still applies for this visit
     }

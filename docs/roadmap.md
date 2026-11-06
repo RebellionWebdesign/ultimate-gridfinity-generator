@@ -97,6 +97,10 @@ Planned features. **Do not start them before the owner has deployed and publishe
 - [ ] **E-09 Bin label tab.** A label tab along the front of a compartment for a printed or stuck-on label. Depends on: E-07. *AC:* closed mesh; the tab is printable without support. Size and angle are decision 14.
 - [ ] **E-10 Custom print bed.** The user types the width, depth and height of their own printer's bed (any printer, not only the Bambu list), and the bed check, the red band in the preview and the warning read these values and update live as the numbers change; the entered bed is kept in the browser. Depends on: the bed check of the editor (built in phases B and C, task C-12 for the split). *AC:* a part that is too large for the typed bed shows the red band and the warning at once; the buttons that offer a fix use the typed values. What exists (4 November 2026): a square custom bed with rounded corners and a build height. Whether the bed may be rectangular and whether a keep-free corner can be entered is decision 15.
 
+## After the deploy: the About modal (owner, 6 November 2026)
+
+- [ ] **About modal.** A modal "About" has to be built after the deploy. The header of the landing page no longer has a Licenses link (the footer keeps it); what the modal holds (credits, licences, version, links, support) the owner decides when it is built. Do not start it before the deploy.
+
 ## Phase H: far future (idea only, owner, 4 November 2026)
 
 No tasks yet, and nothing here is started before phases C and E are done and the owner says so. (Phases F and G are also far-future items, see the table.)

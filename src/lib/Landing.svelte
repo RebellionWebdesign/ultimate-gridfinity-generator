@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import HeroAnimation from "./HeroAnimation.svelte";
   import Icon from "./Icon.svelte";
+  import PartDemo from "./PartDemo.svelte";
   import LicencesDialog from "./LicencesDialog.svelte";
   import Segmented from "./Segmented.svelte";
   import { CONSTANTS } from "../gridfinity/constants";
@@ -14,6 +15,8 @@
     "https://github.com/RebellionWebdesign/ultimate-gridfinity-generator";
 
   let licences = $state(false);
+  /** how far the hero animation has come; the words beside it appear with it */
+  let stage = $state(0);
 
   $effect(() => {
     document.documentElement.dataset.theme = theme.value;
@@ -28,21 +31,27 @@
   // "How it works": a small working copy of the controls
   let cells = $state(2);
   let format = $state<"3mf" | "stl">("3mf");
-  const side = $derived(cells * 42 - 0.5);
-  const fits = $derived(side <= 256);
+  /** a baseplate has no tolerance: n cells are n x 42 mm */
+  const side = $derived(cells * 42);
+  /** the visitor sizes the bed themselves: a plain square, no printer model */
+  let bed = $state(256);
+  const fits = $derived(side <= bed);
+  const BED_PX = 104;
+  const scale = $derived(BED_PX / bed);
 
+  type Drawing =
+    "base" | "bin" | "lid" | "drawer" | "split" | "height" | "colours" | "connectors";
   interface Feature {
     title: string;
     text: string;
     tag?: string;
-    drawing?: "base" | "bin" | "lid";
-    icon?: "layout-grid" | "palette" | "puzzle";
+    drawing: Drawing;
   }
   const features: Feature[] = [
     {
       title: "Base",
       drawing: "base",
-      text: "Solid or skeleton, as many cells as you need. Corner and centre magnets, padded to fit a drawer, split to fit your print bed.",
+      text: "Solid or skeleton, as many cells as you need, with corner and centre magnets.",
     },
     {
       title: "Bin",
@@ -52,21 +61,31 @@
     {
       title: "Lid",
       drawing: "lid",
-      text: "A dust cover or stackable, with a merged or per-cell foot, corner and centre magnets, hollow foot, text and symbol.",
+      text: "A dust cover or stackable, with a merged or per-cell foot, magnets, hollow foot, text and symbol.",
     },
     {
       title: "Fill a drawer",
-      icon: "layout-grid",
-      text: "Enter the width and depth of your drawer. The base is padded solid where whole cells do not fill it, and bins and lids stay at the height that fits.",
+      drawing: "drawer",
+      text: "Enter the width and depth of your drawer, up to 1 m. The base is padded solid where whole cells do not fill it.",
+    },
+    {
+      title: "Split to fit your bed",
+      drawing: "split",
+      text: "A base larger than your print bed is cut into pieces that each fit, between the cells. All pieces go into one 3MF.",
+    },
+    {
+      title: "Height that fits",
+      drawing: "height",
+      text: "Give the height of the drawer, and bins and lids stay as tall as fits, never taller.",
     },
     {
       title: "Exportable colours",
-      icon: "palette",
+      drawing: "colours",
       text: "Plate, lip, text and symbol stay separate parts with their own colour in one 3MF, so your slicer can give each one a filament.",
     },
     {
       title: "Base connectors",
-      icon: "puzzle",
+      drawing: "connectors",
       tag: "Soon",
       text: "Studs and sockets in the solid segments of a padded or split base, so the pieces click together.",
     },
@@ -161,15 +180,15 @@
     <nav aria-label="Page">
       <a href="#how">How it works</a>
       <a href="#spec">The spec</a>
-      <button type="button" onclick={() => (licences = true)}>OSS Licenses</button>
     </nav>
     <button
       type="button"
       class="ghost"
       onclick={() => theme.toggle()}
-      aria-label="Switch to {theme.value === 'dark' ? 'light' : 'dark'} theme"
+      aria-label={theme.label}
+      title={theme.label}
     >
-      <Icon name={theme.value === "dark" ? "sun" : "moon"} />
+      <Icon name={theme.icon} />
     </button>
     <a class="primary" href="#/editor">Open editor</a>
   </div>
@@ -177,6 +196,7 @@
 
 <main id="main">
   <section class="hero">
+    <div class="hero-bg"><HeroAnimation bind:stage /></div>
     <div class="wrap hero-grid">
       <div class="hero-text">
         <h1 class="t-display">Gridfinity parts, generated in your browser.</h1>
@@ -193,13 +213,20 @@
         </div>
         <p class="n-s note">No account · nothing uploaded · works offline</p>
       </div>
-      <figure class="hero-figure">
-        <div class="frame"><HeroAnimation /></div>
-        <figcaption class="n-s">
-          3 × 2 base · four bins · two lids · every part its own colour in one 3MF
-        </figcaption>
-      </figure>
     </div>
+    <p class="n-s hero-caption">
+      <span class="visually-hidden">
+        3 × 2 base · four bins · two lids · every part its own colour in one 3MF
+      </span>
+      <span aria-hidden="true" class="words">
+        <span class="w" class:on={stage >= 1}>3 × 2 base</span>
+        <span class="w" class:on={stage >= 2}> · four bins</span>
+        <span class="w" class:on={stage >= 3}> · two lids</span>
+        <span class="w" class:on={stage >= 4}>
+          · every part its own colour in one 3MF</span
+        >
+      </span>
+    </p>
   </section>
 
   <section class="band">
@@ -207,7 +234,7 @@
       <h2 class="t-title">What it makes</h2>
       <p class="t-lead sub">
         Base, bin and lid share the same controls: size in cells, foot, magnets,
-        colours.
+        colours. The drawer ties them together.
       </p>
       <ul class="features">
         {#each features as f (f.title)}
@@ -215,29 +242,74 @@
             <svg
               class="draw"
               viewBox="0 0 72 48"
-              width="72"
-              height="48"
+              width="120"
+              height="80"
               fill="none"
               stroke="currentColor"
-              stroke-width="1.5"
+              stroke-width="1.4"
               stroke-linejoin="round"
               stroke-linecap="round"
               aria-hidden="true"
-              class:hidden={!f.drawing}
             >
               {#if f.drawing === "lid"}
-                <path d="M36 12 66 25 36 38 6 25Z M6 25v4l30 13 30-13v-4M36 38v4" />
+                <g class="lift">
+                  <path d="M36 12 66 25 36 38 6 25Z M6 25v4l30 13 30-13v-4M36 38v4" />
+                </g>
               {:else if f.drawing === "bin"}
-                <path d="M36 3 62 14 36 25 10 14Z M10 14v20l26 11 26-11V14M36 25v20" />
+                <g class="lift">
+                  <path
+                    d="M36 3 62 14 36 25 10 14Z M10 14v20l26 11 26-11V14M36 25v20"
+                  />
+                </g>
               {:else if f.drawing === "base"}
-                <path
-                  d="M36 12 66 25 36 38 6 25Z M6 25v4l30 13 30-13v-4M36 38v4M21 18.5l30 13M51 18.5l-30 13"
-                />
+                <g class="lift">
+                  <path
+                    d="M36 12 66 25 36 38 6 25Z M6 25v4l30 13 30-13v-4M36 38v4M21 18.5l30 13M51 18.5l-30 13"
+                  />
+                </g>
+              {:else if f.drawing === "drawer"}
+                <path class="dash" d="M36 5 69 19.5 36 34 3 19.5Z" />
+                <g class="lift">
+                  <path d="M26 15 46 24 31 31 11 22Z M11 22v3l20 9 15-7v-3M31 31v4" />
+                </g>
+                <path class="fill" d="M50 22.5l9-4M52 26l9-4M54 29.5l9-4" />
+              {:else if f.drawing === "split"}
+                <g class="piece-a">
+                  <path d="M36 12 66 25 51 31.5 21 18.5Z M66 25v4l-15 6.5v-4" />
+                </g>
+                <g class="piece-b">
+                  <path
+                    d="M21 18.5 51 31.5 36 38 6 25Z M6 25v4l30 13 15-6.5v-4M36 38v4"
+                  />
+                </g>
+              {:else if f.drawing === "height"}
+                <g class="lift">
+                  <path d="M28 5 50 15 28 25 6 15Z M6 15v18l22 10 22-10V15M28 25v18" />
+                </g>
+                <g class="arrow">
+                  <path d="M64 8v32M60 12l4-4 4 4M60 36l4 4 4-4" />
+                </g>
+              {:else if f.drawing === "colours"}
+                <g class="top">
+                  <path d="M36 3 62 14 36 25 10 14Z M10 14v3l26 11 26-11v-3" />
+                </g>
+                <g class="mid">
+                  <path d="M10 23v3l26 11 26-11v-3M10 23l26 11 26-11" />
+                </g>
+                <g class="low">
+                  <path d="M10 32v3l26 11 26-11v-3M10 32l26 11 26-11" />
+                </g>
+              {:else if f.drawing === "connectors"}
+                <g class="piece-a">
+                  <path d="M20 13 36 20 20 27 4 20Z M4 20v4l16 7 16-7v-4" />
+                  <ellipse cx="30" cy="20" rx="3.5" ry="1.7" />
+                </g>
+                <g class="piece-b">
+                  <path d="M52 21 68 28 52 35 36 28Z M36 28v4l16 7 16-7v-4" />
+                  <ellipse class="dash" cx="42" cy="28" rx="3.5" ry="1.7" />
+                </g>
               {/if}
             </svg>
-            {#if f.icon}
-              <span class="glyph"><Icon name={f.icon} size={24} /></span>
-            {/if}
             <h3 class="t-heading">
               {f.title}{#if f.tag}<span class="tag">{f.tag}</span>{/if}
             </h3>
@@ -260,28 +332,21 @@
             in the preview while you type.
           </p>
           <div class="well-box">
-            <span class="t-label">Width</span>
-            <div class="stepper">
-              <button
-                type="button"
-                aria-label="Fewer cells"
-                disabled={cells <= 1}
-                onclick={() => cells--}
-              >
-                <Icon name="minus" />
-              </button>
-              <span class="n value" aria-live="polite">
-                {cells} <span class="unit">cells</span>
-              </span>
-              <button
-                type="button"
-                aria-label="More cells"
-                disabled={cells >= 8}
-                onclick={() => cells++}
-              >
-                <Icon name="plus" />
-              </button>
-            </div>
+            <PartDemo kind="base" hue="var(--accent)" {cells} />
+            <label class="demo-head" for="cells">
+              <span class="t-label">Size</span>
+              <span class="n-s">{cells} × {cells} cells</span>
+            </label>
+            <input
+              id="cells"
+              class="range"
+              type="range"
+              min="1"
+              max="7"
+              step="1"
+              bind:value={cells}
+              style="--share: {((cells - 1) / 6) * 100}%"
+            />
           </div>
         </li>
         <li>
@@ -289,14 +354,59 @@
           <h3 class="t-heading">Check</h3>
           <p>
             The outer size is shown in millimetres, and the part is checked against your
-            printer's bed before you export.
+            bed before you export. Size the bed to match your printer.
           </p>
           <div class="well-box">
-            <span class="pill n-s">{side} × {side} × 7.6 mm</span>
+            <span class="pill n-s">{side} × {side} × 5.05 mm</span>
+            <svg
+              class="bed"
+              viewBox="0 0 {BED_PX + 24} {BED_PX + 24}"
+              role="img"
+              aria-label="Your bed as a square grid, and the part on it"
+            >
+              <rect class="bed-plate" x="12" y="12" width={BED_PX} height={BED_PX} />
+              {#each Array.from({ length: Math.floor(bed / 42) }, (_, k) => k + 1) as k (k)}
+                <path
+                  class="bed-grid"
+                  d="M{12 + k * 42 * scale} 12v{BED_PX}M12 {12 +
+                    k * 42 * scale}h{BED_PX}"
+                />
+              {/each}
+              <rect
+                class="bed-part"
+                class:bad={!fits}
+                x="12"
+                y={12 + BED_PX - side * scale}
+                width={side * scale}
+                height={side * scale}
+              />
+            </svg>
             <p class="verdict" class:bad={!fits} role="status">
               <Icon name={fits ? "check" : "triangle-alert"} size={16} />
-              {fits ? "Fits the P2S bed" : "Too big for the P2S bed"}
+              {fits ? "Fits your bed" : "Too big: split it"}
             </p>
+            <span class="t-label">Your bed</span>
+            <div class="stepper">
+              <button
+                type="button"
+                aria-label="Smaller bed"
+                disabled={bed <= 100}
+                onclick={() => (bed -= 20)}
+              >
+                <Icon name="minus" />
+              </button>
+              <span class="n value" aria-live="polite">
+                {bed} <span class="unit">mm</span>
+              </span>
+              <button
+                type="button"
+                aria-label="Larger bed"
+                disabled={bed >= 400}
+                onclick={() => (bed += 20)}
+              >
+                <Icon name="plus" />
+              </button>
+            </div>
           </div>
         </li>
         <li>
@@ -306,20 +416,24 @@
             Download STL, or 3MF with plate, text and symbol as separate coloured
             objects. Save the model as a file to change it later.
           </p>
-          <div class="well-box row">
-            <div class="seg">
-              <Segmented
-                label="Format"
-                hideLabel
-                bind:value={format}
-                options={[
-                  { value: "3mf", label: "3MF" },
-                  { value: "stl", label: "STL" },
-                ]}
-              />
+          <div class="well-box">
+            <PartDemo printing hue="var(--accent)" />
+            <div class="print-row">
+              <div class="seg">
+                <Segmented
+                  label="Format"
+                  hideLabel
+                  bind:value={format}
+                  options={[
+                    { value: "3mf", label: "3MF" },
+                    { value: "stl", label: "STL" },
+                  ]}
+                />
+              </div>
+              <a class="primary" href="#/editor"
+                ><Icon name="download" size={16} />Save</a
+              >
             </div>
-            <a class="primary" href="#/editor"><Icon name="download" size={16} />Save</a
-            >
           </div>
         </li>
       </ol>
@@ -327,14 +441,9 @@
   </section>
 
   <section id="spec" class="band">
-    <div class="wrap spec-grid">
-      <div>
-        <h2 class="t-title">Made to the spec</h2>
-        <p class="t-lead sub">
-          Every default is the Gridfinity value, and it is also the smallest you can
-          set. You can go larger, up to a limit where the part still fits together.
-        </p>
-        <div class="sample">
+    <div class="wrap">
+      <div class="spec-card">
+        <div class="spec-top">
           <svg
             class="cell"
             viewBox="0 0 {c('grid')} {c('grid')}"
@@ -370,43 +479,59 @@
               y2={HOLE_AT}
             />
           </svg>
-          <label class="sample-head" for="pocket">
-            <span class="t-label">Pocket diameter</span>
-            <span class="n-s">{mmText(pocket)} mm</span>
-          </label>
-          <input
-            id="pocket"
-            class="range"
-            type="range"
-            min={POCKET.min}
-            max={POCKET.max}
-            step={POCKET.step}
-            bind:value={pocket}
-            oninput={() => (touched = true)}
-            style="--share: {pocketShare}%"
-          />
-          <div class="scale">
-            <span>{mmText(POCKET.min)} min</span><span>{mmText(POCKET.max)} limit</span>
+          <div class="spec-side">
+            <h2 class="t-title">Made to the spec</h2>
+            <p class="t-lead">
+              Every default is the Gridfinity value, and it is also the smallest you can
+              set. You can go larger, up to a limit where the part still fits together.
+            </p>
+            <p class="try" class:done={touched}>
+              {touched
+                ? "That is how every setting behaves: the spec value is the floor."
+                : "Try it: drag the slider and watch the pocket and the table below follow."}
+            </p>
+            <div class="sample">
+              <label class="sample-head" for="pocket">
+                <span class="t-label">Pocket diameter</span>
+                <span class="n-s">{mmText(pocket)} mm</span>
+              </label>
+              <input
+                id="pocket"
+                class="range"
+                type="range"
+                min={POCKET.min}
+                max={POCKET.max}
+                step={POCKET.step}
+                bind:value={pocket}
+                oninput={() => (touched = true)}
+                style="--share: {pocketShare}%"
+              />
+              <div class="scale">
+                <span>{mmText(POCKET.min)} min</span><span
+                  >{mmText(POCKET.max)} limit</span
+                >
+              </div>
+            </div>
           </div>
         </div>
+        <dl class="table">
+          {#each specRows as row (row.name)}
+            <div class:live={touched && row.live}>
+              <dt>{row.name}</dt>
+              <dd class="n">{row.value}</dd>
+            </div>
+          {/each}
+        </dl>
       </div>
-      <dl class="table">
-        {#each specRows as row (row.name)}
-          <div class:live={touched && row.live}>
-            <dt>{row.name}</dt>
-            <dd class="n">{row.value}</dd>
-          </div>
-        {/each}
-      </dl>
     </div>
   </section>
 
   <section class="surface">
     <div class="wrap">
-      <h2 class="t-title">Yours, on your device</h2>
+      <h2 class="t-title">No cloud needed.</h2>
       <p class="t-lead sub">
-        Nothing to sign up for, nothing to upload. The model, the geometry and the files
-        stay with you.
+        Everything runs on your device. Nothing to sign up for, nothing to upload; the
+        model, the geometry and the files stay with you.
       </p>
       <ul class="facts">
         {#each facts as f (f.title)}
@@ -419,6 +544,29 @@
             </div>
           </li>
         {/each}
+        <li>
+          <span class="tile accent">
+            <!-- the GitHub mark (Octicons mark-github, MIT licence) -->
+            <svg
+              viewBox="0 0 16 16"
+              width="24"
+              height="24"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
+              />
+            </svg>
+          </span>
+          <h3 class="t-heading">Free and open source</h3>
+          <p>The code is public. Read it, check it, report a bug, or build on it.</p>
+          <div class="chips">
+            <a class="primary" href={REPO_URL} target="_blank" rel="noopener">
+              View on GitHub
+            </a>
+          </div>
+        </li>
       </ul>
     </div>
   </section>
@@ -445,8 +593,7 @@
       </p>
       <nav aria-label="Links">
         <a href={SPEC_URL} target="_blank" rel="noopener">Gridfinity specification</a>
-        <button type="button" onclick={() => (licences = true)}>OSS Licenses</button>
-        <a href={REPO_URL} target="_blank" rel="noopener">Source repository</a>
+        <button type="button" onclick={() => (licences = true)}>Licenses</button>
       </nav>
     </div>
   </div>
@@ -619,13 +766,29 @@
   }
 
   .hero {
-    padding: var(--space-9) 0 96px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 680px;
+    overflow: hidden;
+    padding: var(--space-9) 0 var(--space-8);
+  }
+  /* the animation runs behind the text, large, with no frame */
+  .hero-bg {
+    position: absolute;
+    top: 50%;
+    right: max(calc((100% - 1160px) / 2 + 48px), 48px);
+    width: min(740px, 70vw);
+    transform: translateY(-50%);
+    pointer-events: none;
   }
   .hero-grid {
-    display: grid;
-    grid-template-columns: 1fr 1.15fr;
-    gap: var(--space-8);
-    align-items: center;
+    position: relative;
+    z-index: 1;
+  }
+  .hero-text {
+    max-width: 480px;
   }
   .hero-text .t-lead {
     margin-top: var(--space-6);
@@ -640,25 +803,35 @@
     margin-top: var(--space-6);
     color: var(--text-3);
   }
-  .hero-figure {
+  /* turned 90 degrees to the left, so it reads from the right, beside the animation */
+  .hero-caption {
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    right: max(calc((100% - 1160px) / 2), var(--space-5));
     margin: 0;
+    color: var(--text-2);
+    white-space: nowrap;
+    writing-mode: vertical-rl;
+    transform: translateY(-50%) rotate(180deg);
   }
-  .frame {
-    padding: var(--space-6) var(--space-4) 0;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-panel);
-    background: var(--stage);
-    overflow: hidden;
+  .hero-caption .w {
+    opacity: 0;
+    transition: opacity 450ms ease-out;
   }
-  figcaption {
-    margin-top: var(--space-3);
-    color: var(--text-3);
+  .hero-caption .w.on {
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-caption .w {
+      transition: none;
+    }
   }
 
   /* what it makes */
   .features {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 1px;
     margin: var(--space-8) 0 0;
     padding: 0;
@@ -669,29 +842,57 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
-    padding: var(--space-7);
+    padding: var(--space-7) var(--space-6);
     background: var(--bg);
   }
-  .features li:nth-child(3n + 1) {
+  .features li:nth-child(4n + 1) {
     padding-left: 0;
   }
-  .features li:nth-child(3n) {
+  .features li:nth-child(4n) {
     padding-right: 0;
   }
-  .features li:nth-child(n + 4) {
-    padding-top: var(--space-7);
-  }
   .draw {
+    width: 120px;
+    height: 80px;
+    margin-bottom: var(--space-2);
+    overflow: visible;
     color: var(--text);
+    transition: color 200ms ease-out;
   }
-  .draw.hidden {
-    display: none;
+  .draw .dash {
+    stroke: var(--text-3);
+    stroke-dasharray: 3 3;
   }
-  .glyph {
-    display: inline-flex;
-    align-items: center;
-    height: 48px;
-    color: var(--text);
+  .draw .fill {
+    stroke: var(--text-3);
+  }
+  .draw g {
+    transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .features li:hover .draw {
+    color: var(--accent);
+  }
+  /* a little motion, not too much: parts lift, move apart or come together */
+  @media (prefers-reduced-motion: no-preference) {
+    .features li:hover .lift {
+      transform: translateY(-3px);
+    }
+    .features li:hover .piece-a {
+      transform: translate(3px, -2px);
+    }
+    .features li:hover .piece-b {
+      transform: translate(-3px, 2px);
+    }
+    .features li:hover .arrow {
+      transform: scaleY(1.1);
+      transform-origin: 64px 24px;
+    }
+    .features li:hover .top {
+      transform: translateY(-4px);
+    }
+    .features li:hover .low {
+      transform: translateY(4px);
+    }
   }
   .features h3 {
     display: flex;
@@ -703,11 +904,12 @@
   }
   .tag {
     padding: 0 var(--space-2);
+    border: 1px solid var(--accent);
     border-radius: var(--radius-tag);
-    background: var(--surface-3);
-    color: var(--text-2);
+    background: var(--accent-soft);
+    color: var(--accent);
     font-size: 12px;
-    line-height: 20px;
+    line-height: 18px;
     font-weight: 500;
     letter-spacing: 0;
   }
@@ -769,14 +971,44 @@
     border-radius: var(--radius-control);
     background: var(--surface-2);
   }
-  .well-box.row {
-    flex-direction: row;
+  .seg {
+    width: 144px;
+  }
+  .demo-head {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+  }
+  .print-row {
+    display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-3);
+    width: 100%;
   }
-  .seg {
-    width: 144px;
+  .bed {
+    align-self: center;
+    width: 128px;
+    height: 128px;
+  }
+  .bed-plate {
+    fill: var(--surface);
+    stroke: var(--line-strong);
+    stroke-width: 1;
+  }
+  .bed-grid {
+    fill: none;
+    stroke: var(--line);
+    stroke-width: 0.6;
+  }
+  .bed-part {
+    fill: var(--accent-soft);
+    stroke: var(--accent);
+    stroke-width: 1.2;
+  }
+  .bed-part.bad {
+    fill: color-mix(in srgb, var(--error) 18%, transparent);
+    stroke: var(--error);
   }
   .stepper {
     display: flex;
@@ -834,20 +1066,47 @@
     color: var(--error);
   }
 
-  /* spec */
-  .spec-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+  /* spec: one box, the picture beside the text and the slider, the table below */
+  .spec-card {
+    display: flex;
+    flex-direction: column;
     gap: var(--space-8);
-    align-items: start;
+    padding: var(--space-8);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-panel);
+    background: var(--surface);
+  }
+  .spec-top {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: var(--space-8);
+    align-items: center;
+  }
+  .spec-side .t-lead {
+    margin-top: var(--space-3);
+  }
+  .try {
+    margin-top: var(--space-4);
+    color: var(--accent);
+    font-size: 14px;
+    line-height: 22px;
+    font-weight: 500;
+  }
+  .try.done {
+    color: var(--text-2);
   }
   .sample {
-    margin-top: var(--space-7);
+    margin-top: var(--space-5);
     padding: var(--space-4);
-    max-width: 320px;
+    max-width: 480px;
     border: 1px solid var(--line-strong);
     border-radius: var(--radius-control);
-    background: var(--surface);
+    background: var(--bg);
+  }
+  .spec-card .table {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: var(--space-8);
   }
   .cell {
     display: block;
@@ -963,7 +1222,7 @@
   /* facts */
   .facts {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--space-4);
     margin: var(--space-8) 0 0;
     padding: 0;
@@ -1002,9 +1261,13 @@
     padding-top: var(--space-4);
     border-top: 1px solid var(--line);
   }
+  .tile.accent {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
   .chip {
     padding: var(--space-1) var(--space-3);
-    border: 1px solid var(--line-strong);
+    border: 1px solid var(--accent);
     border-radius: var(--radius-round);
     color: var(--text-2);
   }
@@ -1059,21 +1322,41 @@
     .bar nav {
       display: none;
     }
-    .hero-grid,
-    .spec-grid {
+    .hero-caption {
+      position: relative;
+      top: auto;
+      right: auto;
+      width: 100%;
+      max-width: calc(1160px + 2 * var(--space-7));
+      margin: var(--space-6) auto 0;
+      padding: 0 var(--space-4);
+      writing-mode: horizontal-tb;
+      transform: none;
+      white-space: normal;
+    }
+    .hero-bg {
+      right: 50%;
+      width: 130%;
+      opacity: 0.35;
+      transform: translate(50%, -50%);
+    }
+    .spec-top,
+    .spec-card .table {
+      grid-template-columns: 1fr;
+    }
+    .spec-top .cell {
+      max-width: 280px;
+    }
+    .steps {
       grid-template-columns: 1fr;
     }
     .features,
-    .steps,
     .facts {
-      grid-template-columns: 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .features li,
     .features li:nth-child(n) {
-      padding: var(--space-6) 0;
-    }
-    .features li:first-child {
-      padding-top: 0;
+      padding: var(--space-6) var(--space-5);
     }
     .steps li:not(:last-child)::after {
       display: none;
@@ -1108,6 +1391,17 @@
     footer nav {
       margin-left: 0;
       justify-content: flex-start;
+    }
+    .features,
+    .facts {
+      grid-template-columns: 1fr;
+    }
+    .features li,
+    .features li:nth-child(n) {
+      padding: var(--space-6) 0;
+    }
+    .spec-card {
+      padding: var(--space-5);
     }
   }
 </style>

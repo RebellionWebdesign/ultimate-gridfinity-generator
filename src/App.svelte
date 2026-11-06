@@ -160,9 +160,10 @@
         type="button"
         class="ghost"
         onclick={toggleTheme}
-        aria-label="Switch to {theme.value === 'dark' ? 'light' : 'dark'} theme"
+        aria-label={theme.label}
+        title={theme.label}
       >
-        <Icon name={theme.value === "dark" ? "sun" : "moon"} />
+        <Icon name={theme.icon} />
       </button>
       <button type="button" class="ghost" onclick={() => openInput.click()}>
         <Icon name="folder-open" /><span class="long">Open</span>

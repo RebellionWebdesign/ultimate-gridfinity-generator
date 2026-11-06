@@ -39,6 +39,7 @@ The app shows a page that links to the official sites; this table is the source 
 | Manifold | Apache-2.0 | https://github.com/elalish/manifold |
 | opentype.js | MIT | https://github.com/opentypejs/opentype.js |
 | Lucide (interface icons, `lucide-static`; the reference script also bundles Lucide symbols) | ISC (icons derived from Feather: MIT) | https://github.com/lucide-icons/lucide |
+| Octicons (only the GitHub mark on the landing page, inline SVG path; the logo itself is GitHub's trademark, used as a link to the repository, owner's wish of 6 November 2026) | MIT | https://github.com/primer/octicons |
 | Svelte | MIT (checked in `node_modules/svelte/package.json`, 2 November 2026) | https://github.com/sveltejs/svelte |
 | three.js | MIT (checked in the package, 2 November 2026) | https://github.com/mrdoob/three.js |
 | Gridfinity (credit) | MIT, Zack Freedman and Voidstar Lab LLC | https://www.printables.com/model/417152-gridfinity-specification |
