@@ -97,6 +97,13 @@ Planned features. **Do not start them before the owner has deployed and publishe
 - [ ] **E-09 Bin label tab.** A label tab along the front of a compartment for a printed or stuck-on label. Depends on: E-07. *AC:* closed mesh; the tab is printable without support. Size and angle are decision 14.
 - [ ] **E-10 Custom print bed.** The user types the width, depth and height of their own printer's bed (any printer, not only the Bambu list), and the bed check, the red band in the preview and the warning read these values and update live as the numbers change; the entered bed is kept in the browser. Depends on: the bed check of the editor (built in phases B and C, task C-12 for the split). *AC:* a part that is too large for the typed bed shows the red band and the warning at once; the buttons that offer a fix use the typed values. What exists (4 November 2026): a square custom bed with rounded corners and a build height. Whether the bed may be rectangular and whether a keep-free corner can be entered is decision 15.
 
+## SEO (owner's list of 6 November 2026, option A: hashes stay, only the landing page is indexed)
+
+- [x] **Head tags in `index.html`**: title, description, canonical, Open Graph, Twitter card, `<noscript>` text; `robots.txt`, `sitemap.xml` and `og-image.png` in `public/`.
+- [x] **Prerendered landing page** (option C): the build renders the landing page with Svelte's server renderer into `index.html` (`prerenderLanding` in `vite.config.ts`, no new dependency); the animations and drawings are left out of it and appear in the browser. *AC:* the raw HTML holds the headings and texts (checked in `dist/index.html`).
+- [x] **nginx configuration** (MIME type of the manifest, cache headers, compression, HSTS) and the Coolify notes are in the README. *AC for the owner:* paste it into Coolify, redeploy, check the response headers.
+- [ ] **For the owner, not code:** "www redirect" in Coolify; Search Console and Bing Webmaster Tools; look at the link preview in Discord or Slack. Not done by choice: JSON-LD, separate pages per part (they need clean paths, option B), hreflang.
+
 ## After the deploy: the About modal (owner, 6 November 2026)
 
 - [ ] **About modal.** A modal "About" has to be built after the deploy. The header of the landing page no longer has a Licenses link (the footer keeps it); what the modal holds (credits, licences, version, links, support) the owner decides when it is built. Do not start it before the deploy.

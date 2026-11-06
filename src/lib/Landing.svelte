@@ -22,8 +22,13 @@
     document.documentElement.dataset.theme = theme.value;
   });
 
+  // The drawings and animations are only for the eye and have thousands of paths: they are
+  // left out of the pre-rendered HTML (SEO) and appear once the page runs in the browser.
+  let live = $state(false);
+
   // a link like `#how` scrolls to its section, also when the page was just mounted
   onMount(() => {
+    live = true;
     const id = location.hash.slice(1);
     if (id && !id.startsWith("/")) document.getElementById(id)?.scrollIntoView();
   });
@@ -196,7 +201,9 @@
 
 <main id="main">
   <section class="hero">
-    <div class="hero-bg"><HeroAnimation bind:stage /></div>
+    <div class="hero-bg">
+      {#if live}<HeroAnimation bind:stage />{/if}
+    </div>
     <div class="wrap hero-grid">
       <div class="hero-text">
         <h1 class="t-display">Gridfinity parts, generated in your browser.</h1>
@@ -332,7 +339,7 @@
             in the preview while you type.
           </p>
           <div class="well-box">
-            <PartDemo kind="base" hue="var(--accent)" {cells} />
+            {#if live}<PartDemo kind="base" hue="var(--accent)" {cells} />{/if}
             <label class="demo-head" for="cells">
               <span class="t-label">Size</span>
               <span class="n-s">{cells} × {cells} cells</span>
@@ -417,7 +424,7 @@
             objects. Save the model as a file to change it later.
           </p>
           <div class="well-box">
-            <PartDemo printing hue="var(--accent)" />
+            {#if live}<PartDemo printing hue="var(--accent)" />{/if}
             <div class="print-row">
               <div class="seg">
                 <Segmented
@@ -788,7 +795,7 @@
     z-index: 1;
   }
   .hero-text {
-    max-width: 480px;
+    max-width: 450px;
   }
   .hero-text .t-lead {
     margin-top: var(--space-6);

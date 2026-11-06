@@ -11,8 +11,12 @@ const NEXT: Record<ThemeMode, ThemeMode> = {
 };
 
 // kept in a variable for the life of the page, so the listener is not lost
-const dark = matchMedia("(prefers-color-scheme: dark)");
-const systemTheme = (): Theme => (dark.matches ? "dark" : "light");
+// (the build renders the landing page in Node, where there is no matchMedia)
+const dark =
+  typeof matchMedia === "function"
+    ? matchMedia("(prefers-color-scheme: dark)")
+    : undefined;
+const systemTheme = (): Theme => (dark?.matches ? "dark" : "light");
 
 const storedMode = (): ThemeMode => {
   try {
@@ -29,6 +33,7 @@ class ThemeState {
   private system = $state<Theme>(systemTheme());
 
   constructor() {
+    if (!dark) return;
     // the automatic mode follows the system while the page is open
     const follow = () => {
       this.system = systemTheme();
