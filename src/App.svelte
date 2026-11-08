@@ -215,8 +215,8 @@
           <button type="button" class="link" onclick={() => (licences = true)}>
             Licenses
           </button>
-          <a class="link" href="./datenschutz.html">Datenschutz</a>
-          <a class="link" href="./impressum.html">Impressum</a>
+          <a class="link" href="./privacy.html">Privacy</a>
+          <a class="link" href="./imprint.html">Imprint</a>
         </span>
       </p>
     </aside>
