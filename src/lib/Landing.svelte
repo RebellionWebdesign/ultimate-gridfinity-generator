@@ -10,7 +10,7 @@
   import { mmText } from "./parts";
   import { theme } from "./theme.svelte";
 
-  const SPEC_URL = "https://www.printables.com/model/417152-gridfinity-specification";
+  const SPEC_URL = "https://gridfinity.xyz/specification/";
   const REPO_URL =
     "https://github.com/RebellionWebdesign/ultimate-gridfinity-generator";
 

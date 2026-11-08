@@ -1,6 +1,6 @@
 # Ultimate Gridfinity Generator
 
-A web app (PWA) that generates [Gridfinity](https://www.printables.com/model/417152-gridfinity-specification) parts in the browser and exports them as STL or 3MF. The first part type is the **lid**; bins and baseplates follow later, feature by feature.
+A web app (PWA) that generates [Gridfinity](https://gridfinity.xyz/specification/) parts in the browser and exports them as STL or 3MF. The first part type is the **lid**; bins and baseplates follow later, feature by feature.
 
 **Status:** Phase B (web app, lids only) is built; the owner is testing it. The complete MakerWorld Parametric Model Maker script (OpenSCAD) exists in `ultimate-gridfinity-generator\reference\gridfinity_generator.scad` and serves as the reference for this app's geometry.
 

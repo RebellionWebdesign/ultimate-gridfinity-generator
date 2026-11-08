@@ -51,7 +51,7 @@
     {
       name: "Gridfinity (the standard)",
       licence: "MIT, Zack Freedman and Voidstar Lab LLC",
-      url: "https://www.printables.com/model/417152-gridfinity-specification",
+      url: "https://gridfinity.xyz/specification/",
     },
   ];
 
