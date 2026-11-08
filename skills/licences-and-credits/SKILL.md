@@ -53,4 +53,4 @@ The root `README.md` points here. Font files are bundled together with their lic
 - Every dependency and bundled font is checked against an allow-list before it is added; the font licence must permit bundling and redistribution in the app.
 - Keep the Gridfinity notice where the spec demands it.
 - A new licence in the dependency tree needs an ADR the owner accepts.
-- The privacy statement comes from the IT-Recht Kanzlei: do not change its wording. On 8 November 2026 the owner removed the parts that do not fit the app (Claude, donations, Ko-fi). The texts of the privacy statement and the imprint carry the owner's contact data and are not in the repository (`.gitignore`); see the README and roadmap open decision 17.
+- The privacy statement comes from the IT-Recht Kanzlei: do not change its wording. On 8 November 2026 the owner removed the parts that do not fit the app (Claude, donations, Ko-fi). The privacy statement and the imprint are plain HTML files in the repository root (`datenschutz.html`, `privacy.html`, `impressum.html`, `imprint.html`); see roadmap open decision 17.

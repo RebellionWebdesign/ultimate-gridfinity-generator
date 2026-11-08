@@ -1,11 +1,10 @@
 /// <reference types="vitest/config" />
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { render } from "svelte/server";
 import { createServer, defineConfig, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
-import { decodeLegalEnv, legalTextToHtml } from "./src/legal/legalText.js";
 
 const { version } = JSON.parse(readFileSync("./package.json", "utf8")) as {
   version: string;
@@ -47,69 +46,6 @@ const prerenderLanding = (): Plugin => ({
   },
 });
 
-/**
- * The privacy statement and the imprint are static pages in German and English
- * (`datenschutz.html` and `privacy.html`, `impressum.html` and `imprint.html`). Their texts
- * are not code: the privacy statement comes from the IT-Recht Kanzlei and may not be
- * changed, and both carry the owner's contact data. The build reads `src/legal/<name>.md`
- * (`datenschutz.de`, `datenschutz.en`, `impressum.de`, `impressum.en`; plain text) or,
- * where that file is not in the checkout, the variable `LEGAL_<NAME>_<LANG>_B64` (for
- * example `LEGAL_IMPRESSUM_DE_B64`: the same text, base64; `tools/legal-env.mjs` prints
- * them). With neither, the page says so and the build warns; with `REQUIRE_LEGAL=1` (set it
- * on the server) it fails instead, so a site without its legal texts can never go live by
- * accident.
- */
-const LEGAL_PAGES: Record<string, { name: string; env: string; lang: string }> = {
-  "datenschutz.html": {
-    name: "datenschutz.de",
-    env: "LEGAL_DATENSCHUTZ_DE_B64",
-    lang: "de",
-  },
-  "privacy.html": {
-    name: "datenschutz.en",
-    env: "LEGAL_DATENSCHUTZ_EN_B64",
-    lang: "en",
-  },
-  "impressum.html": { name: "impressum.de", env: "LEGAL_IMPRESSUM_DE_B64", lang: "de" },
-  "imprint.html": { name: "impressum.en", env: "LEGAL_IMPRESSUM_EN_B64", lang: "en" },
-};
-
-const legalPages = (): Plugin => ({
-  name: "legal-pages",
-  transformIndexHtml: {
-    order: "pre",
-    handler(html, ctx) {
-      const page = LEGAL_PAGES[basename(ctx.filename)];
-      if (!page) return html;
-      const file = `src/legal/${page.name}.md`;
-      const encoded = process.env[page.env];
-      let text: string | undefined;
-      if (existsSync(file)) text = readFileSync(file, "utf8");
-      else if (encoded) {
-        try {
-          text = decodeLegalEnv(page.env, encoded);
-        } catch (error) {
-          // a wrong variable never reaches the page; REQUIRE_LEGAL stops the build
-          if (process.env.REQUIRE_LEGAL === "1") throw error;
-          console.warn(`[legal-pages] ${(error as Error).message}`);
-        }
-      }
-      if (text === undefined) {
-        const message = `${basename(ctx.filename)}: no text found (${file} or ${page.env})`;
-        if (process.env.REQUIRE_LEGAL === "1") throw new Error(message);
-        console.warn(`[legal-pages] ${message}`);
-        return html.replace(
-          "<!--LEGAL-->",
-          page.lang === "de"
-            ? "<h1>Noch kein Text</h1><p>Dieser Text ist noch nicht eingestellt.</p>"
-            : "<h1>No text yet</h1><p>This text has not been added yet.</p>",
-        );
-      }
-      return html.replace("<!--LEGAL-->", legalTextToHtml(text));
-    },
-  },
-});
-
 export default defineConfig({
   // the app shows the version of package.json
   define: { __APP_VERSION__: JSON.stringify(version) },
@@ -129,7 +65,6 @@ export default defineConfig({
   plugins: [
     svelte(),
     prerenderLanding(),
-    legalPages(),
     VitePWA({
       registerType: "autoUpdate",
       // the worker is registered by hand, only after the user said yes (src/lib/offline.ts)
