@@ -50,6 +50,14 @@
     dialog.close();
   };
 
+  /** Removes every model, stops the autosave and removes the offline copy of the app. */
+  const switchOff = () => {
+    clearFailure = "";
+    editor.switchOffSaving();
+    open = false;
+    dialog.close();
+  };
+
   const clearWithoutZip = () => {
     clearFailure = "";
     editor.clearStored();
@@ -81,70 +89,82 @@
       {editor.loadError}
     </p>{/if}
 
-  <h3 class="t-label">
-    <button
-      type="button"
-      class="toggle"
-      aria-expanded={open}
-      aria-controls="stored-models"
-      onclick={() => (open = !open)}
-    >
-      <span class="chev" class:open><Icon name="chevron-right" size={16} /></span>
-      <span>In this browser</span>
-      <span class="count n-s">{editor.stored.length} saved</span>
-    </button>
-  </h3>
-  <div class="fill">
-    <progress
-      class:warn={fill.warn}
-      max="1"
-      value={fill.fraction}
-      aria-label="Browser storage in use"
-    ></progress>
-    <p class="t-caption n-s">{fill.text}</p>
-  </div>
-  {#if open}
-    <div id="stored-models" class="stored">
-      {#if editor.stored.length === 0}
-        <p class="t-caption">Nothing saved in this browser yet.</p>
-      {:else}
-        <ul>
-          {#each editor.stored as item (item.id)}
-            <li>
-              <div>
-                <p class="t-label">{item.name}</p>
-                <p class="n-s t-caption">
-                  {date(item.savedAt)} · {item.part === "baseplate"
-                    ? "base"
-                    : (item.part ?? "lid")}
-                </p>
-              </div>
-              <button
-                type="button"
-                class="quiet"
-                onclick={() => editor.open(item.json, item.name, item.id)}
-              >
-                Open
-              </button>
-            </li>
-          {/each}
-        </ul>
-      {/if}
-      {#if editor.storageFailed}
-        <p class="t-caption err" role="alert">
-          This browser did not allow saving here. Use Save file to keep your model.
-        </p>
-      {:else}
-        <p class="t-caption">
-          The browser may clear this storage when space runs low. Save a file to keep a
-          copy.
-        </p>
-      {/if}
+  {#if editor.consent === "yes"}
+    <h3 class="t-label">
+      <button
+        type="button"
+        class="toggle"
+        aria-expanded={open}
+        aria-controls="stored-models"
+        onclick={() => (open = !open)}
+      >
+        <span class="chev" class:open><Icon name="chevron-right" size={16} /></span>
+        <span>In this browser</span>
+        <span class="count n-s">{editor.stored.length} saved</span>
+      </button>
+    </h3>
+    <div class="fill">
+      <progress
+        class:warn={fill.warn}
+        max="1"
+        value={fill.fraction}
+        aria-label="Browser storage in use"
+      ></progress>
+      <p class="t-caption n-s">{fill.text}</p>
     </div>
-  {/if}
-  {#if editor.stored.length > 0}
+    {#if open}
+      <div id="stored-models" class="stored">
+        {#if editor.stored.length === 0}
+          <p class="t-caption">Nothing saved in this browser yet.</p>
+        {:else}
+          <ul>
+            {#each editor.stored as item (item.id)}
+              <li>
+                <div>
+                  <p class="t-label">{item.name}</p>
+                  <p class="n-s t-caption">
+                    {date(item.savedAt)} · {item.part === "baseplate"
+                      ? "base"
+                      : (item.part ?? "lid")}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="quiet"
+                  onclick={() => editor.open(item.json, item.name, item.id)}
+                >
+                  Open
+                </button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+        {#if editor.storageFailed}
+          <p class="t-caption err" role="alert">
+            This browser did not allow saving here. Use Save file to keep your model.
+          </p>
+        {:else}
+          <p class="t-caption">
+            The browser may clear this storage when space runs low. Save a file to keep
+            a copy.
+          </p>
+        {/if}
+      </div>
+    {/if}
     <button type="button" class="clear" onclick={() => dialog.showModal()}>
-      <Icon name="download" />Clear saved models…
+      <Icon name={editor.stored.length > 0 ? "download" : "x"} />{editor.stored.length >
+      0
+        ? "Clear saved models…"
+        : "Switch off saving…"}
+    </button>
+  {:else}
+    <h3 class="t-label">In this browser</h3>
+    <p class="t-caption">
+      Saving in this browser is off: nothing is kept after you close the page. Use Save
+      file to keep a model.
+    </p>
+    <button type="button" class="clear" onclick={() => (editor.consentOpen = true)}>
+      Allow saving…
     </button>
   {/if}
   {#if clearFailure}<p class="t-caption err" role="alert">{clearFailure}</p>{/if}
@@ -155,17 +175,32 @@
 </section>
 
 <dialog bind:this={dialog} class="confirm" aria-labelledby="clear-title">
-  <h2 id="clear-title" class="t-strong">Remove all saved models?</h2>
+  <h2 id="clear-title" class="t-strong">
+    {editor.stored.length > 0 ? "Remove all saved models?" : "Switch off saving?"}
+  </h2>
   <p class="t-caption">
-    {editor.stored.length} model{editor.stored.length === 1 ? "" : "s"} will be removed from
-    this browser. You can take a ZIP file with all of them first, or remove them without a
-    copy.
+    {#if editor.stored.length > 0}
+      {editor.stored.length} model{editor.stored.length === 1 ? "" : "s"} will be removed
+      from this browser. You can take a ZIP file with all of them first, or remove them without
+      a copy.
+    {/if}
+    Switching off saving also stops the autosave and removes the offline copy of the app from
+    this browser. You can allow it again at any time.
   </p>
   <div class="actions">
-    <button type="button" class="primary" onclick={() => void downloadAndClear()}>
-      Download ZIP, then remove
+    {#if editor.stored.length > 0}
+      <button type="button" class="primary" onclick={() => void downloadAndClear()}>
+        Download ZIP, then remove
+      </button>
+      <button type="button" onclick={clearWithoutZip}>Remove without ZIP</button>
+    {/if}
+    <button
+      type="button"
+      class:primary={editor.stored.length === 0}
+      onclick={switchOff}
+    >
+      Switch off saving{editor.stored.length > 0 ? " and remove the models" : ""}
     </button>
-    <button type="button" onclick={clearWithoutZip}>Remove without ZIP</button>
     <button type="button" onclick={() => dialog.close()}>Cancel</button>
   </div>
 </dialog>

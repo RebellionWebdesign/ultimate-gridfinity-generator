@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, untrack } from "svelte";
+  import ConsentDialog from "./lib/ConsentDialog.svelte";
   import Icon from "./lib/Icon.svelte";
   import LicencesDialog from "./lib/LicencesDialog.svelte";
   import OutputPanel from "./lib/OutputPanel.svelte";
@@ -137,7 +138,9 @@
           </button>
         {/if}
         <span class="t-caption">
-          {editor.storageFailed ? "Not saved in this browser" : "Saved in this browser"}
+          {editor.consent !== "yes" || editor.storageFailed
+            ? "Not saved in this browser"
+            : "Saved in this browser"}
         </span>
       </div>
     </div>
@@ -354,6 +357,8 @@
   </button>
   <OutputPanel />
 </dialog>
+
+<ConsentDialog />
 
 <LicencesDialog bind:open={licences} />
 

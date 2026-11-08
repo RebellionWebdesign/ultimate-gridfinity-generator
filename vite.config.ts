@@ -109,6 +109,8 @@ export default defineConfig({
     legalPages(),
     VitePWA({
       registerType: "autoUpdate",
+      // the worker is registered by hand, only after the user said yes (src/lib/offline.ts)
+      injectRegister: false,
       includeAssets: ["icon.svg"],
       manifest: {
         id: "./",

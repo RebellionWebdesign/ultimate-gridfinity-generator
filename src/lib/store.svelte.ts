@@ -22,6 +22,8 @@ import {
   type ModelFile,
 } from "../model/modelFile";
 import { GeometryClient, InputBuildError } from "../worker/client";
+import { readConsent, writeConsent, type Consent } from "./consent";
+import { disableOffline, enableOffline } from "./offline";
 import { mmText, type PartType } from "./parts";
 import {
   CUSTOM_LIMITS,
@@ -87,7 +89,11 @@ class Editor {
   slow = $state(false);
   fileName = $state("lid-1x1");
   modelId: string = crypto.randomUUID();
-  stored = $state<StoredModel[]>(readStored());
+  /** the user's choice about saving in this browser; nothing is read or written before "yes" */
+  consent = $state<Consent>(readConsent());
+  /** the consent dialog was asked for by hand (the first visit opens it by itself) */
+  consentOpen = $state(false);
+  stored = $state<StoredModel[]>(this.consent === "yes" ? readStored() : []);
   storageFailed = $state(false);
   loadError = $state("");
   /** the user named the model by hand: stop deriving the name from the lid */
@@ -415,6 +421,7 @@ class Editor {
 
   /** Keeps the current model in this browser (localStorage); the browser may clear it. */
   autosave(): void {
+    if (this.consent !== "yes") return;
     const json = this.toFileText();
     const entry: StoredModel = {
       id: this.modelId,
@@ -444,6 +451,28 @@ class Editor {
       // nothing to clear when storage is blocked
     }
     this.stored = [];
+  }
+
+  /** The user said yes: models are kept in this browser and the app works offline. */
+  allowSaving(): void {
+    writeConsent("yes");
+    this.consent = "yes";
+    this.stored = readStored();
+    this.autosave();
+    void enableOffline();
+  }
+
+  /** The user said no: nothing is saved, and a worker from an earlier visit is removed. */
+  declineSaving(): void {
+    writeConsent("no");
+    this.consent = "no";
+    void disableOffline();
+  }
+
+  /** Switches saving off: removes every saved model, the offline copy and the autosave. */
+  switchOffSaving(): void {
+    this.clearStored();
+    this.declineSaving();
   }
 
   /** The model as a file's text, for "Save file". */
