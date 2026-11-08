@@ -37,7 +37,7 @@
     model.
   </p>
   <p class="t-caption">
-    <a href="./datenschutz.html" target="_blank" rel="noopener">Privacy statement</a>
+    <a href="./privacy.html" target="_blank" rel="noopener">Privacy statement</a>
   </p>
   <div class="actions">
     <button type="button" class="primary" onclick={() => answer(true)}>Allow</button>

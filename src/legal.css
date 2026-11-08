@@ -90,3 +90,39 @@ footer nav {
     line-height: 32px;
   }
 }
+.bar-links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+}
+.lang {
+  display: flex;
+  gap: var(--space-3);
+  font-size: 13px;
+  font-weight: 500;
+}
+.lang a,
+.back {
+  color: var(--text-2);
+}
+.lang [aria-current="page"] {
+  color: var(--text);
+}
+.legal .note {
+  margin-bottom: var(--space-6);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 20px;
+}
+@media (max-width: 720px) {
+  .bar-links {
+    gap: var(--space-3);
+  }
+  .back {
+    display: none;
+  }
+}

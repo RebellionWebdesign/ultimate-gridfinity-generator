@@ -48,17 +48,30 @@ const prerenderLanding = (): Plugin => ({
 });
 
 /**
- * The privacy statement and the imprint are static pages (`datenschutz.html`,
- * `impressum.html`). Their texts are not code: they come from the IT-Recht Kanzlei, may not
- * be changed, and carry the owner's contact data. The build reads `src/legal/<name>.de.md`
- * (plain text as delivered) or, where that file is not in the checkout, the variable
- * `LEGAL_DATENSCHUTZ_B64` / `LEGAL_IMPRESSUM_B64` (the same text, base64). With neither, the
- * page says so and the build warns; with `REQUIRE_LEGAL=1` (set it on the server) it fails
- * instead, so a site without its legal texts can never go live by accident.
+ * The privacy statement and the imprint are static pages in German and English
+ * (`datenschutz.html` and `privacy.html`, `impressum.html` and `imprint.html`). Their texts
+ * are not code: the privacy statement comes from the IT-Recht Kanzlei and may not be
+ * changed, and both carry the owner's contact data. The build reads `src/legal/<name>.md`
+ * (`datenschutz.de`, `datenschutz.en`, `impressum.de`, `impressum.en`; plain text) or,
+ * where that file is not in the checkout, the variable `LEGAL_<NAME>_<LANG>_B64` (for
+ * example `LEGAL_IMPRESSUM_DE_B64`: the same text, base64; `tools/legal-env.mjs` prints
+ * them). With neither, the page says so and the build warns; with `REQUIRE_LEGAL=1` (set it
+ * on the server) it fails instead, so a site without its legal texts can never go live by
+ * accident.
  */
-const LEGAL_PAGES: Record<string, { name: string; env: string }> = {
-  "datenschutz.html": { name: "datenschutz", env: "LEGAL_DATENSCHUTZ_B64" },
-  "impressum.html": { name: "impressum", env: "LEGAL_IMPRESSUM_B64" },
+const LEGAL_PAGES: Record<string, { name: string; env: string; lang: string }> = {
+  "datenschutz.html": {
+    name: "datenschutz.de",
+    env: "LEGAL_DATENSCHUTZ_DE_B64",
+    lang: "de",
+  },
+  "privacy.html": {
+    name: "datenschutz.en",
+    env: "LEGAL_DATENSCHUTZ_EN_B64",
+    lang: "en",
+  },
+  "impressum.html": { name: "impressum.de", env: "LEGAL_IMPRESSUM_DE_B64", lang: "de" },
+  "imprint.html": { name: "impressum.en", env: "LEGAL_IMPRESSUM_EN_B64", lang: "en" },
 };
 
 const legalPages = (): Plugin => ({
@@ -68,7 +81,7 @@ const legalPages = (): Plugin => ({
     handler(html, ctx) {
       const page = LEGAL_PAGES[basename(ctx.filename)];
       if (!page) return html;
-      const file = `src/legal/${page.name}.de.md`;
+      const file = `src/legal/${page.name}.md`;
       const encoded = process.env[page.env];
       const text = existsSync(file)
         ? readFileSync(file, "utf8")
@@ -81,7 +94,9 @@ const legalPages = (): Plugin => ({
         console.warn(`[legal-pages] ${message}`);
         return html.replace(
           "<!--LEGAL-->",
-          "<h1>Noch kein Text</h1><p>Dieser Text ist noch nicht eingestellt.</p>",
+          page.lang === "de"
+            ? "<h1>Noch kein Text</h1><p>Dieser Text ist noch nicht eingestellt.</p>"
+            : "<h1>No text yet</h1><p>This text has not been added yet.</p>",
         );
       }
       return html.replace("<!--LEGAL-->", legalTextToHtml(text));
@@ -99,7 +114,9 @@ export default defineConfig({
       input: {
         main: "index.html",
         datenschutz: "datenschutz.html",
+        privacy: "privacy.html",
         impressum: "impressum.html",
+        imprint: "imprint.html",
       },
     },
   },
@@ -135,11 +152,17 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         // the preview image is for link previews only; robots.txt and sitemap.xml must come
         // from the server, not from the cached app shell
-        globIgnores: ["og-image.png", "datenschutz.html", "impressum.html"],
+        globIgnores: [
+          "og-image.png",
+          "datenschutz.html",
+          "privacy.html",
+          "impressum.html",
+          "imprint.html",
+        ],
         navigateFallbackDenylist: [
           /^\/robots\.txt$/,
           /^\/sitemap\.xml$/,
-          /^\/(datenschutz|impressum)\.html$/,
+          /^\/(datenschutz|privacy|impressum|imprint)\.html$/,
         ],
       },
     }),
