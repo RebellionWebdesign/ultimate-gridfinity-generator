@@ -1,0 +1,92 @@
+/* The privacy statement and the imprint: static pages, no script, in the tokens of app.css */
+html,
+body {
+  height: auto;
+}
+.wrap {
+  width: 100%;
+  max-width: calc(760px + 2 * var(--space-7));
+  margin: 0 auto;
+  padding: 0 var(--space-7);
+}
+.bar {
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+.bar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  height: var(--size-header);
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+.back {
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+}
+.legal {
+  padding-top: var(--space-8);
+  padding-bottom: var(--space-9);
+}
+.legal h1 {
+  margin-bottom: var(--space-6);
+  font-size: 32px;
+  line-height: 40px;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+.legal h2 {
+  margin: var(--space-7) 0 var(--space-3);
+  font-size: 20px;
+  line-height: 28px;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+}
+.legal p,
+.legal li {
+  font-size: 15px;
+  line-height: 24px;
+  overflow-wrap: anywhere;
+}
+.legal p {
+  margin: 0 0 var(--space-3);
+}
+.legal ul {
+  margin: 0 0 var(--space-3);
+  padding-left: var(--space-6);
+}
+.legal a,
+footer a {
+  color: var(--text);
+  text-underline-offset: 2px;
+}
+footer {
+  padding-top: var(--space-5);
+  padding-bottom: var(--space-8);
+  border-top: 1px solid var(--line);
+}
+footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  font-size: 12px;
+  line-height: 16px;
+}
+@media (max-width: 720px) {
+  .wrap {
+    padding: 0 var(--space-4);
+  }
+  .legal h1 {
+    font-size: 24px;
+    line-height: 32px;
+  }
+}

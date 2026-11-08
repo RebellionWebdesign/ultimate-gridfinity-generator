@@ -601,6 +601,8 @@
       <nav aria-label="Links">
         <a href={SPEC_URL} target="_blank" rel="noopener">Gridfinity specification</a>
         <button type="button" onclick={() => (licences = true)}>Licenses</button>
+        <a href="./datenschutz.html">Datenschutz</a>
+        <a href="./impressum.html">Impressum</a>
       </nav>
     </div>
   </div>

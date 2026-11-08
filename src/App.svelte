@@ -217,9 +217,13 @@
       </div>
       <p class="version t-caption n-s">
         <span>Version {__APP_VERSION__}</span>
-        <button type="button" class="link" onclick={() => (licences = true)}>
-          Licenses
-        </button>
+        <span class="links">
+          <button type="button" class="link" onclick={() => (licences = true)}>
+            Licenses
+          </button>
+          <a class="link" href="./datenschutz.html">Datenschutz</a>
+          <a class="link" href="./impressum.html">Impressum</a>
+        </span>
       </p>
     </aside>
 
@@ -448,6 +452,12 @@
   }
   .panel-body {
     flex: none;
+  }
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--space-1) var(--space-3);
   }
   .version {
     display: flex;
