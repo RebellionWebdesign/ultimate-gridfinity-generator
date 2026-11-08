@@ -104,6 +104,14 @@ Planned features. **Do not start them before the owner has deployed and publishe
 - [x] **nginx configuration** (MIME type of the manifest, cache headers, compression, HSTS) is the owner's, kept in Coolify and not in this repository (6 November 2026). Coolify copies it to `/etc/nginx/conf.d/default.conf`, inside nginx's `http` block, so it may hold only `server { ... }`: a `worker_processes`, `events` or `http` block makes nginx fail at start and the site answers 502.
 - [ ] **For the owner, not code:** "www redirect" in Coolify; Search Console and Bing Webmaster Tools; look at the link preview in Discord or Slack. Not done by choice: JSON-LD, separate pages per part (they need clean paths, option B), hreflang.
 
+## Privacy statement and imprint (owner, 8 November 2026)
+
+- [x] **Static legal pages** in German and English with a language switch, built from `src/legal` or build variables (`README`); links in the footer of the landing page and the editor.
+- [x] **Consent for saving in the browser**: nothing is read or written before "Allow"; "Switch off saving" in the clear dialog; the service worker is registered only after "Allow" and removed otherwise.
+- [x] **Wording**: "no parts or files are uploaded", offline on request, "source available"; Support button and Ko-fi link removed.
+- [ ] **For the owner, not code:** set the four build variables and `REQUIRE_LEGAL=1` in Coolify (`node tools/legal-env.mjs` prints them); align the contact data of the privacy statement with the imprint; ask the Kanzlei for an English version; take a new `og-image.png` (it still shows the old wording).
+- [ ] **Search Console tag** into `index.html`, when the owner asks (open decision 17).
+
 ## After the deploy: the About modal (owner, 6 November 2026)
 
 - [ ] **About modal.** A modal "About" has to be built after the deploy. The header of the landing page no longer has a Licenses link (the footer keeps it); what the modal holds (credits, licences, version, links, support) the owner decides when it is built. Do not start it before the deploy.
@@ -132,5 +140,6 @@ No tasks yet, and nothing here is started before phases C and E are done and the
 14. **Bin interior (E-07 to E-09).** How compartments are entered (a count per axis with equal split, or free divider positions), minimum and default divider thickness and height, scoop size and which compartments get one, label tab size and angle. Owner decides; no value is invented.
 15. **Custom print bed (E-10).** Rectangular or square only, whether a keep-free corner can be entered, and whether it also fixes the build height. Owner decides.
 16. **Tool insert from a photo (phase H).** How the scale of the photo is known, how the outline is found and corrected by the user, shell wall limits. Owner decides when the phase starts.
+17. **Privacy statement and imprint (owner, 8 November 2026).** Decided: static pages in German and English (`datenschutz.html` and `privacy.html`, `impressum.html` and `imprint.html`, each with a language switch), built from the texts in `src/legal`. The texts carry the owner's contact data, so they are not in the repository (`.gitignore`) and reach the server as build variables (README). The privacy statement is the text of the IT-Recht Kanzlei without the parts that do not fit the app: contract processing with Anthropic Claude, donations and the Ko-fi link, all removed by the owner on 8 November 2026 (Claude is used to build the app only; no visitor data goes to it). The imprint is the owner's text. The English texts are translations; the German text is the binding one. Open: align the contact data of the privacy statement with the imprint, and ask the Kanzlei for its own English version. Google Search Console (owner, 8 November 2026): verification with the HTML tag method; the tag with its token is shown in the owner's Search Console, and it goes unchanged into the `<head>` of `index.html` when the owner asks for it and stays there (removing it loses the verification). It places no tracking code. Do not verify with Google Analytics or Google Tag Manager: both run code for visitors and would change the statement. Do not change the Kanzlei wording; the owner decides.
 
 Added by this setup (not in the spec): Vite with Svelte, Prettier, ESLint and npm are decided (2 November 2026, ADR-0004).
