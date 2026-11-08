@@ -135,13 +135,13 @@
     {
       icon: "laptop",
       title: "Computed on your device",
-      text: "The geometry runs in your browser. No server sees your parts.",
-      chips: ["WebAssembly", "Web Worker", "0 bytes uploaded"],
+      text: "The geometry runs in your browser. Your parts and files are not uploaded.",
+      chips: ["WebAssembly", "Web Worker", "No parts or files uploaded"],
     },
     {
       icon: "wifi-off",
       title: "Works offline",
-      text: "After the first visit. Chrome and Edge can install it as an app.",
+      text: "Allow it once in the editor and it works offline. Chrome and Edge can install it as an app.",
       chips: ["Installable", "No account"],
     },
     {
@@ -209,8 +209,8 @@
         <h1 class="t-display">Gridfinity parts, generated in your browser.</h1>
         <p class="t-lead">
           Set the size in cells, add magnets, a label and a symbol, and download a
-          print-ready STL or 3MF. The geometry is computed on your device; nothing is
-          uploaded.
+          print-ready STL or 3MF. The geometry is computed on your device; no parts or
+          files are uploaded.
         </p>
         <div class="cta">
           <a class="primary large" href="#/editor">
@@ -218,7 +218,9 @@
           </a>
           <a class="quiet" href="#how">How it works</a>
         </div>
-        <p class="n-s note">No account · nothing uploaded · works offline</p>
+        <p class="n-s note">
+          No account · no parts or files uploaded · offline if you allow it
+        </p>
       </div>
     </div>
     <p class="n-s hero-caption">
@@ -537,8 +539,8 @@
     <div class="wrap">
       <h2 class="t-title">No cloud needed.</h2>
       <p class="t-lead sub">
-        Everything runs on your device. Nothing to sign up for, nothing to upload; the
-        model, the geometry and the files stay with you.
+        Everything runs on your device. Nothing to sign up for, no parts or files to
+        upload; the model, the geometry and the files stay with you.
       </p>
       <ul class="facts">
         {#each facts as f (f.title)}
@@ -566,8 +568,10 @@
               />
             </svg>
           </span>
-          <h3 class="t-heading">Free and open source</h3>
-          <p>The code is public. Read it, check it, report a bug, or build on it.</p>
+          <h3 class="t-heading">Free to use, source available</h3>
+          <p>
+            The code is public under CC BY-NC-SA 4.0. Read it, check it, report a bug.
+          </p>
           <div class="chips">
             <a class="primary" href={REPO_URL} target="_blank" rel="noopener">
               View on GitHub
