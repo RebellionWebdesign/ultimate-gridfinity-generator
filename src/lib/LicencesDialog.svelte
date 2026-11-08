@@ -44,11 +44,6 @@
       url: "https://github.com/lucide-icons/lucide",
     },
     {
-      name: "Octicons (the GitHub mark on the landing page)",
-      licence: "MIT; the logo itself is GitHub's trademark",
-      url: "https://github.com/primer/octicons",
-    },
-    {
       name: "Gridfinity (the standard)",
       licence: "MIT, Zack Freedman and Voidstar Lab LLC",
       url: "https://gridfinity.xyz/specification/",

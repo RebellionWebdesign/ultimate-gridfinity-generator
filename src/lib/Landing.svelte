@@ -390,11 +390,13 @@
                 height={side * scale}
               />
             </svg>
-            <p class="verdict" class:bad={!fits} role="status">
-              <Icon name={fits ? "check" : "triangle-alert"} size={16} />
-              {fits ? "Fits your bed" : "Too big: split it"}
-            </p>
-            <span class="t-label">Your bed</span>
+            <div class="bed-row">
+              <span class="t-label">Your bed</span>
+              <p class="verdict" class:bad={!fits} role="status">
+                <Icon name={fits ? "check" : "triangle-alert"} size={16} />
+                {fits ? "Fits your bed" : "Too big: split it"}
+              </p>
+            </div>
             <div class="stepper">
               <button
                 type="button"
@@ -555,20 +557,37 @@
         {/each}
         <li>
           <span class="tile accent">
-            <!-- the GitHub mark (Octicons mark-github, MIT licence) -->
+            <!-- the logo of the page -->
             <svg
-              viewBox="0 0 16 16"
+              viewBox="0 0 40 40"
               width="24"
               height="24"
-              fill="currentColor"
               aria-hidden="true"
+              fill="none"
             >
-              <path
-                d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
+              <rect
+                x="3"
+                y="3"
+                width="34"
+                height="34"
+                rx="8"
+                stroke="currentColor"
+                stroke-width="3"
+              />
+              <path d="M20 3v34M3 20h34" stroke="currentColor" stroke-width="3" />
+              <rect
+                x="20"
+                y="3"
+                width="17"
+                height="17"
+                rx="8"
+                fill="currentColor"
+                stroke="currentColor"
+                stroke-width="3"
               />
             </svg>
           </span>
-          <h3 class="t-heading">Free to use, source available</h3>
+          <h3 class="t-heading">Source available</h3>
           <p>
             The code is public under CC BY-NC-SA 4.0. Read it, check it, report a bug.
           </p>
@@ -792,8 +811,10 @@
   .hero-bg {
     position: absolute;
     top: 50%;
-    right: max(calc((100% - 1160px) / 2 + 48px), 48px);
-    width: min(740px, 70vw);
+    --hero-w: min(740px, 70vw);
+    width: var(--hero-w);
+    /* centred between the text column (450 px) and the vertical caption: equal gaps */
+    right: max(var(--space-5), calc(50% - 217px - var(--hero-w) / 2));
     transform: translateY(-50%);
     pointer-events: none;
   }
@@ -1000,6 +1021,12 @@
     gap: var(--space-3);
     width: 100%;
   }
+  .bed-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
   .bed {
     align-self: center;
     width: 128px;
@@ -1028,7 +1055,6 @@
     display: flex;
     align-items: center;
     width: 100%;
-    max-width: 220px;
     height: var(--size-control);
     border: 1px solid var(--line-strong);
     border-radius: var(--radius-control);
@@ -1112,7 +1138,7 @@
   .sample {
     margin-top: var(--space-5);
     padding: var(--space-4);
-    max-width: 480px;
+    width: 100%;
     border: 1px solid var(--line-strong);
     border-radius: var(--radius-control);
     background: var(--bg);
