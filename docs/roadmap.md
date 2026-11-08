@@ -16,7 +16,7 @@ Source: spec sections 2, 3, 6.2, 7 (incl. 7.3) and 9 (`docs/spec/gridfinity-gene
 | Phase | Content | State |
 |---|---|---|
 | A | MakerWorld script (OpenSCAD, Parametric Model Maker) | Done by the owner (outside this repo); serves as oracle |
-| B | Web app (PWA), lids | Built and released by the owner (3 November 2026); deploy and publication next |
+| B | Web app (PWA), lids | Built and released by the owner (3 November 2026); deployed on 8 November 2026 at ultimategridfinity.app |
 | C | Bins and baseplates, sliding lid, filler for free space; one feature at a time | In progress: baseplate (C-01 to C-03), bin (C-04 to C-08) and drawer fit with solid filler, split plate and drawer height (C-09 to C-13) built; sliding lid still open |
 | D | SolidCraft plugin | Later, only when the plugin system is mature |
 | E | Drawer planner, snap connectors for filled plates, text on bin walls, colour by height, bin compartments, scoop, label tab, custom print bed, snap studs instead of magnets | Planned, only after deploy and publication (owner, 4 November 2026) |
@@ -25,6 +25,17 @@ Source: spec sections 2, 3, 6.2, 7 (incl. 7.3) and 9 (`docs/spec/gridfinity-gene
 | H | Tool inserts from a photo | Far future, idea only (owner, 4 November 2026) |
 
 Postponed (spec section 2): the desktop app with Tauri or Electron, to phase F. Phases D, F and G are later; do not start them before the owner says so.
+
+### Where we are and what comes next (8 November 2026)
+
+Done on 8 November 2026: the web app is deployed at ultimategridfinity.app and verified in Google Search Console (HTML tag); landing page with hero animation, privacy statement and imprint in German and English as static pages, consent dialog for saving in the browser, no cookies, no server logs (nginx `access_log off;` and `error_log /dev/null crit;` in Coolify, no access log in the proxy; the container logs were checked and stayed empty after visits and a 404), Ko-fi link removed. Details are in the two sections "SEO" and "Privacy statement and imprint" below.
+
+Next, in this order (owner decides; Phase E only when the owner says so):
+1. **For the owner:** submit `https://ultimategridfinity.app/sitemap.xml` in Google Search Console and Bing Webmaster Tools; look at the link preview in Discord or Slack; ask the Kanzlei for an English version and whether the changed privacy statement (2.1, sections 3 and 5) is in order.
+2. **Small tasks:** a new `og-image.png` (it still shows the old wording); the phone layout with group tabs and a check on a real device, then close issue 7; the About modal (the owner decides what it holds).
+3. **Phase C:** the sliding lid, the only part not built.
+4. **Phase E**, in the recommended order: E-10 custom print bed, E-06 colour by height, E-07 to E-09 bin compartments, scoop and label tab (dimensions missing), E-04 and E-11 snap connectors (stud height and hole depth missing), E-01 to E-03 drawer planner (design first), E-05 text on bin walls.
+5. **Far future:** phases D, F, G and H.
 
 ## Phase B: web app
 
@@ -102,13 +113,16 @@ Planned features. **Do not start them before the owner has deployed and publishe
 - [x] **Head tags in `index.html`**: title, description, canonical, Open Graph, Twitter card, `<noscript>` text; `robots.txt`, `sitemap.xml` and `og-image.png` in `public/`.
 - [x] **Prerendered landing page** (option C): the build renders the landing page with Svelte's server renderer into `index.html` (`prerenderLanding` in `vite.config.ts`, no new dependency); the animations and drawings are left out of it and appear in the browser. *AC:* the raw HTML holds the headings and texts (checked in `dist/index.html`).
 - [x] **nginx configuration** (MIME type of the manifest, cache headers, compression, HSTS) is the owner's, kept in Coolify and not in this repository (6 November 2026). Coolify copies it to `/etc/nginx/conf.d/default.conf`, inside nginx's `http` block, so it may hold only `server { ... }`: a `worker_processes`, `events` or `http` block makes nginx fail at start and the site answers 502.
-- [ ] **For the owner, not code:** "www redirect" in Coolify; Search Console and Bing Webmaster Tools; look at the link preview in Discord or Slack. Not done by choice: JSON-LD, separate pages per part (they need clean paths, option B), hreflang.
+- [x] **Done by the owner:** the "www redirect" in Coolify (6 November 2026); the property is verified in Google Search Console (8 November 2026, HTML tag).
+- [ ] **For the owner, not code:** submit the sitemap in Google Search Console, and verify the site and submit the sitemap in Bing Webmaster Tools; look at the link preview in Discord or Slack. Not done by choice: JSON-LD, separate pages per part (they need clean paths, option B), hreflang.
 
 ## Privacy statement and imprint (owner, 8 November 2026)
 
 - [x] **Static legal pages** in German and English with a language switch, as plain HTML files with the text in them (`README`); links in the footer of the landing page and the editor.
 - [x] **Consent for saving in the browser**: nothing is read or written before "Allow"; "Switch off saving" in the clear dialog; the service worker is registered only after "Allow" and removed otherwise.
 - [x] **Wording**: "no parts or files are uploaded", offline on request, "source available"; Support button and Ko-fi link removed.
+- [x] **Privacy statement completed (8 November 2026):** no cookies; local storage and cache only after "Allow" in the dialog (only the decision itself is stored before); no server logs; Google Search Console named (Google Ireland Limited, no code on the site, no data about visitors); sections renumbered 1 to 8, German and English (`datenschutz.html`, `privacy.html`). The theme choice is kept in the browser only after "Allow" as well (`ugg.theme`), so the statement is true.
+- [x] **No server logs, checked (8 November 2026):** `access_log off;` and `error_log /dev/null crit;` in the nginx configuration in Coolify (General tab of the application), no access log in the proxy; `docker logs` of the site container, `coolify-proxy` and `coolify-proxy-error-pages` stayed empty after visits and a request for a missing page. **Keep it that way:** if logging is turned on, or a cookie, analytics or a request to a third party is added, the privacy statement is wrong and must change first.
 - [ ] **For the owner, not code:** ask the Kanzlei for an English version and whether the changed contact data in the privacy statement is fine; take a new `og-image.png` (it still shows the old wording).
 - [x] **Search Console tag** in the `<head>` of `index.html` (8 November 2026, the owner asked for it); it stays there, removing it loses the verification.
 
