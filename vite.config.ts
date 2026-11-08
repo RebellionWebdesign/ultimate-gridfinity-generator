@@ -5,7 +5,7 @@ import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { render } from "svelte/server";
 import { createServer, defineConfig, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
-import { legalTextToHtml } from "./src/legal/legalText.js";
+import { decodeLegalEnv, legalTextToHtml } from "./src/legal/legalText.js";
 
 const { version } = JSON.parse(readFileSync("./package.json", "utf8")) as {
   version: string;
@@ -83,11 +83,17 @@ const legalPages = (): Plugin => ({
       if (!page) return html;
       const file = `src/legal/${page.name}.md`;
       const encoded = process.env[page.env];
-      const text = existsSync(file)
-        ? readFileSync(file, "utf8")
-        : encoded
-          ? Buffer.from(encoded, "base64").toString("utf8")
-          : undefined;
+      let text: string | undefined;
+      if (existsSync(file)) text = readFileSync(file, "utf8");
+      else if (encoded) {
+        try {
+          text = decodeLegalEnv(page.env, encoded);
+        } catch (error) {
+          // a wrong variable never reaches the page; REQUIRE_LEGAL stops the build
+          if (process.env.REQUIRE_LEGAL === "1") throw error;
+          console.warn(`[legal-pages] ${(error as Error).message}`);
+        }
+      }
       if (text === undefined) {
         const message = `${basename(ctx.filename)}: no text found (${file} or ${page.env})`;
         if (process.env.REQUIRE_LEGAL === "1") throw new Error(message);

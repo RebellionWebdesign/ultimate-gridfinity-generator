@@ -54,3 +54,24 @@ export const legalTextToHtml = (text: string): string => {
   flush();
   return out.join("\n");
 };
+
+/**
+ * Reads a legal text from a build variable (base64, see `tools/legal-env.mjs`). It throws
+ * with the length and the first characters of the value when that is not a base64 text, so a
+ * wrong variable stops the build instead of putting nonsense on a legal page.
+ */
+export const decodeLegalEnv = (name: string, value: string): string => {
+  const trimmed = value.trim();
+  const fail = (why: string): never => {
+    throw new Error(
+      `${name}: ${why} (length ${trimmed.length}, starts with "${trimmed.slice(0, 12)}"). ` +
+        "Expected the base64 line of tools/legal-env.mjs, several thousand characters.",
+    );
+  };
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(trimmed)) return fail("not base64");
+  const text = Buffer.from(trimmed, "base64").toString("utf8");
+  if (text.includes("�")) return fail("does not decode to text");
+  if (text.split(/\r?\n/)[0]?.length === 0 || text.length < 200)
+    return fail("decodes to a text that is too short");
+  return text;
+};

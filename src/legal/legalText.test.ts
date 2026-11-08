@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { legalTextToHtml } from "./legalText";
+import { decodeLegalEnv, legalTextToHtml } from "./legalText";
 
 describe("legalTextToHtml", () => {
   it("uses the first line as the title and skips the rules around it", () => {
@@ -37,5 +37,29 @@ describe("legalTextToHtml", () => {
   it("accepts Windows line endings and a byte order mark", () => {
     const html = legalTextToHtml(String.fromCharCode(0xfeff) + "Titel\r\n\r\nText\r\n");
     expect(html).toBe("<h1>Titel</h1>\n<p>Text</p>");
+  });
+});
+
+describe("decodeLegalEnv", () => {
+  const text = `Impressum\n\n1) Diensteanbieter\n${"Zeile\n".repeat(60)}`;
+  const encoded = Buffer.from(text, "utf8").toString("base64");
+
+  it("decodes a base64 text, also with a trailing line break", () => {
+    expect(decodeLegalEnv("X", encoded)).toBe(text);
+    expect(decodeLegalEnv("X", `${encoded}\n`)).toBe(text);
+  });
+
+  it("rejects a value that is not base64 and names the variable", () => {
+    expect(() => decodeLegalEnv("LEGAL_X_B64", "LEGAL_X_B64=abc")).toThrow(
+      /LEGAL_X_B64: not base64 \(length 15, starts with "LEGAL_X_B64="\)/,
+    );
+  });
+
+  it("rejects base64 that does not decode to text or is too short", () => {
+    const noise = Buffer.from([0xff, 0xfe, 0xfd, 0x80, 0x81, 0x82]).toString("base64");
+    expect(() => decodeLegalEnv("X", noise)).toThrow(/does not decode to text/);
+    expect(() => decodeLegalEnv("X", Buffer.from("kurz").toString("base64"))).toThrow(
+      /too short/,
+    );
   });
 });
