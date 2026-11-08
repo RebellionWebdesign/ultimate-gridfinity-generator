@@ -110,7 +110,7 @@ Planned features. **Do not start them before the owner has deployed and publishe
 - [x] **Consent for saving in the browser**: nothing is read or written before "Allow"; "Switch off saving" in the clear dialog; the service worker is registered only after "Allow" and removed otherwise.
 - [x] **Wording**: "no parts or files are uploaded", offline on request, "source available"; Support button and Ko-fi link removed.
 - [ ] **For the owner, not code:** set the four build variables and `REQUIRE_LEGAL=1` in Coolify (`node tools/legal-env.mjs` prints them); align the contact data of the privacy statement with the imprint; ask the Kanzlei for an English version; take a new `og-image.png` (it still shows the old wording).
-- [ ] **Search Console tag** into `index.html`, when the owner asks (open decision 17).
+- [x] **Search Console tag** in the `<head>` of `index.html` (8 November 2026, the owner asked for it); it stays there, removing it loses the verification.
 
 ## After the deploy: the About modal (owner, 6 November 2026)
 
