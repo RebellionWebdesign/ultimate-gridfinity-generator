@@ -14,3 +14,6 @@ dist
 .claude/
 *.tsbuildinfo
 coverage
+
+# Legal texts with the owner's contact data: not for the public repository (see README, "Privacy statement and imprint")
+/src/legal/*.md
