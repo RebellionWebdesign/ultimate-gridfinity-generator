@@ -1,5 +1,7 @@
 // Light or dark theme, shared by the landing page and the editor. The switch in the header
 // goes round three modes: automatic (follows the system and changes with it), light, dark.
+import { readConsent } from "./consent";
+
 export type Theme = "light" | "dark";
 export type ThemeMode = "auto" | "light" | "dark";
 
@@ -18,7 +20,10 @@ const dark =
     : undefined;
 const systemTheme = (): Theme => (dark?.matches ? "dark" : "light");
 
+// The choice is kept in the browser only after the user said yes to saving (consent.ts);
+// before that the theme lasts for the visit and starts as automatic.
 const storedMode = (): ThemeMode => {
+  if (readConsent() !== "yes") return "auto";
   try {
     const value = localStorage.getItem(STORAGE_KEY);
     return value === "light" || value === "dark" ? value : "auto";
@@ -73,11 +78,26 @@ class ThemeState {
   toggle(): void {
     this.mode = NEXT[this.mode];
     this.apply();
+    this.persist();
+  }
+
+  /** Keeps the mode in the browser, only with consent; the automatic mode keeps nothing. */
+  persist(): void {
+    if (readConsent() !== "yes") return;
     try {
       if (this.mode === "auto") localStorage.removeItem(STORAGE_KEY);
       else localStorage.setItem(STORAGE_KEY, this.mode);
     } catch {
       // storage may be blocked; the theme still applies for this visit
+    }
+  }
+
+  /** Removes the kept mode (saving was switched off); the page keeps its theme until closed. */
+  forget(): void {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // nothing to remove when storage is blocked
     }
   }
 }

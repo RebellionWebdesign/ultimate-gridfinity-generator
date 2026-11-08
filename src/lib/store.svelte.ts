@@ -24,6 +24,7 @@ import {
 import { GeometryClient, InputBuildError } from "../worker/client";
 import { readConsent, writeConsent, type Consent } from "./consent";
 import { disableOffline, enableOffline } from "./offline";
+import { theme } from "./theme.svelte";
 import { mmText, type PartType } from "./parts";
 import {
   CUSTOM_LIMITS,
@@ -459,6 +460,7 @@ class Editor {
     this.consent = "yes";
     this.stored = readStored();
     this.autosave();
+    theme.persist();
     void enableOffline();
   }
 
@@ -466,6 +468,7 @@ class Editor {
   declineSaving(): void {
     writeConsent("no");
     this.consent = "no";
+    theme.forget();
     void disableOffline();
   }
 
