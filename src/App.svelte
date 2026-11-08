@@ -9,7 +9,7 @@
   import ParamsPanel from "./lib/ParamsPanel.svelte";
   import PreviewStage from "./lib/PreviewStage.svelte";
   import Segmented from "./lib/Segmented.svelte";
-  import { ISSUES_URL, KOFI_URL, PART_NAME, formatSize } from "./lib/parts";
+  import { ISSUES_URL, PART_NAME, formatSize } from "./lib/parts";
   import { editor } from "./lib/store.svelte";
   import { theme } from "./lib/theme.svelte";
 
@@ -181,15 +181,6 @@
       >
         <Icon name="download" /><span class="long">Export</span>
       </button>
-      <a
-        class="ghost"
-        href={KOFI_URL}
-        target="_blank"
-        rel="noopener"
-        title="Support the project on Ko-fi"
-      >
-        <Icon name="coffee" /><span class="long">Support</span>
-      </a>
       <input
         bind:this={openInput}
         class="visually-hidden"
