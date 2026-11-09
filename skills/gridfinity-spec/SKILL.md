@@ -37,6 +37,7 @@ Source: spec section 4 (`docs/spec/gridfinity-generator-spec.de.md`). All values
 | Stacking lip variants | round (R0.5) and sharp (no rounding) | same profile 0.7 / 1.8 / 1.9, depth 2.6 |
 | Wall under the stacking lip (`lipStepHeight`) | 45° chamfer from the wall in to depth 2.6, then a vertical step of 1.6 up to the top of the body; the lip (0.7 / 1.8 / 1.9) starts there | reference drawing `bin_stacking_lip_profile.svg` (Stu142): section polygons, 32 units at 20 units per mm for the step and the chamfer; the owner pointed to it on 9 November 2026 |
 | Bin scoop (not in the standard) | arc diameter 33.75, meets the floor 15.84 from the inner face of the wall, up to the tip of the 45° chamfer under the lip (1.6 below the top of the body) | owner's drawing, 9 November 2026 (`scoopRadius`, `scoopLength`) |
+| Bin dividers (not in the standard) | full width only, up to the lower edge of the step under the lip; thickness 0.8 to 1.6 in steps of 0.2; least gap between dividers and to the walls equals the thickness | owner, 9 November 2026 (`DIVIDER_LIMITS`) |
 | Hole centre | 4.8 from the lowest foot edge | derived: 7.75 from the outer wall, 26 mm hole spacing |
 | Half grid 21 mm, custom grid size | community extension | not part of the spec |
 
