@@ -35,7 +35,8 @@ Source: spec section 4 (`docs/spec/gridfinity-generator-spec.de.md`). All values
 | Baseplate profile widths | 2.85 per side at the bottom, 2.15 per side at the wall; 36.3 and 37.7; ridge 5.7 at the bottom | 36.3 = 42 − 2 × 2.85; 37.7 = 42 − 2 × 2.15 |
 | Bin vertical wall width | 37.2 | = 41.5 − 2 × 2.15 |
 | Stacking lip variants | round (R0.5) and sharp (no rounding) | same profile 0.7 / 1.8 / 1.9, depth 2.6 |
-| Bin scoop (not in the standard) | arc diameter 33.75, meets the floor 15.84 from the inner face of the wall, up to the tip of the 45° chamfer under the lip | owner's drawing, 9 November 2026 (`scoopRadius`, `scoopLength`) |
+| Wall under the stacking lip (`lipStepHeight`) | 45° chamfer from the wall in to depth 2.6, then a vertical step of 1.6 up to the top of the body; the lip (0.7 / 1.8 / 1.9) starts there | reference drawing `bin_stacking_lip_profile.svg` (Stu142): section polygons, 32 units at 20 units per mm for the step and the chamfer; the owner pointed to it on 9 November 2026 |
+| Bin scoop (not in the standard) | arc diameter 33.75, meets the floor 15.84 from the inner face of the wall, up to the tip of the 45° chamfer under the lip (1.6 below the top of the body) | owner's drawing, 9 November 2026 (`scoopRadius`, `scoopLength`) |
 | Hole centre | 4.8 from the lowest foot edge | derived: 7.75 from the outer wall, 26 mm hole spacing |
 | Half grid 21 mm, custom grid size | community extension | not part of the spec |
 
