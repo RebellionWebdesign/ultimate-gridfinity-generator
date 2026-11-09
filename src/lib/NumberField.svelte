@@ -16,6 +16,8 @@
     minWhy?: string;
     /** "min" wording: spec minimum or only the first value */
     signed?: boolean;
+    /** no reset button: there is no default value */
+    noReset?: boolean;
     onchange?: (value: number) => void;
   }
 
@@ -30,6 +32,7 @@
     why = "",
     minWhy = "",
     signed = false,
+    noReset = false,
     onchange,
   }: Props = $props();
 
@@ -97,7 +100,7 @@
 <div class="field">
   <div class="row">
     <label class="t-label" for={id}>{label}</label>
-    {#if value !== def}
+    {#if !noReset && value !== def}
       <button
         class="reset n-s"
         type="button"

@@ -2,7 +2,7 @@
 import type { ModelMesh } from "../geometry/model";
 import { parseSvg, SvgError, type SvgShapes } from "../geometry/svg";
 import {
-  DEFAULT_BIN,
+  newBin,
   maxHeightUnits,
   validateBin,
   type BinParams,
@@ -73,7 +73,7 @@ class Editor {
   private current = $state<PartType>("lid");
   params = $state<LidParams>({ ...DEFAULT_LID });
   baseplate = $state<BaseplateParams>({ ...DEFAULT_BASEPLATE });
-  bin = $state<BinParams>({ ...DEFAULT_BIN });
+  bin = $state<BinParams>(newBin());
   /** the height of the drawer in mm: bins and lids are kept lower than it (0 = off) */
   drawerHeight = $state(0);
   name = $state("Lid 1 × 1");

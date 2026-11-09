@@ -187,32 +187,59 @@ const scoopSolid = (
   const moved = scope.add(
     placed.translate(p.wall_thickness - SCOOP_OVERLAP, p.wall_thickness, layout.floor),
   );
-  // The ends of the prism reach into the walls; at the rounded corners of the bin that would
-  // stand out of the outer wall. So it is cut to the shape of the cavity, a little larger
-  // (0.05 mm into the wall, enough for a clean union), with the same rounded corners.
-  const grow = 0.05;
-  const envelope = scope.add(
-    loft(kernel, [
-      {
-        z: layout.floor - SCOOP_OVERLAP,
-        hx: layout.width / 2 - p.wall_thickness + grow,
-        hy: layout.depth / 2 - p.wall_thickness + grow,
-        r: innerRadius(p.wall_thickness) + grow,
-      },
-      {
-        z: layout.bodyHeight + 0.01,
-        hx: layout.width / 2 - p.wall_thickness + grow,
-        hy: layout.depth / 2 - p.wall_thickness + grow,
-        r: innerRadius(p.wall_thickness) + grow,
-      },
-    ]),
-  );
   return scope.add(
-    kernel.Manifold.intersection(
-      moved,
-      scope.add(envelope.translate(layout.width / 2, layout.depth / 2, 0)),
-    ),
+    kernel.Manifold.intersection(moved, cavityEnvelope(kernel, scope, p, layout)),
   );
+};
+
+/**
+ * The shape of the cavity, a little larger (0.05 mm into the wall, enough for a clean union),
+ * with the same rounded corners, in the coordinates of the bin. Scoop and dividers reach into
+ * the walls; at the rounded corners of the bin that would stand out of the outer wall, so they
+ * are cut to this.
+ */
+const cavityEnvelope = (
+  kernel: Kernel,
+  scope: Scope,
+  p: BinParams,
+  layout: BinLayout,
+): Manifold => {
+  const grow = 0.05;
+  const ring = (z: number): Layer => ({
+    z,
+    hx: layout.width / 2 - p.wall_thickness + grow,
+    hy: layout.depth / 2 - p.wall_thickness + grow,
+    r: innerRadius(p.wall_thickness) + grow,
+  });
+  const envelope = scope.add(
+    loft(kernel, [ring(layout.floor - SCOOP_OVERLAP), ring(layout.bodyHeight + 0.01)]),
+  );
+  return scope.add(envelope.translate(layout.width / 2, layout.depth / 2, 0));
+};
+
+/**
+ * The dividers (E-07) as solids, in the coordinates of the bin: each runs across the whole
+ * width of the cavity into the side walls, from the floor up to its height.
+ */
+const dividerSolids = (
+  kernel: Kernel,
+  scope: Scope,
+  p: BinParams,
+  layout: BinLayout,
+): Manifold[] => {
+  if (p.dividers.length === 0) return [];
+  const envelope = cavityEnvelope(kernel, scope, p, layout);
+  const wall = p.wall_thickness;
+  const across = layout.width - 2 * wall + 2 * SCOOP_OVERLAP;
+  return p.dividers.map((d) => {
+    const edge = wall + d.position - p.divider_thickness / 2;
+    const box = scope
+      .add(
+        kernel.Manifold.cube([across, p.divider_thickness, d.height + SCOOP_OVERLAP]),
+      )
+      .translate(wall - SCOOP_OVERLAP, edge, layout.floor - SCOOP_OVERLAP);
+    return scope.add(kernel.Manifold.intersection(scope.add(box), envelope));
+  });
 };
 
 /** Cells that carry a centre magnet: the corner cells of the bin (spec section 3.1). */
@@ -369,7 +396,14 @@ export const buildBin = (kernel: Kernel, scope: Scope, p: BinParams): BinParts =
     ]),
   );
   const scoop = p.scoop ? scoopSolid(kernel, scope, p, layout) : undefined;
-  const body = scoop ? scope.add(kernel.Manifold.union(hollow, scoop)) : hollow;
+  const additions = [
+    ...(scoop ? [scoop] : []),
+    ...dividerSolids(kernel, scope, p, layout),
+  ];
+  const body =
+    additions.length > 0
+      ? scope.add(kernel.Manifold.union([hollow, ...additions]))
+      : hollow;
 
   const place = (part: Manifold) => move(part, -w / 2, -h / 2, 0);
   if (!(p.lip_color_enabled && p.lip_style === "with_lip")) {

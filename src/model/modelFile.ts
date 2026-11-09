@@ -3,9 +3,11 @@
 import {
   BIN_LIMITS,
   DEFAULT_BIN,
+  DIVIDER_LIMITS,
   clampBin,
   type BinLimitedKey,
   type BinParams,
+  type Divider,
 } from "./binParams";
 import {
   BASEPLATE_LIMITS,
@@ -133,6 +135,25 @@ export const sanitizeBaseplate = (raw: unknown): BaseplateParams => {
   return plate;
 };
 
+/**
+ * Dividers of unknown origin: only well-formed entries stay, at most the allowed number.
+ * Their values are kept as they are; the check of the bin reports a collision or a value out
+ * of range, so a file never changes a divider silently.
+ */
+const sanitizeDividers = (raw: unknown): Divider[] => {
+  if (!Array.isArray(raw)) return [];
+  const out: Divider[] = [];
+  for (const item of raw) {
+    if (typeof item !== "object" || item === null) continue;
+    const { axis, position, height } = item as Record<string, unknown>;
+    if (axis === "y") continue; // dividers along the depth were dropped (owner, 9 November 2026)
+    if (typeof position !== "number" || !Number.isFinite(position)) continue;
+    if (typeof height !== "number" || !Number.isFinite(height)) continue;
+    out.push({ position, height });
+  }
+  return out.slice(0, DIVIDER_LIMITS.count.max);
+};
+
 /** Bin parameters of unknown origin to valid ones, like `sanitizeParams`. */
 export const sanitizeBin = (raw: unknown): BinParams => {
   const input = (typeof raw === "object" && raw !== null ? raw : {}) as Record<
@@ -141,6 +162,7 @@ export const sanitizeBin = (raw: unknown): BinParams => {
   >;
   const out = { ...DEFAULT_BIN } as Record<string, unknown>;
   for (const [key, fallback] of Object.entries(DEFAULT_BIN)) {
+    if (key === "dividers") continue;
     const value = input[key];
     if (typeof fallback === "number") {
       if (typeof value !== "number" || !Number.isFinite(value)) continue;
@@ -153,6 +175,7 @@ export const sanitizeBin = (raw: unknown): BinParams => {
     }
   }
   const bin = out as unknown as BinParams;
+  bin.dividers = sanitizeDividers(input.dividers);
   for (const key of ["plate_color", "lip_color"] as const) {
     if (!/^#[0-9a-fA-F]{6}$/.test(bin[key])) bin[key] = DEFAULT_BIN[key];
   }

@@ -1,7 +1,7 @@
 // Bin parameters. Names follow the reference script (reference/gridfinity_generator.scad).
 // The spec value is the minimum and the default; the user can only raise a value, up to
 // its limit (spec section 4, ui-spec section 8).
-import { CONSTANTS } from "../gridfinity/constants";
+import { CONSTANTS, outerSize } from "../gridfinity/constants";
 import { STONE, type NumberLimit } from "./lidParams";
 
 /** with_lip: stacking lip (+4.4 mm). flat_same_height: no lip, same total height. flat_lower: no lip, 4.4 mm lower. */
@@ -33,9 +33,40 @@ export interface BinParams {
   lip_color: string;
   /** a curved ramp along the front wall (E-08) */
   scoop: boolean;
+  /** thickness of all dividers; also the least gap between two dividers and to a wall (E-07) */
+  divider_thickness: number;
+  /** walls across the whole cavity (E-07) */
+  dividers: Divider[];
+}
+
+/**
+ * A divider (E-07) runs across the whole width of the cavity and ends at the side walls.
+ * Its position is the middle of the divider, measured along the depth from the inner face of
+ * the front wall; the height is measured from the cavity floor.
+ */
+export interface Divider {
+  position: number;
+  height: number;
 }
 
 const MAG_WALL = 0.75;
+
+export const DIVIDER_LIMITS = {
+  // owner, 9 November 2026: 0.8 to 1.6 mm in steps of 0.2; the least gap equals the thickness
+  thickness: {
+    min: 0.8,
+    max: 1.6,
+    step: 0.2,
+    why: "0.8 to 1.6 mm in steps of 0.2 mm; the least gap between dividers and to the walls is the thickness",
+  },
+  height: {
+    min: 1,
+    max: 600,
+    step: 0.1,
+    why: "up to the lower edge of the step under the stacking lip, like the scoop",
+  },
+  count: { max: 40 },
+} as const;
 
 export const BIN_LIMITS = {
   units_x: { min: 1, max: 12, step: 1, why: "12 cells is the script's limit" },
@@ -96,6 +127,7 @@ export const BIN_LIMITS = {
     step: 0.05,
     why: "0.2 mm is the project's default; 0.6 mm is the script's limit",
   },
+  divider_thickness: DIVIDER_LIMITS.thickness,
 } as const satisfies Record<string, NumberLimit>;
 
 export type BinLimitedKey = keyof typeof BIN_LIMITS;
@@ -120,7 +152,12 @@ export const DEFAULT_BIN: BinParams = {
   lip_color_enabled: false,
   lip_color: STONE,
   scoop: false,
+  divider_thickness: DIVIDER_LIMITS.thickness.min,
+  dividers: [],
 };
+
+/** A fresh copy of the defaults: the divider list must not be shared between bins. */
+export const newBin = (): BinParams => ({ ...DEFAULT_BIN, dividers: [] });
 
 /** Height the top edge adds to the body: the stacking lip, or the same height without a lip. */
 export const topExtra = (style: LipStyle): number =>
@@ -160,6 +197,109 @@ export const scoopHeightOf = (p: BinParams): number =>
   (p.lip_style === "with_lip" ? CONSTANTS.lipStepHeight.value : 0) -
   floorZOf(p);
 
+/** Highest a divider can be: the lower edge of the step under the stacking lip, as for the scoop. */
+export const dividerHeightMax = (p: BinParams): number => scoopHeightOf(p);
+
+/** Inner length of the cavity along the depth: the room the dividers stand in. */
+export const dividerSpan = (p: BinParams): number =>
+  outerSize(p.units_y) - 2 * p.wall_thickness;
+
+const round = (v: number): number => Math.round(v * 1000) / 1000;
+
+/**
+ * The dividers that collide: too close to a wall, or to the divider before them (from the
+ * front wall backwards). The least gap equals the thickness of the dividers (owner,
+ * 9 November 2026). Of two dividers that are too close, the later one collides.
+ */
+export const collidingDividers = (p: BinParams): Set<Divider> => {
+  const t = p.divider_thickness;
+  const span = dividerSpan(p);
+  const out = new Set<Divider>();
+  let end = 0; // the front wall's inner face, then the back edge of the last divider kept
+  const ordered = [...p.dividers].sort((a, b) => a.position - b.position);
+  for (const d of ordered) {
+    const start = d.position - t / 2;
+    if (
+      !Number.isFinite(d.position) ||
+      start < end + t - 1e-9 ||
+      d.position + t / 2 > span - t + 1e-9
+    ) {
+      out.add(d);
+    } else {
+      end = d.position + t / 2;
+    }
+  }
+  return out;
+};
+
+/** The dividers without the ones that collide (what the panel keeps when the thickness grows). */
+export const withoutCollisions = (p: BinParams): Divider[] => {
+  const bad = collidingDividers(p);
+  return p.dividers.filter((d) => !bad.has(d));
+};
+
+/**
+ * Custom function (not part of the Gridfinity standard): dividers spread evenly. Given the
+ * thickness of `p` and the gap the user wants between two dividers (and to the walls), it
+ * places as many dividers as fit with at least that gap and spreads them so every gap is
+ * the same. The gap that results is a little larger than asked, never smaller.
+ */
+export const evenDividers = (
+  p: BinParams,
+  wantedGap: number,
+): { dividers: Divider[]; gap: number } => {
+  const t = p.divider_thickness;
+  const span = dividerSpan(p);
+  const wanted = Math.max(wantedGap, t);
+  const count = Math.max(
+    0,
+    Math.min(
+      DIVIDER_LIMITS.count.max,
+      Math.floor((span - wanted) / (wanted + t) + 1e-9),
+    ),
+  );
+  const gap = (span - count * t) / (count + 1);
+  const height = Math.max(DIVIDER_LIMITS.height.min, dividerHeightMax(p));
+  return {
+    gap,
+    dividers: Array.from({ length: count }, (_, i) => ({
+      position: gap * (i + 1) + t * i + t / 2,
+      height,
+    })),
+  };
+};
+
+/** What is wrong with the dividers: too many, too high, or colliding with a wall or each other. */
+export const dividerProblems = (p: BinParams): string[] => {
+  const errors: string[] = [];
+  const { height, count } = DIVIDER_LIMITS;
+  if (p.dividers.length > count.max) {
+    errors.push(
+      `At most ${count.max} dividers are possible, got ${p.dividers.length}.`,
+    );
+  }
+  const maxHeight = dividerHeightMax(p);
+  const bad = collidingDividers(p);
+  p.dividers.forEach((d, i) => {
+    const name = `Divider ${i + 1}`;
+    if (!Number.isFinite(d.height) || d.height < height.min - 1e-9) {
+      errors.push(`${name} must be at least ${height.min} mm high.`);
+    } else if (d.height > maxHeight + 1e-9) {
+      errors.push(
+        `${name} is higher than the bin allows (${round(maxHeight)} mm, up to the step under the stacking lip).`,
+      );
+    }
+    if (!Number.isFinite(d.position)) {
+      errors.push(`${name} needs a position.`);
+    } else if (bad.has(d)) {
+      errors.push(
+        `${name} collides with a wall or with another divider: keep at least ${p.divider_thickness} mm of room.`,
+      );
+    }
+  });
+  return errors;
+};
+
 /** Error messages for every value outside its limit; empty when the bin is valid. */
 export const validateBin = (p: BinParams): string[] => {
   const errors: string[] = [];
@@ -180,6 +320,7 @@ export const validateBin = (p: BinParams): string[] => {
       "The scoop needs a floor lower than the top of the body: lower the floor or make the bin taller.",
     );
   }
+  errors.push(...dividerProblems(p));
   return errors;
 };
 
