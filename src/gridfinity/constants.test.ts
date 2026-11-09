@@ -23,6 +23,7 @@ describe("Gridfinity constants match the spec", () => {
     ["lipHeight", 4.4],
     ["lipDepth", 2.6],
     ["lipFootOffset", 0.25],
+    ["lipStepHeight", 1.6],
     ["baseplateProfileLower", 0.7],
     ["baseplateProfileVertical", 1.8],
     ["baseplateProfileUpper", 2.15],

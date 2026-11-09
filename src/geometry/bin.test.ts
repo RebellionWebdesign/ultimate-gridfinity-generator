@@ -332,6 +332,7 @@ describe("E-08 scoop (the owner's drawing of 9 November 2026)", () => {
     return cu - Math.sqrt(R * R - (v - cv) ** 2);
   };
   const tip = CONSTANTS.lipDepth.value - wall;
+  const stepH = CONSTANTS.lipStepHeight.value;
 
   /** Vertices where the scoop meets the left side wall, as (u, v). */
   const onSideWall = (o: Partial<BinParams>) => {
@@ -363,7 +364,7 @@ describe("E-08 scoop (the owner's drawing of 9 November 2026)", () => {
   });
 
   it("follows the circle with the radius of the drawing (diameter 33.75) along the whole arc", () => {
-    for (const v of [2, 6, 10, 14]) {
+    for (const v of [2, 6, 10, 13]) {
       expect(frontEdge({}, v), `v = ${v}`).toBeCloseTo(arcU(tip, v), 2);
     }
   });
@@ -385,13 +386,14 @@ describe("E-08 scoop (the owner's drawing of 9 November 2026)", () => {
     // 4 units: tall enough for the arc to stand upright; above it only the wall piece
     const p = { ...DEFAULT_BIN, height_units: 4 };
     const layout = layoutOf(p);
-    const height = layout.bodyHeight - layout.floor;
+    const height = layout.bodyHeight - stepH - layout.floor;
     expect(height).toBeGreaterThan(circle(tip).cv);
     for (const v of [circle(tip).cv + 0.5, 20, height - 0.01]) {
       expect(frontEdge({ height_units: 4 }, v), `v = ${v}`).toBeCloseTo(tip, 2);
     }
-    // above the body the chamfer is the lip's own: the cavity opens up again
-    expect(frontEdge({ height_units: 4 }, height + 0.3)).toBeLessThan(tip);
+    // up the step the wall stays at the tip; above it the lip's 0.7 chamfer opens the cavity again
+    expect(frontEdge({ height_units: 4 }, height + stepH - 0.01)).toBeCloseTo(tip, 2);
+    expect(frontEdge({ height_units: 4 }, height + stepH + 0.3)).toBeLessThan(tip);
   });
 
   it("in a tall bin only the piece along the wall grows: the arc stays the same", () => {
@@ -407,10 +409,10 @@ describe("E-08 scoop (the owner's drawing of 9 November 2026)", () => {
   });
 
   it("in a low bin the arc is cut at the top of the body and a flat face is left", () => {
-    for (const units of [1, 2]) {
+    for (const units of [2, 3]) {
       const p = { ...DEFAULT_BIN, height_units: units };
       const layout = layoutOf(p);
-      const height = layout.bodyHeight - layout.floor;
+      const height = layout.bodyHeight - stepH - layout.floor;
       // just below the top the front edge is still on the arc, just above it is the lip's chamfer
       expect(
         frontEdge({ height_units: units }, height - 0.01),
@@ -487,7 +489,7 @@ describe("E-08 scoop (the owner's drawing of 9 November 2026)", () => {
     };
     for (const o of [
       {},
-      { height_units: 1 },
+      { height_units: 2 },
       { height_units: 2 },
       { height_units: 6 },
       { lip_style: "flat_lower" as const },
@@ -500,7 +502,7 @@ describe("E-08 scoop (the owner's drawing of 9 November 2026)", () => {
     const corner = CONSTANTS.binCornerRadius.value;
     for (const o of [
       {},
-      { height_units: 1 },
+      { height_units: 1, lip_style: "flat_lower" as const },
       { units_x: 2, units_y: 2 },
       { wall_thickness: 2.5 },
     ]) {
@@ -549,5 +551,56 @@ describe("E-08 scoop (the owner's drawing of 9 November 2026)", () => {
       validateBin({ ...DEFAULT_BIN, height_units: 1, bottom_thickness: 5 }),
     ).toEqual([]);
     expect(validateBin({ ...DEFAULT_BIN, scoop: true })).toEqual([]);
+    // a 1 unit bin with a stacking lip has no room: the step and the chamfer take 3 mm of 7
+    expect(validateBin({ ...DEFAULT_BIN, height_units: 1, scoop: true })).toEqual([
+      expect.stringContaining("scoop needs a floor lower"),
+    ]);
+    expect(
+      validateBin({
+        ...DEFAULT_BIN,
+        height_units: 1,
+        lip_style: "flat_lower",
+        scoop: true,
+      }),
+    ).toEqual([]);
+  });
+});
+
+describe("stacking lip profile (reference drawing of the lip by Stu142)", () => {
+  // inset of the cavity wall from the outer wall at a height, read from the vertices
+  const insets = (o: Partial<BinParams>, z: number) =>
+    at(measure(o), z).map(([x]) => Number((20.75 - Math.abs(x)).toFixed(3)));
+  const top = 21; // 1x1x3: the lip starts at the top of the body
+  const step = CONSTANTS.lipStepHeight.value;
+
+  it("wall, 45 degree chamfer to depth 2.6, a vertical step of 1.6, then 0.7 / 1.8 / 1.9", () => {
+    expect(insets({}, top - step - 1.4)).toContain(1.2); // the chamfer starts at the wall (1.2)
+    expect(insets({}, top - step)).toContain(2.6); // 1.4 higher: depth 2.6
+    expect(insets({}, top)).toContain(2.6); // the step stands upright up to the top of the body
+    expect(insets({}, top + 0.7)).toContain(1.9); // 0.7 at 45 degrees
+    expect(insets({}, top + 2.5)).toContain(1.9); // 1.8 vertical
+    expect(insets({}, top + 4.4)).toContain(0); // 1.9 at 45 degrees to the knife edge
+  });
+
+  it("keeps the height: 7 per unit plus 4.4", () => {
+    expect(measure({}).size.z).toBeCloseTo(25.4, 4);
+  });
+
+  it("a thicker wall shortens the chamfer, the step stays", () => {
+    // wall 2.0: the chamfer is 0.6 high and starts 1.6 + 0.6 below the top
+    expect(insets({ wall_thickness: 2 }, top - step - 0.6)).toContain(2);
+    expect(insets({ wall_thickness: 2 }, top - step)).toContain(2.6);
+  });
+
+  it("a low bin with a high floor starts the cavity on the profile at the floor", () => {
+    // 2 units: top 14, the chamfer starts at 11.0, the default floor is at 5.55: unchanged
+    expect(measure({ height_units: 2 }).closed).toBe(true);
+    // a floor inside the chamfer (2 units, floor 12): the cavity starts on the chamfer
+    const m = measure({ height_units: 2, bottom_thickness: 7.25 });
+    expect(m.closed).toBe(true);
+    const floor = floorZOf({ ...DEFAULT_BIN, height_units: 2, bottom_thickness: 7.25 });
+    expect(floor).toBeCloseTo(12, 4);
+    // at the floor the wall is already 1.0 mm in on the chamfer (11.0 + 1.0 = 12.0)
+    expect(insets({ height_units: 2, bottom_thickness: 7.25 }, floor)).toContain(2.2);
   });
 });

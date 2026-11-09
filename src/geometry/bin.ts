@@ -50,9 +50,43 @@ const innerRadius = (depth: number): number =>
   Math.max(c("binCornerRadius") - depth, 0.8);
 
 /**
- * The cavity as a loft: straight walls from the floor up. With a stacking lip the wall
- * widens at 45 degrees into the lip profile (0.7 / 1.8 / 1.9, depth 2.6) and ends in a
- * knife edge; the last ring sits 0.01 above so the cut passes cleanly through the tip.
+ * The wall of the cavity under and in a stacking lip, from below as [z, inset from the outer
+ * wall]: the wall runs in at 45 degrees to the lip depth (2.6), stands upright for the step
+ * (1.6), and then the lip itself follows: 0.7 (45 degrees) / 1.8 vertical / 1.9 (45 degrees)
+ * to a knife edge. The lip starts at the top of the body. Reference drawing of the stacking
+ * lip (Stu142); the last point sits 0.01 above so the cut passes cleanly through the tip.
+ */
+const lipWallProfile = (p: BinParams, layout: BinLayout): [number, number][] => {
+  const top = layout.bodyHeight;
+  const step = c("lipStepHeight");
+  const depth = c("lipDepth");
+  return [
+    [top - step - (depth - p.wall_thickness), p.wall_thickness],
+    [top - step, depth],
+    [top, depth],
+    [top + c("lipLowerSlope"), c("lipUpperSlope")],
+    [top + c("lipLowerSlope") + c("lipVertical"), c("lipUpperSlope")],
+    [top + c("lipHeight"), 0],
+    [top + c("lipHeight") + 0.01, 0],
+  ];
+};
+
+/** Inset of the wall profile at a height (the wall itself below its first point). */
+const insetAt = (profile: [number, number][], z: number): number => {
+  const [first] = profile;
+  if (!first || z <= first[0]) return first?.[1] ?? 0;
+  for (let i = 1; i < profile.length; i++) {
+    const [z0, d0] = profile[i - 1] as [number, number];
+    const [z1, d1] = profile[i] as [number, number];
+    if (z <= z1) return d0 + ((d1 - d0) * (z - z0)) / (z1 - z0);
+  }
+  return profile[profile.length - 1]?.[1] ?? 0;
+};
+
+/**
+ * The cavity as a loft: straight walls from the floor up. With a stacking lip the wall goes
+ * on as in `lipWallProfile`; when the floor lies above the start of that profile, the cavity
+ * starts on it at the floor.
  */
 const cavityLayers = (p: BinParams, layout: BinLayout): Layer[] => {
   const hx = layout.width / 2 - p.wall_thickness;
@@ -64,22 +98,18 @@ const cavityLayers = (p: BinParams, layout: BinLayout): Layer[] => {
       { z: layout.top + 0.01, hx, hy, r },
     ];
   }
-  const lower = c("lipLowerSlope");
-  const upper = lower + c("lipVertical");
-  const lipRing = (dz: number, depth: number): Layer => ({
-    z: layout.bodyHeight + dz,
-    hx: layout.width / 2 - depth,
-    hy: layout.depth / 2 - depth,
-    r: innerRadius(depth),
+  const ring = (z: number, inset: number): Layer => ({
+    z,
+    hx: layout.width / 2 - inset,
+    hy: layout.depth / 2 - inset,
+    r: innerRadius(inset),
   });
+  const profile = lipWallProfile(p, layout);
   return [
-    { z: layout.floor, hx, hy, r },
-    { z: layout.bodyHeight - (c("lipDepth") - p.wall_thickness), hx, hy, r },
-    lipRing(0, c("lipDepth")),
-    lipRing(lower, c("lipUpperSlope")),
-    lipRing(upper, c("lipUpperSlope")),
-    lipRing(c("lipHeight"), 0),
-    lipRing(c("lipHeight") + 0.01, 0),
+    ring(layout.floor, insetAt(profile, layout.floor)),
+    ...profile
+      .filter(([z]) => z > layout.floor + 1e-9)
+      .map(([z, inset]) => ring(z, inset)),
   ];
 };
 
@@ -93,8 +123,7 @@ const SCOOP_OVERLAP = 0.3;
  * cavity, v up from the cavity floor, in mm. The arc has the owner's radius and meets the
  * floor `scoopLength` from the wall. It stands upright against the wall at the distance of
  * the tip of the 45 degree chamfer under the stacking lip (`lipDepth - wall`; at the wall
- * itself without a lip) and goes up to the tip, the lower edge of the lip step: the height
- * of the body. In a tall bin only the straight piece along the wall grows; in a low bin
+ * itself without a lip) and goes up to the tip, the lower edge of the lip step. In a tall bin only the straight piece along the wall grows; in a low bin
  * the arc is cut at the top and a flat face is left. Undefined when there is no room.
  */
 export const scoopOutline = (
@@ -103,8 +132,10 @@ export const scoopOutline = (
 ): [number, number][] | undefined => {
   const r = c("scoopRadius");
   const length = c("scoopLength");
-  const tip = p.lip_style === "with_lip" ? c("lipDepth") - p.wall_thickness : 0;
-  const height = layout.bodyHeight - layout.floor;
+  const lip = p.lip_style === "with_lip";
+  const tip = lip ? c("lipDepth") - p.wall_thickness : 0;
+  // up to the tip of the chamfer, the lower edge of the step; without a lip to the body top
+  const height = layout.bodyHeight - (lip ? c("lipStepHeight") : 0) - layout.floor;
   if (height <= 0) return undefined;
   // centre of the circle: r from the upright end, so that the arc passes through the floor point
   const cu = tip + r;

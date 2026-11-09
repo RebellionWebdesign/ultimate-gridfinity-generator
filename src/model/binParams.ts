@@ -154,9 +154,11 @@ export const floorZOf = (p: BinParams): number => {
   );
 };
 
-/** Height of the scoop: from the cavity floor to the top of the body, where the lip step is. */
+/** Height of the scoop: from the cavity floor to the lower edge of the lip step (the top of the body without a lip). */
 export const scoopHeightOf = (p: BinParams): number =>
-  p.height_units * CONSTANTS.heightUnit.value - floorZOf(p);
+  p.height_units * CONSTANTS.heightUnit.value -
+  (p.lip_style === "with_lip" ? CONSTANTS.lipStepHeight.value : 0) -
+  floorZOf(p);
 
 /** Error messages for every value outside its limit; empty when the bin is valid. */
 export const validateBin = (p: BinParams): string[] => {

@@ -30,6 +30,15 @@ export const CONSTANTS = {
   lipHeight: { value: 4.4, source: `${SPEC}: does not count toward the 7 mm height` },
   lipDepth: { value: 2.6, source: SPEC },
   lipFootOffset: { value: 0.25, source: SPEC },
+  // Below the lip the cavity wall runs in at 45 degrees to the lip depth and then stands
+  // upright for this height (the "step"), before the 0.7 / 1.8 / 1.9 profile of the lip starts.
+  // Read from the section polygons of the reference drawing bin_stacking_lip_profile.svg
+  // (Stu142): 32 drawing units at 20 units per mm, the same as the 45 degree chamfer below it.
+  lipStepHeight: {
+    value: 1.6,
+    source:
+      "reference drawing bin_stacking_lip_profile.svg: step 32 units at 20 units per mm",
+  },
   baseplateProfileLower: {
     value: 0.7,
     source: `${SPEC}: baseplate profile, 45 degrees`,
