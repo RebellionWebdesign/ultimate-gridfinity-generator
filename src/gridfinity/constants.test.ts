@@ -38,6 +38,9 @@ describe("Gridfinity constants match the spec", () => {
     ["screwHoleDiameter", 3.0],
     ["holeSpacing", 26],
     ["holeCentreFromFootEdge", 4.8],
+    // bin scoop, the owner's drawing of 9 November 2026 (not from the standard)
+    ["scoopRadius", 16.875],
+    ["scoopLength", 15.84],
   ];
 
   it.each(table)("%s = %d", (name, value) => {

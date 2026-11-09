@@ -31,6 +31,8 @@ export interface BinParams {
   plate_color: string;
   lip_color_enabled: boolean;
   lip_color: string;
+  /** a curved ramp along the front wall (E-08) */
+  scoop: boolean;
 }
 
 const MAG_WALL = 0.75;
@@ -117,6 +119,7 @@ export const DEFAULT_BIN: BinParams = {
   plate_color: STONE,
   lip_color_enabled: false,
   lip_color: STONE,
+  scoop: false,
 };
 
 /** Height the top edge adds to the body: the stacking lip, or the same height without a lip. */
@@ -151,6 +154,10 @@ export const floorZOf = (p: BinParams): number => {
   );
 };
 
+/** Height of the scoop: from the cavity floor to the top of the body, where the lip step is. */
+export const scoopHeightOf = (p: BinParams): number =>
+  p.height_units * CONSTANTS.heightUnit.value - floorZOf(p);
+
 /** Error messages for every value outside its limit; empty when the bin is valid. */
 export const validateBin = (p: BinParams): string[] => {
   const errors: string[] = [];
@@ -165,6 +172,11 @@ export const validateBin = (p: BinParams): string[] => {
     if (!/^#[0-9a-fA-F]{6}$/.test(p[key])) {
       errors.push(`${key} must be a #rrggbb colour.`);
     }
+  }
+  if (p.scoop && scoopHeightOf(p) <= 0) {
+    errors.push(
+      "The scoop needs a floor lower than the top of the body: lower the floor or make the bin taller.",
+    );
   }
   return errors;
 };

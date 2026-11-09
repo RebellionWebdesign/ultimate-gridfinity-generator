@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
+import { CONSTANTS } from "../gridfinity/constants";
 import {
   BIN_LIMITS,
   DEFAULT_BIN,
@@ -7,7 +8,7 @@ import {
   validateBin,
   type BinParams,
 } from "../model/binParams";
-import { buildBin, layoutOf } from "./bin";
+import { buildBin, layoutOf, scoopOutline } from "./bin";
 import { initKernel, Scope, type Kernel } from "./kernel";
 import { isClosed, sizeOf, vertices } from "./mesh";
 
@@ -292,5 +293,261 @@ describe("bin height up to the build height", () => {
     expect(maxHeightUnits(256, "flat_lower")).toBe(36);
     expect(maxHeightUnits(600, "flat_lower")).toBe(85);
     expect(maxHeightUnits(10, "with_lip")).toBe(1);
+  });
+});
+
+describe("E-08 scoop (the owner's drawing of 9 November 2026)", () => {
+  const R = CONSTANTS.scoopRadius.value;
+  const L = CONSTANTS.scoopLength.value;
+  const wall = 1.2;
+  /** the circle of the arc, in (u, v): from the front wall's inner face, up from the floor */
+  const circle = (tip: number) => {
+    const cu = tip + R;
+    return { cu, cv: Math.sqrt(R * R - (L - cu) ** 2) };
+  };
+
+  /** Distance from the inner face of the front wall to the front edge of the cavity at v mm above the floor. */
+  const frontEdge = (o: Partial<BinParams>, v: number): number => {
+    const p = { ...DEFAULT_BIN, ...o, scoop: true };
+    const layout = layoutOf(p);
+    const scope = new Scope();
+    try {
+      const { body } = buildBin(kernel, scope, p);
+      const section = scope.add(body.slice(layout.floor + v));
+      const holes = section.toPolygons().filter(
+        (poly) =>
+          poly.reduce((sum, [x, y], i) => {
+            const [nx, ny] = poly[(i + 1) % poly.length] ?? [0, 0];
+            return sum + (x * ny - nx * y);
+          }, 0) < 0,
+      );
+      const ys = holes.flatMap((poly) => poly.map(([, y]) => y));
+      return Math.min(...ys) + layout.depth / 2 - p.wall_thickness;
+    } finally {
+      scope.dispose();
+    }
+  };
+  const arcU = (tip: number, v: number): number => {
+    const { cu, cv } = circle(tip);
+    return cu - Math.sqrt(R * R - (v - cv) ** 2);
+  };
+  const tip = CONSTANTS.lipDepth.value - wall;
+
+  /** Vertices where the scoop meets the left side wall, as (u, v). */
+  const onSideWall = (o: Partial<BinParams>) => {
+    const p = { ...DEFAULT_BIN, ...o };
+    const layout = layoutOf(p);
+    const m = measure({ ...o, scoop: true });
+    // the part is centred on x/y: put its corner back at the origin
+    return m.verts
+      .filter(([x]) => Math.abs(x + layout.width / 2 - p.wall_thickness) < 1e-6)
+      .map(([, y, z]): [number, number] => [
+        y + layout.depth / 2 - p.wall_thickness,
+        z - layout.floor,
+      ]);
+  };
+
+  it("is off by default and changes nothing then", () => {
+    expect(DEFAULT_BIN.scoop).toBe(false);
+    expect(measure({ scoop: false }).volume).toBe(measure({}).volume);
+  });
+
+  it("makes a closed solid of the same size, with more material", () => {
+    const plain = measure({});
+    const m = measure({ scoop: true });
+    expect(m.closed).toBe(true);
+    expect(m.size.x).toBeCloseTo(plain.size.x, 6);
+    expect(m.size.y).toBeCloseTo(plain.size.y, 6);
+    expect(m.size.z).toBeCloseTo(plain.size.z, 6);
+    expect(m.volume).toBeGreaterThan(plain.volume + 100);
+  });
+
+  it("follows the circle with the radius of the drawing (diameter 33.75) along the whole arc", () => {
+    for (const v of [2, 6, 10, 14]) {
+      expect(frontEdge({}, v), `v = ${v}`).toBeCloseTo(arcU(tip, v), 2);
+    }
+  });
+
+  it("has its points on that circle where it meets the side wall", () => {
+    const { cu, cv } = circle(CONSTANTS.lipDepth.value - wall);
+    const arc = onSideWall({}).filter(([u, v]) => u > 3 && u < L - 0.01 && v > 0.01);
+    expect(arc.length).toBeGreaterThan(20);
+    for (const [u, v] of arc) {
+      expect(Math.hypot(u - cu, v - cv), `${u}, ${v}`).toBeCloseTo(R, 5);
+    }
+  });
+
+  it("meets the floor 15.84 mm from the wall", () => {
+    expect(frontEdge({}, 0.001)).toBeCloseTo(L, 1);
+  });
+
+  it("ends at the tip of the chamfer under the lip: the top of the body, 1.4 mm from the wall", () => {
+    // 4 units: tall enough for the arc to stand upright; above it only the wall piece
+    const p = { ...DEFAULT_BIN, height_units: 4 };
+    const layout = layoutOf(p);
+    const height = layout.bodyHeight - layout.floor;
+    expect(height).toBeGreaterThan(circle(tip).cv);
+    for (const v of [circle(tip).cv + 0.5, 20, height - 0.01]) {
+      expect(frontEdge({ height_units: 4 }, v), `v = ${v}`).toBeCloseTo(tip, 2);
+    }
+    // above the body the chamfer is the lip's own: the cavity opens up again
+    expect(frontEdge({ height_units: 4 }, height + 0.3)).toBeLessThan(tip);
+  });
+
+  it("in a tall bin only the piece along the wall grows: the arc stays the same", () => {
+    const section = (units: number) => {
+      const outline = scoopOutline(
+        { ...DEFAULT_BIN, height_units: units },
+        layoutOf({ ...DEFAULT_BIN, height_units: units }),
+      );
+      return outline?.slice(2, -2);
+    };
+    // the arc points are the same for 4 and 12 units
+    expect(section(12)).toEqual(section(4));
+  });
+
+  it("in a low bin the arc is cut at the top of the body and a flat face is left", () => {
+    for (const units of [1, 2]) {
+      const p = { ...DEFAULT_BIN, height_units: units };
+      const layout = layoutOf(p);
+      const height = layout.bodyHeight - layout.floor;
+      // just below the top the front edge is still on the arc, just above it is the lip's chamfer
+      expect(
+        frontEdge({ height_units: units }, height - 0.01),
+        `${units}u`,
+      ).toBeCloseTo(arcU(tip, height - 0.01), 1);
+      expect(
+        frontEdge({ height_units: units }, height + 0.01),
+        `${units}u`,
+      ).toBeLessThan(tip + 0.01);
+      expect(measure({ height_units: units, scoop: true }).closed, `${units}u`).toBe(
+        true,
+      );
+    }
+  });
+
+  it("works without a lip and with other walls, floors and sizes", () => {
+    const cases: Partial<BinParams>[] = [
+      { lip_style: "flat_lower" },
+      { lip_style: "flat_same_height" },
+      { wall_thickness: 2.5 },
+      { bottom_thickness: 2 },
+      { units_x: 3, units_y: 2, height_units: 6 },
+      { corner_magnets: true, center_magnet: true },
+      { foot_hollow: "open" },
+      { lip_color_enabled: true },
+    ];
+    for (const o of cases) {
+      const m = measure({ ...o, scoop: true });
+      expect(m.closed, JSON.stringify(o)).toBe(true);
+      expect(m.size.z).toBeCloseTo(measure(o).size.z, 6);
+    }
+  });
+
+  it("needs nothing under it: no face of the scoop points down", () => {
+    const check = (o: Partial<BinParams>) => {
+      const p = { ...DEFAULT_BIN, ...o, scoop: true };
+      const layout = layoutOf(p);
+      const tip =
+        p.lip_style === "with_lip" ? CONSTANTS.lipDepth.value - p.wall_thickness : 0;
+      const scope = new Scope();
+      try {
+        const { body } = buildBin(kernel, scope, p);
+        const { vertProperties: v, triVerts, numProp } = body.getMesh();
+        let seen = 0;
+        for (let i = 0; i < triVerts.length; i += 3) {
+          const at = (k: number) =>
+            [0, 1, 2].map((d) => v[(triVerts[i + k] ?? 0) * numProp + d] ?? 0);
+          const [a, b, c] = [at(0), at(1), at(2)] as [number[], number[], number[]];
+          const nz =
+            (b[0]! - a[0]!) * (c[1]! - a[1]!) - (b[1]! - a[1]!) * (c[0]! - a[0]!);
+          const area = Math.abs(nz) / 2;
+          const cx = (a[0]! + b[0]! + c[0]!) / 3 + layout.width / 2;
+          const cy = (a[1]! + b[1]! + c[1]!) / 3 + layout.depth / 2;
+          const cz = (a[2]! + b[2]! + c[2]!) / 3;
+          const inScoop =
+            // mid-width, away from the rounded corners of the cavity and their chamfer
+            cx > p.wall_thickness + 6 &&
+            cx < layout.width - p.wall_thickness - 6 &&
+            cy > p.wall_thickness + tip + 0.05 &&
+            cy < p.wall_thickness + L - 0.01 &&
+            cz > layout.floor + 0.005 &&
+            cz < layout.bodyHeight - 0.005;
+          if (!inScoop || area < 1e-9) continue;
+          seen++;
+          expect(
+            nz,
+            `${JSON.stringify(o)} at ${cy.toFixed(2)}, ${cz.toFixed(2)}`,
+          ).toBeGreaterThan(-1e-6);
+        }
+        expect(seen, JSON.stringify(o)).toBeGreaterThan(20);
+      } finally {
+        scope.dispose();
+      }
+    };
+    for (const o of [
+      {},
+      { height_units: 1 },
+      { height_units: 2 },
+      { height_units: 6 },
+      { lip_style: "flat_lower" as const },
+    ]) {
+      check(o);
+    }
+  });
+
+  it("does not stand out of the rounded outer corners of the bin", () => {
+    const corner = CONSTANTS.binCornerRadius.value;
+    for (const o of [
+      {},
+      { height_units: 1 },
+      { units_x: 2, units_y: 2 },
+      { wall_thickness: 2.5 },
+    ]) {
+      const p = { ...DEFAULT_BIN, ...o, scoop: true };
+      const layout = layoutOf(p);
+      const outside = measure({ ...o, scoop: true }).verts.filter(([x, y]) => {
+        // distance of the point beyond the rounded outline, in the corner zone only
+        const dx = layout.width / 2 - Math.abs(x) - corner;
+        const dy = layout.depth / 2 - Math.abs(y) - corner;
+        return dx < 0 && dy < 0 && Math.hypot(dx, dy) > corner + 1e-3;
+      });
+      expect(outside, JSON.stringify(o)).toEqual([]);
+    }
+  });
+
+  it("has rounded front corners where it meets the side walls, like the cavity", () => {
+    // at the floor the cavity corner has the radius of the wall's inner corner (2.55 mm)
+    const p = { ...DEFAULT_BIN, scoop: true };
+    const layout = layoutOf(p);
+    const r = CONSTANTS.binCornerRadius.value - p.wall_thickness;
+    const m = measure({ scoop: true });
+    const front = m.verts.filter(
+      ([x, y, z]) =>
+        Math.abs(z - layout.floor - 3) < 1 &&
+        y + layout.depth / 2 < p.wall_thickness + 1 &&
+        x + layout.width / 2 < p.wall_thickness + r + 1,
+    );
+    // no vertex sits in the square corner outside the rounded one
+    for (const [x, y] of front) {
+      const dx = x + layout.width / 2 - p.wall_thickness - r;
+      const dy = y + layout.depth / 2 - p.wall_thickness - r;
+      if (dx < 0 && dy < 0) expect(Math.hypot(dx, dy)).toBeLessThanOrEqual(r + 1e-6);
+    }
+  });
+
+  it("is refused when the floor is as high as the top of the body", () => {
+    expect(
+      validateBin({
+        ...DEFAULT_BIN,
+        height_units: 1,
+        bottom_thickness: 5,
+        scoop: true,
+      }),
+    ).toEqual([expect.stringContaining("scoop needs a floor lower")]);
+    expect(
+      validateBin({ ...DEFAULT_BIN, height_units: 1, bottom_thickness: 5 }),
+    ).toEqual([]);
+    expect(validateBin({ ...DEFAULT_BIN, scoop: true })).toEqual([]);
   });
 });

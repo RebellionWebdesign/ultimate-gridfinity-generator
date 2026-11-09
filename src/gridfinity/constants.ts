@@ -57,6 +57,17 @@ export const CONSTANTS = {
   screwHoleDiameter: { value: 3.0, source: SPEC },
   holeSpacing: { value: 26, source: `${SPEC}: 26 mm hole spacing` },
   holeCentreFromFootEdge: { value: 4.8, source: `${SPEC}: derived` },
+  // Bin scoop (E-08). Not in the Gridfinity standard: the owner's drawing of 9 November 2026
+  // (section of a scoop, the diameter of the arc is 33.75 mm).
+  scoopRadius: {
+    value: 16.875,
+    source: "owner's drawing, 9 November 2026: arc diameter 33.75",
+  },
+  scoopLength: {
+    value: 15.84,
+    source:
+      "owner's drawing, 9 November 2026: from the inner face of the wall to where the arc meets the floor",
+  },
 } as const satisfies Record<string, Constant>;
 
 export type ConstantName = keyof typeof CONSTANTS;

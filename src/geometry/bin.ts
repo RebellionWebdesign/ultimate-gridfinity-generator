@@ -83,6 +83,95 @@ const cavityLayers = (p: BinParams, layout: BinLayout): Layer[] => {
   ];
 };
 
+/** Points per arc of the scoop (the circle of the cavity corners has about 10 per 90 degrees). */
+const SCOOP_SEGMENTS = 48;
+/** The scoop reaches this far into the walls and below the floor, so the union is clean. */
+const SCOOP_OVERLAP = 0.3;
+
+/**
+ * Section of the scoop (E-08) in (u, v): u from the inner face of the front wall into the
+ * cavity, v up from the cavity floor, in mm. The arc has the owner's radius and meets the
+ * floor `scoopLength` from the wall. It stands upright against the wall at the distance of
+ * the tip of the 45 degree chamfer under the stacking lip (`lipDepth - wall`; at the wall
+ * itself without a lip) and goes up to the tip, the lower edge of the lip step: the height
+ * of the body. In a tall bin only the straight piece along the wall grows; in a low bin
+ * the arc is cut at the top and a flat face is left. Undefined when there is no room.
+ */
+export const scoopOutline = (
+  p: BinParams,
+  layout: BinLayout,
+): [number, number][] | undefined => {
+  const r = c("scoopRadius");
+  const length = c("scoopLength");
+  const tip = p.lip_style === "with_lip" ? c("lipDepth") - p.wall_thickness : 0;
+  const height = layout.bodyHeight - layout.floor;
+  if (height <= 0) return undefined;
+  // centre of the circle: r from the upright end, so that the arc passes through the floor point
+  const cu = tip + r;
+  const cv = Math.sqrt(r * r - (length - cu) ** 2);
+  const bottom = Math.atan2(-cv, length - cu) + 2 * Math.PI;
+  const top = Math.PI + (height >= cv ? 0 : Math.asin((cv - height) / r));
+  const points: [number, number][] = [
+    [-SCOOP_OVERLAP, -SCOOP_OVERLAP],
+    [length, -SCOOP_OVERLAP],
+  ];
+  for (let i = 0; i <= SCOOP_SEGMENTS; i++) {
+    const a = bottom + ((top - bottom) * i) / SCOOP_SEGMENTS;
+    points.push([cu + r * Math.cos(a), cv + r * Math.sin(a)]);
+  }
+  if (height > cv) points.push([tip, height]);
+  points.push([-SCOOP_OVERLAP, height]);
+  return points;
+};
+
+/** The scoop as a solid across the cavity, in the coordinates of the bin (corner at 0). */
+const scoopSolid = (
+  kernel: Kernel,
+  scope: Scope,
+  p: BinParams,
+  layout: BinLayout,
+): Manifold | undefined => {
+  const outline = scoopOutline(p, layout);
+  if (!outline) return undefined;
+  const across = layout.width - 2 * p.wall_thickness + 2 * SCOOP_OVERLAP;
+  const prism = scope.add(
+    scope.add(new kernel.CrossSection([outline])).extrude(across),
+  );
+  // (u, v, along) -> (x = along, y = u, z = v)
+  const placed = scope.add(
+    prism.transform([0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1]),
+  );
+  const moved = scope.add(
+    placed.translate(p.wall_thickness - SCOOP_OVERLAP, p.wall_thickness, layout.floor),
+  );
+  // The ends of the prism reach into the walls; at the rounded corners of the bin that would
+  // stand out of the outer wall. So it is cut to the shape of the cavity, a little larger
+  // (0.05 mm into the wall, enough for a clean union), with the same rounded corners.
+  const grow = 0.05;
+  const envelope = scope.add(
+    loft(kernel, [
+      {
+        z: layout.floor - SCOOP_OVERLAP,
+        hx: layout.width / 2 - p.wall_thickness + grow,
+        hy: layout.depth / 2 - p.wall_thickness + grow,
+        r: innerRadius(p.wall_thickness) + grow,
+      },
+      {
+        z: layout.bodyHeight + 0.01,
+        hx: layout.width / 2 - p.wall_thickness + grow,
+        hy: layout.depth / 2 - p.wall_thickness + grow,
+        r: innerRadius(p.wall_thickness) + grow,
+      },
+    ]),
+  );
+  return scope.add(
+    kernel.Manifold.intersection(
+      moved,
+      scope.add(envelope.translate(layout.width / 2, layout.depth / 2, 0)),
+    ),
+  );
+};
+
 /** Cells that carry a centre magnet: the corner cells of the bin (spec section 3.1). */
 const cornerCells = (p: BinParams): [number, number][] => {
   const xs = [...new Set([0, p.units_x - 1])];
@@ -230,12 +319,14 @@ export const buildBin = (kernel: Kernel, scope: Scope, p: BinParams): BinParts =
       );
     }
   }
-  const body = scope.add(
+  const hollow = scope.add(
     kernel.Manifold.difference([
       scope.add(kernel.Manifold.union([...feet, block])),
       ...cutters,
     ]),
   );
+  const scoop = p.scoop ? scoopSolid(kernel, scope, p, layout) : undefined;
+  const body = scoop ? scope.add(kernel.Manifold.union(hollow, scoop)) : hollow;
 
   const place = (part: Manifold) => move(part, -w / 2, -h / 2, 0);
   if (!(p.lip_color_enabled && p.lip_style === "with_lip")) {

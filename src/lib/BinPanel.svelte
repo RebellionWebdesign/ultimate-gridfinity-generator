@@ -115,6 +115,17 @@
     <p class="t-caption">The floor is measured above the 4.75 mm foot.</p>
   </ParamGroup>
 
+  <ParamGroup name="Scoop" summary={p.scoop ? "on" : "off"}>
+    <Switch
+      label="Scoop"
+      bind:checked={p.scoop}
+      hint="A curved ramp along the front wall, across the whole width, so small parts slide out. It rises to the top of the body, where the stacking lip begins. In a tall bin only the piece along the wall grows; in a low bin the ramp is cut at the top."
+    />
+    <p class="t-caption">
+      Arc diameter 33.75 mm, meeting the floor 15.84 mm from the front wall.
+    </p>
+  </ParamGroup>
+
   <ParamGroup name="Magnets and foot" summary={magnetSummary}>
     <Switch
       label="Corner magnets"
