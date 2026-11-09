@@ -77,6 +77,45 @@ export const CONSTANTS = {
     source:
       "owner's drawing, 9 November 2026: from the inner face of the wall to where the arc meets the floor",
   },
+  // Bin label (E-09). Not in the Gridfinity standard: the owner's drawing of 9 November 2026
+  // (a flat plate with two lugs, plan view) and his answers the same day.
+  labelThickness: {
+    value: 1,
+    source:
+      "owner, 9 November 2026: the plate is 1 mm thick (the lugs as thick as the plate)",
+  },
+  labelDepth: {
+    value: 14,
+    source: "owner's drawing, 9 November 2026: plate 14.00 deep",
+  },
+  labelEdgeInset: {
+    value: 2,
+    source:
+      "owner, 9 November 2026, after seeing the first version: the plate sits flush with at most 0.1 mm of gap to the vertical wall of the lip (inset 1.9), so 1.9 + 0.1; it rests with its edges on the first 45 degree slope of the lip (his drawing had 37.08 wide, inset 2.21: that left a gap of 0.31)",
+  },
+  labelLugLength: {
+    value: 0.6,
+    source: "owner's drawing, 9 November 2026: lug 0.60 on each side",
+  },
+  labelLugWidth: {
+    value: 7,
+    source: "owner's drawing, 9 November 2026: lug 7.00 wide",
+  },
+  labelLugOffset: {
+    value: 4.33,
+    source:
+      "measured on the owner's drawing, 9 November 2026: from the rounded edge of the plate to the lug (4.33 + 7.00 + 2.67 = 14)",
+  },
+  labelLugChamfer: {
+    value: 0.3,
+    source:
+      "owner, 9 November 2026: a small chamfer on the lugs so they go in more easily; the size 0.3 mm (45 degrees, on the upper and the lower outer edge) was chosen by the agent, to be confirmed",
+  },
+  labelLugClearance: {
+    value: 0.05,
+    source:
+      "owner, 9 November 2026: every dimension of the slot in the bin is about 50 micrometres larger than the lug",
+  },
 } as const satisfies Record<string, Constant>;
 
 export type ConstantName = keyof typeof CONSTANTS;

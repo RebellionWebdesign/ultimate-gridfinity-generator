@@ -242,6 +242,60 @@ const dividerSolids = (
   });
 };
 
+/** Height of the underside of the label plate: where the first 45 degree slope of the lip is as far in as the plate edge. */
+export const labelRestZ = (layout: BinLayout): number =>
+  layout.bodyHeight + (c("lipDepth") - c("labelEdgeInset"));
+
+/**
+ * Where the lugs of the label plate sit along the depth of the bin, as [from, to] in the
+ * coordinates of the bin: 4.33 mm from the edge of the plate on the side of the wall, the
+ * plate itself resting 2.0 mm in from that wall.
+ */
+export const labelLugSpan = (
+  p: BinParams,
+  layout: BinLayout,
+): [number, number] | undefined => {
+  if (p.label_slot === "none") return undefined;
+  const e = c("labelEdgeInset");
+  const near = c("labelLugOffset");
+  const wide = c("labelLugWidth");
+  return p.label_slot === "back"
+    ? [layout.depth - e - near - wide, layout.depth - e - near]
+    : [e + near, e + near + wide];
+};
+
+/**
+ * The two slots (E-09) for the lugs of the label plate, cut into the side walls: every
+ * dimension of the lug plus 0.05 mm, so the plate clicks in cleanly. They reach a little into
+ * the cavity so that the cut opens cleanly.
+ */
+const labelSlots = (
+  kernel: Kernel,
+  scope: Scope,
+  p: BinParams,
+  layout: BinLayout,
+): Manifold[] => {
+  const span = labelLugSpan(p, layout);
+  if (!span || p.lip_style !== "with_lip") return [];
+  const e = c("labelEdgeInset");
+  const grow = c("labelLugClearance");
+  const lug = c("labelLugLength");
+  const [y0, y1] = span;
+  const z0 = labelRestZ(layout) - grow / 2;
+  const height = c("labelThickness") + grow;
+  const reach = 0.1; // into the cavity, which is empty there
+  const cut = (x0: number, x1: number) =>
+    scope.add(
+      scope
+        .add(kernel.Manifold.cube([x1 - x0, y1 - y0 + grow, height]))
+        .translate(x0, y0 - grow / 2, z0),
+    );
+  return [
+    cut(e - lug - grow, e + reach),
+    cut(layout.width - e - reach, layout.width - e + lug + grow),
+  ];
+};
+
 /** Cells that carry a centre magnet: the corner cells of the bin (spec section 3.1). */
 const cornerCells = (p: BinParams): [number, number][] => {
   const xs = [...new Set([0, p.units_x - 1])];
@@ -400,10 +454,15 @@ export const buildBin = (kernel: Kernel, scope: Scope, p: BinParams): BinParts =
     ...(scoop ? [scoop] : []),
     ...dividerSolids(kernel, scope, p, layout),
   ];
-  const body =
+  const joined =
     additions.length > 0
       ? scope.add(kernel.Manifold.union([hollow, ...additions]))
       : hollow;
+  const slots = labelSlots(kernel, scope, p, layout);
+  const body =
+    slots.length > 0
+      ? scope.add(kernel.Manifold.difference([joined, ...slots]))
+      : joined;
 
   const place = (part: Manifold) => move(part, -w / 2, -h / 2, 0);
   if (!(p.lip_color_enabled && p.lip_style === "with_lip")) {

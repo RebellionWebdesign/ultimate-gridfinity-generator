@@ -7,6 +7,9 @@ import { STONE, type NumberLimit } from "./lidParams";
 /** with_lip: stacking lip (+4.4 mm). flat_same_height: no lip, same total height. flat_lower: no lip, 4.4 mm lower. */
 export type FootHollow = "none" | "open";
 
+/** Where a label sits in the bin (E-09): slots for its lugs in the two side walls, at the front or the back. */
+export type LabelSlot = "none" | "front" | "back";
+
 export type LipStyle = "with_lip" | "flat_same_height" | "flat_lower";
 
 export interface BinParams {
@@ -37,6 +40,8 @@ export interface BinParams {
   divider_thickness: number;
   /** walls across the whole cavity (E-07) */
   dividers: Divider[];
+  /** slots in the side walls for a label plate (E-09) */
+  label_slot: LabelSlot;
 }
 
 /**
@@ -154,6 +159,7 @@ export const DEFAULT_BIN: BinParams = {
   scoop: false,
   divider_thickness: DIVIDER_LIMITS.thickness.min,
   dividers: [],
+  label_slot: "none",
 };
 
 /** A fresh copy of the defaults: the divider list must not be shared between bins. */
@@ -196,6 +202,10 @@ export const scoopHeightOf = (p: BinParams): number =>
   p.height_units * CONSTANTS.heightUnit.value -
   (p.lip_style === "with_lip" ? CONSTANTS.lipStepHeight.value : 0) -
   floorZOf(p);
+
+/** Width of the label plate: from edge to edge of the first slope of the lip, 37.5 on a 1 x 1 bin. */
+export const labelWidthOf = (p: Pick<BinParams, "units_x">): number =>
+  outerSize(p.units_x) - 2 * CONSTANTS.labelEdgeInset.value;
 
 /** Highest a divider can be: the lower edge of the step under the stacking lip, as for the scoop. */
 export const dividerHeightMax = (p: BinParams): number => scoopHeightOf(p);
@@ -321,6 +331,11 @@ export const validateBin = (p: BinParams): string[] => {
     );
   }
   errors.push(...dividerProblems(p));
+  if (p.label_slot !== "none" && p.lip_style !== "with_lip") {
+    errors.push(
+      "A label needs the stacking lip: its plate rests on the lip. Choose the stacking lip, or switch the label slot off.",
+    );
+  }
   return errors;
 };
 

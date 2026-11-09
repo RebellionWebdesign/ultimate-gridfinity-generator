@@ -20,7 +20,7 @@
   } = $props();
 
   const MAX_CELLS = 8;
-  /** the largest plate of the Set card: one cell more than the 6 x 6 of a P2S bed */
+  /** the largest plate of the Set card: one cell more than the 6 x 6 of a 256 mm bed */
   const MAX_PLATE = 7;
   const DEPTH = 1;
   const UNITS = 2;

@@ -17,6 +17,13 @@ import {
   type BaseplateParams,
 } from "./baseplateParams";
 import {
+  DEFAULT_LABEL,
+  LABEL_LIMITS,
+  clampLabel,
+  type LabelLimitedKey,
+  type LabelParams,
+} from "./labelParams";
+import {
   DEFAULT_LID,
   LID_LIMITS,
   clampToLimit,
@@ -39,12 +46,14 @@ interface ModelFileBase {
 export type ModelFile =
   | (ModelFileBase & { type: "lid"; params: LidParams })
   | (ModelFileBase & { type: "baseplate"; params: BaseplateParams })
-  | (ModelFileBase & { type: "bin"; params: BinParams });
+  /** a bin brings its label (text and colours) along; files from before have none */
+  | (ModelFileBase & { type: "bin"; params: BinParams; label?: LabelParams });
 
 export class ModelFileError extends Error {}
 
 const ENUMS: Partial<Record<string, readonly string[]>> = {
   baseplate_style: ["solid", "skeleton"],
+  label_slot: ["none", "front", "back"],
   lip_style: ["with_lip", "flat_same_height", "flat_lower"],
   variant: ["dust_cover", "stackable"],
   lip_mode: ["full", "corners_only"],
@@ -154,6 +163,33 @@ const sanitizeDividers = (raw: unknown): Divider[] => {
   return out.slice(0, DIVIDER_LIMITS.count.max);
 };
 
+/** Label parameters of unknown origin to valid ones, like `sanitizeParams`. */
+export const sanitizeLabel = (raw: unknown): LabelParams => {
+  const input = (typeof raw === "object" && raw !== null ? raw : {}) as Record<
+    string,
+    unknown
+  >;
+  const out = { ...DEFAULT_LABEL } as Record<string, unknown>;
+  for (const [key, fallback] of Object.entries(DEFAULT_LABEL)) {
+    const value = input[key];
+    if (typeof fallback === "number") {
+      if (typeof value !== "number" || !Number.isFinite(value)) continue;
+      out[key] =
+        key in LABEL_LIMITS ? clampLabel(key as LabelLimitedKey, value) : value;
+    } else if (typeof fallback === "boolean") {
+      if (typeof value === "boolean") out[key] = value;
+    } else if (typeof value === "string") {
+      const choices = ENUMS[key];
+      if (choices ? choices.includes(value) : true) out[key] = value;
+    }
+  }
+  const label = out as unknown as LabelParams;
+  for (const key of ["plate_color", "text_color", "symbol_color"] as const) {
+    if (!/^#[0-9a-fA-F]{6}$/.test(label[key])) label[key] = DEFAULT_LABEL[key];
+  }
+  return label;
+};
+
 /** Bin parameters of unknown origin to valid ones, like `sanitizeParams`. */
 export const sanitizeBin = (raw: unknown): BinParams => {
   const input = (typeof raw === "object" && raw !== null ? raw : {}) as Record<
@@ -204,6 +240,7 @@ export const serializeBin = (
   name: string,
   params: BinParams,
   drawerHeight = 0,
+  label?: LabelParams,
 ): string => {
   const file: ModelFile = {
     drawerHeight,
@@ -213,6 +250,7 @@ export const serializeBin = (
     savedAt: new Date().toISOString(),
     svgName: "",
     params,
+    ...(label ? { label } : {}),
   };
   return JSON.stringify(file, null, 2);
 };
@@ -286,7 +324,13 @@ export const parseModel = (text: string, fileName = "the file"): ModelFile => {
   };
   const name = typeof migrated.name === "string" ? migrated.name : "";
   if (type === "bin") {
-    return { ...base, type, name: name || "Bin", params: sanitizeBin(migrated.params) };
+    return {
+      ...base,
+      type,
+      name: name || "Bin",
+      params: sanitizeBin(migrated.params),
+      ...(migrated.label ? { label: sanitizeLabel(migrated.label) } : {}),
+    };
   }
   if (type === "baseplate") {
     return {

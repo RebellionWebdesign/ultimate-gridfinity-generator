@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { boundsOf, outwardOutline, plateOutline, type Point2 } from "./plate";
-import { PRINTERS, customPrinter } from "./printers";
+import { bedPrinter } from "./printers";
 
-const plateOf = (name: string) => {
-  const printer = PRINTERS.find((p) => p.name === name);
-  if (!printer?.plate) throw new Error(`No plate for ${name}`);
+const plateOf = (x = 256, y = 256) => {
+  const printer = bedPrinter(x, y, 256);
+  if (!printer.plate) throw new Error("No plate");
   return {
     printer,
     outline: plateOutline(printer.plate, printer.bed[0], printer.bed[1]),
@@ -18,45 +18,13 @@ const signedArea = (points: Point2[]): number =>
   }, 0);
 
 describe("build plate outlines", () => {
-  it("P2S: body 256 x 256, handle tab 8 mm at the back, lip 10 mm at the front", () => {
-    const { min, max } = boundsOf(plateOf("Bambu Lab P2S").outline);
-    expect(min[0]).toBeCloseTo(-128, 6);
-    expect(max[0]).toBeCloseTo(128, 6);
-    expect(min[1]).toBeCloseTo(-138, 6);
-    expect(max[1]).toBeCloseTo(136, 6);
-  });
-
-  it("H2 family: 350 x 320 body, tabs 4.6 mm at the back, lips 15 mm at the front", () => {
-    for (const name of ["H2D", "H2D Pro", "H2C", "H2S", "A2L"]) {
-      const { min, max } = boundsOf(plateOf(`Bambu Lab ${name}`).outline);
-      expect(min[0], name).toBeCloseTo(-175, 6);
-      expect(max[0], name).toBeCloseTo(175, 6);
-      expect(min[1], name).toBeCloseTo(-175, 6);
-      expect(max[1], name).toBeCloseTo(164.6, 6);
-    }
-  });
-
-  it("H2 family: the front edge is recessed between the two lips", () => {
-    const { outline } = plateOf("Bambu Lab H2D");
-    const low = outline.filter(([, y]) => y < -160 - 1e-6);
-    expect(low.length).toBeGreaterThan(0);
-    // no point below the body edge in the middle (x from -49.5 to 49.5)
-    expect(low.some(([x]) => Math.abs(x) < 49)).toBe(false);
-    // lips at both corners
-    expect(low.some(([x]) => x < -100)).toBe(true);
-    expect(low.some(([x]) => x > 100)).toBe(true);
-  });
-
-  it("A1 mini: body 180 x 180, two tabs at the back, one lip at the front", () => {
-    const { min, max } = boundsOf(plateOf("Bambu Lab A1 mini").outline);
-    expect(min[0]).toBeCloseTo(-90, 6);
-    expect(max[0]).toBeCloseTo(90, 6);
-    expect(min[1]).toBeCloseTo(-97.5, 6);
-    expect(max[1]).toBeCloseTo(95.5, 6);
+  it("a 256 x 256 bed is a plain square, no tabs or lips", () => {
+    const { min, max } = boundsOf(plateOf().outline);
+    expect([min[0], min[1], max[0], max[1]]).toEqual([-128, -128, 128, 128]);
   });
 
   it("a custom bed is a square with rounded corners", () => {
-    const custom = customPrinter(200, 180);
+    const custom = bedPrinter(200, 200, 180);
     const outline = plateOutline(custom.plate!, 200, 200);
     const { min, max } = boundsOf(outline);
     expect([min[0], min[1], max[0], max[1]]).toEqual([-100, -100, 100, 100]);
@@ -68,15 +36,13 @@ describe("build plate outlines", () => {
   });
 
   it("every outline runs counter-clockwise without repeated points", () => {
-    for (const printer of PRINTERS) {
+    for (const printer of [bedPrinter(256, 256, 256), bedPrinter(200, 150, 100)]) {
       if (!printer.plate) continue;
       const outline = plateOutline(printer.plate, printer.bed[0], printer.bed[1]);
-      expect(signedArea(outline), printer.name).toBeGreaterThan(0);
+      expect(signedArea(outline), `${printer.bed}`).toBeGreaterThan(0);
       outline.forEach((p, i) => {
         const next = outline[(i + 1) % outline.length] as Point2;
-        expect(p[0] === next[0] && p[1] === next[1], `${printer.name} ${i}`).toBe(
-          false,
-        );
+        expect(p[0] === next[0] && p[1] === next[1], `${printer.bed} ${i}`).toBe(false);
       });
     }
   });
@@ -108,7 +74,11 @@ describe("outwardOutline", () => {
   });
 
   it("surrounds a real build plate: every point moves away from the middle", () => {
-    const outline = plateOutline(PRINTERS[0]?.plate ?? { cornerRadius: 0 }, 256, 256);
+    const outline = plateOutline(
+      bedPrinter(256, 256, 256).plate ?? { cornerRadius: 0 },
+      256,
+      256,
+    );
     const out = outwardOutline(outline, 5);
     expect(out).toHaveLength(outline.length);
     out.forEach(([x, y], i) => {

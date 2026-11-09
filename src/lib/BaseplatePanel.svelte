@@ -91,11 +91,11 @@
     {/if}
     {@render num("plate_min_x_mm", "Drawer width", "mm")}
     {@render num("plate_min_y_mm", "Drawer depth", "mm")}
-    <DrawerHeight />
     <p class="t-caption">
-      0 switches it off. Where the plate is smaller than the drawer, the rest is filled
-      solid.
+      0 switches the width and depth off. Where the plate is smaller than the drawer,
+      the rest is filled solid.
     </p>
+    <DrawerHeight />
     {#if drawerOn}
       <button type="button" class="fit" onclick={() => editor.fitDrawer()}>
         Use as many cells as fit the drawer

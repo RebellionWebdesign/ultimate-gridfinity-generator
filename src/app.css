@@ -175,6 +175,13 @@ body {
   margin: 0;
 }
 
+/* the editor does not scroll as a page (App.svelte sets the class) */
+html.editor,
+html.editor body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 body {
   background: var(--bg);
   color: var(--text);

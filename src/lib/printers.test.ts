@@ -1,73 +1,28 @@
 import { describe, expect, it } from "vitest";
-import {
-  CUSTOM_PRINTER,
-  PRINTERS,
-  checkBed,
-  customPrinter,
-  maxCells,
-  type Printer,
-} from "./printers";
+import { BED_LIMITS, DEFAULT_BED, bedPrinter, checkBed, maxCells } from "./printers";
 
-const printer = (name: string): Printer => {
-  const found = PRINTERS.find((p) => p.name === name);
-  if (!found) throw new Error(`No printer ${name}`);
-  return found;
-};
+describe("bed check (the print bed is typed in, owner 9 November 2026)", () => {
+  const p2s = bedPrinter(...DEFAULT_BED);
 
-describe("bed check", () => {
-  const p2s = printer("Bambu Lab P2S");
-  const p1s = printer("Bambu Lab P1S");
-
-  it("P2S: the whole 256 x 256 x 256 volume is printable (Bambu Studio profile)", () => {
+  it("starts with 256 x 256 x 256 mm, the whole volume printable", () => {
+    expect(DEFAULT_BED).toEqual([256, 256, 256]);
     expect(p2s.bed).toEqual([256, 256, 256]);
-    expect(p2s.exclude).toBeUndefined();
     expect(checkBed([256, 256, 256], p2s).fits).toBe(true);
     expect(checkBed([256.5, 100, 10], p2s).fits).toBe(false);
     expect(checkBed([100, 100, 257], p2s).fits).toBe(false);
   });
 
   it("a long part fits when turned 90 degrees on a non-square bed", () => {
-    const h2d = printer("Bambu Lab H2D");
-    expect(checkBed([320, 300, 10], h2d)).toEqual({ fits: true, turned: false });
-    expect(checkBed([300, 325, 10], h2d)).toEqual({ fits: true, turned: true });
-    expect(checkBed([326, 330, 10], h2d)).toEqual({ fits: false, turned: false });
-    const h2s = printer("Bambu Lab H2S");
-    expect(checkBed([320, 335, 10], h2s)).toEqual({ fits: true, turned: true });
+    const bed = bedPrinter(325, 320, 325);
+    expect(checkBed([320, 300, 10], bed)).toMatchObject({ fits: true, turned: false });
+    expect(checkBed([300, 325, 10], bed)).toMatchObject({ fits: true, turned: true });
+    expect(checkBed([326, 330, 10], bed)).toMatchObject({ fits: false, turned: false });
   });
 
-  it("P1S, P1P, X1C and X1E: 250 mm high and 18 x 28 mm reserved at the front left", () => {
-    for (const name of [
-      "Bambu Lab P1S",
-      "Bambu Lab P1P",
-      "Bambu Lab X1C",
-      "Bambu Lab X1E",
-    ]) {
-      const p = printer(name);
-      expect(p.bed[2]).toBe(250);
-      expect(p.exclude).toEqual([18, 28]);
-    }
-    expect(checkBed([100, 100, 251], p1s).fits).toBe(false);
-  });
-
-  it("a part that spans the reserved corner in both directions does not fit", () => {
-    // 250 x 250: beside the corner needs 18 + 250 > 256, in front of it 28 + 250 > 256
-    expect(checkBed([250, 250, 10], p1s).fits).toBe(false);
-    expect(checkBed([250, 250, 10], p2s).fits).toBe(true);
-    // 238 wide fits beside the corner, 228 deep fits in front of it
-    expect(checkBed([238, 256, 10], p1s).fits).toBe(true);
-    expect(checkBed([256, 228, 10], p1s).fits).toBe(true);
-    expect(checkBed([239, 239, 10], p1s).fits).toBe(false);
-  });
-
-  it("A2L, H2D Pro, H2C, X1 and X2D follow Bambu Studio's machine profiles", () => {
-    expect(printer("Bambu Lab A2L").bed).toEqual([330, 320, 325]);
-    expect(printer("Bambu Lab H2D Pro").bed).toEqual([325, 320, 325]);
-    expect(printer("Bambu Lab H2C").bed).toEqual([325, 320, 325]);
-    expect(printer("Bambu Lab X2D").bed).toEqual([256, 256, 261]);
-    expect(printer("Bambu Lab X1")).toMatchObject({
-      bed: [256, 256, 250],
-      exclude: [18, 28],
-    });
+  it("the whole bed counts: no corner is reserved", () => {
+    expect(checkBed([250, 250, 10], bedPrinter(256, 256, 250)).fits).toBe(true);
+    expect(checkBed([256, 256, 250], bedPrinter(256, 256, 250)).fits).toBe(true);
+    expect(checkBed([256, 256, 251], bedPrinter(256, 256, 250)).fits).toBe(false);
   });
 
   it("maxCells: the most cells that fit along one axis", () => {
@@ -75,67 +30,41 @@ describe("bed check", () => {
     expect(maxCells("x", [7, 1], 7, p2s)).toBe(6);
     expect(maxCells("y", [1, 9], 7, p2s)).toBe(6);
     expect(maxCells("x", [3, 1], 7, p2s)).toBe(3);
-    // 6 x 6 fits the P2S, not the P1S (251.5 > 238 and > 228)
-    expect(maxCells("x", [6, 6], 7, p1s)).toBe(5);
-  });
-
-  it("every printer with a 256 x 256 mm bed gets the same plate outline", () => {
-    const same = PRINTERS.filter((p) => p.bed[0] === 256 && p.bed[1] === 256);
-    expect(same.map((p) => p.name)).toEqual([
-      "Bambu Lab P2S",
-      "Bambu Lab P1S",
-      "Bambu Lab P1P",
-      "Bambu Lab X1",
-      "Bambu Lab X1C",
-      "Bambu Lab X1E",
-      "Bambu Lab A1",
-      "Bambu Lab X2D",
-    ]);
-    for (const p of same) expect(p.plate, p.name).toBe(p2s.plate);
-    expect(p2s.plate?.backTabs).toHaveLength(1);
-    // the H2 family shares one plate, the A1 mini has its own
-    const h2 = ["H2D", "H2D Pro", "H2C", "H2S", "A2L"].map((n) =>
-      printer(`Bambu Lab ${n}`),
-    );
-    for (const p of h2) expect(p.plate, p.name).toBe(h2[0]?.plate);
-    expect(h2[0]?.plate?.body).toEqual({ width: 350, depth: 320 });
-    expect(printer("Bambu Lab A1 mini").plate?.backTabs).toHaveLength(2);
-  });
-
-  it("a custom bed is a square with rounded corners and its own height", () => {
-    const custom = customPrinter(200, 180);
-    expect(custom.name).toBe(CUSTOM_PRINTER);
-    expect(custom.bed).toEqual([200, 200, 180]);
-    expect(custom.plate).toEqual({ cornerRadius: 6 });
-    expect(checkBed([199, 199, 180], custom).fits).toBe(true);
-    expect(checkBed([201, 100, 10], custom).fits).toBe(false);
-    expect(checkBed([100, 100, 181], custom).fits).toBe(false);
     // 4 cells (167.5 mm) fit a 200 mm bed, 5 cells (209.5 mm) do not
-    expect(maxCells("x", [5, 1], 7, custom)).toBe(4);
-  });
-});
-
-describe("H3C (owner, 3 November 2026)", () => {
-  it("has a 330 x 320 x 325 mm build volume", () => {
-    expect(printer("Bambu Lab H3C").bed).toEqual([330, 320, 325]);
+    expect(maxCells("x", [5, 1], 7, bedPrinter(200, 200, 180))).toBe(4);
   });
 
-  it("its plate has the printable area as body, two back tabs and two front lips", () => {
-    const plate = printer("Bambu Lab H3C").plate;
-    expect(plate?.body).toBeUndefined();
-    expect(plate?.backTabs).toHaveLength(2);
-    expect(plate?.frontLips).toHaveLength(2);
-    // the tabs and lips stay inside the 330 mm of the body and do not overlap
-    for (const piece of [...(plate?.backTabs ?? []), ...(plate?.frontLips ?? [])]) {
-      expect(piece.from).toBeGreaterThanOrEqual(0);
-      expect(piece.to).toBeLessThanOrEqual(330);
+  it("the limits of what can be typed", () => {
+    expect(BED_LIMITS.size).toEqual({ min: 50, max: 600 });
+    expect(BED_LIMITS.height).toEqual({ min: 20, max: 600 });
+  });
+
+  it("the Z check: a part taller than the build height does not fit, whatever its footprint", () => {
+    expect(checkBed([100, 100, 256], p2s)).toMatchObject({
+      heightFits: true,
+      fits: true,
+    });
+    expect(checkBed([100, 100, 256.5], p2s)).toMatchObject({
+      heightFits: false,
+      footprintFits: true,
+      fits: false,
+    });
+    expect(checkBed([300, 100, 300], p2s)).toMatchObject({
+      heightFits: false,
+      footprintFits: false,
+      fits: false,
+    });
+    expect(checkBed([300, 100, 10], p2s)).toMatchObject({
+      heightFits: true,
+      footprintFits: false,
+    });
+    // a bed with a low ceiling
+    expect(checkBed([50, 50, 101], bedPrinter(256, 256, 100)).heightFits).toBe(false);
+  });
+
+  it("every bed is drawn as a plain rectangle with rounded corners", () => {
+    for (const bed of [bedPrinter(256, 256, 256), bedPrinter(200, 180, 180)]) {
+      expect(bed.plate).toEqual({ cornerRadius: 6 });
     }
-    const [left, right] = plate?.frontLips ?? [];
-    expect(left?.to).toBeLessThan(right?.from ?? 0);
-  });
-
-  it("fits a part of the printable size", () => {
-    expect(checkBed([330, 320, 325], printer("Bambu Lab H3C")).fits).toBe(true);
-    expect(checkBed([331, 320, 325], printer("Bambu Lab H3C")).turned).toBe(false);
   });
 });

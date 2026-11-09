@@ -1,7 +1,12 @@
 // Turns the built model into a file and hands it to the user.
 import { writeStl } from "../export/stl";
 import { write3mf, write3mfPieces, type PartColours } from "../export/threeMf";
-import { shifted, type ModelMesh, type TileMesh } from "../geometry/model";
+import {
+  shifted,
+  type ModelMesh,
+  type PartMesh,
+  type TileMesh,
+} from "../geometry/model";
 import { centreOf, tileOffsets } from "../export/tileLayout";
 import { zip } from "../export/zip";
 
@@ -108,6 +113,23 @@ export const buildTilesZip = async (
     })),
   );
   const archive = await zip(entries);
+  return new Blob([archive as BlobPart], { type: "application/zip" });
+};
+
+/**
+ * Every part of a model as its own STL file, all in one ZIP (STL holds no colours, so the
+ * slicer needs plate and text apart to give them filaments): `name-plate.stl`, `name-text.stl`.
+ */
+export const buildPartsZip = async (
+  parts: readonly PartMesh[],
+  fileName: string,
+): Promise<Blob> => {
+  const archive = await zip(
+    parts.map((part) => ({
+      name: `${fileName}-${part.name}.stl`,
+      data: new Uint8Array(writeStl([part])),
+    })),
+  );
   return new Blob([archive as BlobPart], { type: "application/zip" });
 };
 

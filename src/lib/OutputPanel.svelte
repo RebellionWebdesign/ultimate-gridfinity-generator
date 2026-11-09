@@ -1,11 +1,12 @@
 <script lang="ts">
   import Icon from "./Icon.svelte";
   import NumberField from "./NumberField.svelte";
-  import { CUSTOM_LIMITS, CUSTOM_PRINTER, PRINTERS } from "./printers";
+  import { BED_LIMITS, DEFAULT_BED } from "./printers";
   import { PART_NAME, formatSize } from "./parts";
   import { editor } from "./store.svelte";
   import {
     buildFile,
+    buildPartsZip,
     buildTilesFile,
     buildTilesZip,
     exportExtensions,
@@ -59,6 +60,12 @@
         await saveBlob(blob, `${editor.fileName}.zip`, "ZIP archive", {
           "application/zip": [".zip"],
         });
+      } else if (editor.part === "label" && format === "stl") {
+        // the label: plate and text as separate STL files in one ZIP
+        const blob = await buildPartsZip(editor.model.parts, editor.fileName);
+        await saveBlob(blob, `${editor.fileName}.zip`, "ZIP archive", {
+          "application/zip": [".zip"],
+        });
       } else {
         const blob = await buildFile(
           format,
@@ -81,11 +88,14 @@
     }
   };
 
+  /** the label as STL: plate and text are separate files in a ZIP */
+  const zipsParts = $derived(editor.part === "label" && format === "stl");
+
   const label = $derived(
     editor.blocked ||
       (busy
         ? "Saving…"
-        : `${picker ? "Save" : "Download"} ${editor.model?.tiles && tileFile === "zip" ? "ZIP" : format.toUpperCase()}${picker ? "…" : ""}`),
+        : `${picker ? "Save" : "Download"} ${(editor.model?.tiles && tileFile === "zip") || zipsParts ? "ZIP" : format.toUpperCase()}${picker ? "…" : ""}`),
   );
 </script>
 
@@ -100,35 +110,42 @@
     {:else}
       <p class="t-caption">Width × depth × height in mm, label included</p>
     {/if}
-    <label class="t-label" for="printer">Printer for the bed check</label>
-    <select id="printer" bind:value={editor.printer} disabled={!editor.bedCheck}>
-      {#each PRINTERS as printer (printer.name)}
-        <option value={printer.name}>{printer.name} · {printer.bed.join(" × ")}</option>
-      {/each}
-      <option value={CUSTOM_PRINTER}>Custom size</option>
-    </select>
-    {#if editor.printer === CUSTOM_PRINTER && editor.bedCheck}
+    <h3 class="t-label bed-title">Print bed for the bed check</h3>
+    {#if editor.bedCheck}
       <NumberField
-        label="Bed size, square"
-        bind:value={editor.customSize}
-        min={CUSTOM_LIMITS.size.min}
-        max={CUSTOM_LIMITS.size.max}
+        label="Bed width"
+        bind:value={editor.bedX}
+        min={BED_LIMITS.size.min}
+        max={BED_LIMITS.size.max}
         step={1}
-        def={CUSTOM_LIMITS.size.def}
+        def={DEFAULT_BED[0]}
         unit="mm"
-        why="Width and depth are the same; the corners are rounded."
+        why="The largest bed this app checks"
+        minWhy="A bed smaller than this is not a printer bed."
+      />
+      <NumberField
+        label="Bed depth"
+        bind:value={editor.bedY}
+        min={BED_LIMITS.size.min}
+        max={BED_LIMITS.size.max}
+        step={1}
+        def={DEFAULT_BED[1]}
+        unit="mm"
+        why="The largest bed this app checks"
         minWhy="A bed smaller than this is not a printer bed."
       />
       <NumberField
         label="Build height"
-        bind:value={editor.customHeight}
-        min={CUSTOM_LIMITS.height.min}
-        max={CUSTOM_LIMITS.height.max}
+        bind:value={editor.bedZ}
+        min={BED_LIMITS.height.min}
+        max={BED_LIMITS.height.max}
         step={1}
-        def={CUSTOM_LIMITS.height.def}
+        def={DEFAULT_BED[2]}
         unit="mm"
+        why="The largest build height this app checks"
         minWhy="A build height smaller than this is not a printer."
       />
+      <p class="t-caption">Default: 256 × 256 × 256 mm.</p>
     {/if}
     <label class="check t-caption">
       <input type="checkbox" bind:checked={editor.bedCheck} /> Check against the bed
@@ -142,7 +159,11 @@
       {:else}
         <p class="status err t-label" role="alert">
           <Icon name="triangle-alert" size={16} />
-          Too big for this bed, also turned 90°
+          {editor.bedResult.heightFits
+            ? "Too big for this bed, also turned 90°"
+            : editor.bedResult.footprintFits
+              ? "Too tall for this bed"
+              : "Too big and too tall for this bed"}
         </p>
       {/if}
     {:else if !editor.bedCheck}
@@ -170,10 +191,14 @@
       {format === "3mf"
         ? editor.part === "baseplate"
           ? "The baseplate is one part with its colour. Your slicer may ask which filament the colour gets."
-          : editor.part === "bin"
-            ? "The bin and its stacking lip stay separate parts of one object when the lip has its own colour. Your slicer may ask which filament each colour gets."
-            : "Lid, text and symbol stay separate parts of one object, each with its colour. Your slicer may ask which filament each colour gets."
-        : "Geometry only: no colours, all parts in one file."}
+          : editor.part === "label"
+            ? "The label plate and its text stay separate parts of one object, each with its colour. Only the label is in this file; the bin is exported on its own."
+            : editor.part === "bin"
+              ? "The bin and its stacking lip stay separate parts of one object when the lip has its own colour. Your slicer may ask which filament each colour gets."
+              : "Lid, text and symbol stay separate parts of one object, each with its colour. Your slicer may ask which filament each colour gets."
+        : editor.part === "label"
+          ? "Geometry only: no colours. Plate and text are separate STL files in one ZIP, so the slicer can give each a filament."
+          : "Geometry only: no colours, all parts in one file."}
     </p>
     {#if editor.model?.tiles}
       <div class="seg" role="group" aria-label="Pieces in the file">
@@ -198,7 +223,9 @@
     <div class="name">
       <input id="file-name" class="n-s" bind:value={editor.fileName} />
       <span class="n-s ext"
-        >.{editor.model?.tiles && tileFile === "zip" ? "zip" : format}</span
+        >.{(editor.model?.tiles && tileFile === "zip") || zipsParts
+          ? "zip"
+          : format}</span
       >
     </div>
     <button
@@ -237,7 +264,9 @@
     font-size: 20px;
     line-height: 24px;
   }
-  select,
+  .bed-title {
+    font-size: inherit;
+  }
   .name {
     height: var(--size-control);
     padding: 0 var(--space-3);

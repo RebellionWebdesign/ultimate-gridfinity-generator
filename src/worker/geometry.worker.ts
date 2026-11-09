@@ -3,7 +3,13 @@
 import wasmUrl from "manifold-3d/manifold.wasm?url";
 import { InputError, prepareAssets, type AssetLoaders } from "../geometry/assets";
 import { initKernel } from "../geometry/kernel";
-import { buildBaseplateModel, buildBinModel, buildModel } from "../geometry/model";
+import {
+  buildBaseplateModel,
+  buildBinModel,
+  buildLabelModel,
+  buildModel,
+} from "../geometry/model";
+import { labelAsLid } from "../model/labelParams";
 import type { BundledFont } from "../model/lidParams";
 import type { BuildRequest, BuildResponse } from "./protocol";
 
@@ -27,6 +33,30 @@ const loaders: AssetLoaders = {
   icons: async () => (await import("../data/lucideLidIcons.json")).default,
 };
 
+/**
+ * The bin, and with the request's `label` also the label in its place. If the label's font
+ * or SVG cannot be loaded the bin is built without it and a note says why: a wrong label
+ * must not stop the bin.
+ */
+const buildBinWithLabel = async (
+  k: Awaited<typeof kernel>,
+  request: Extract<BuildRequest, { part: "bin" }>,
+) => {
+  const { label } = request;
+  if (!label) return buildBinModel(k, request.params);
+  let assets;
+  try {
+    assets = await prepareAssets(labelAsLid(label), loaders, request.labelSvg);
+  } catch (error) {
+    const model = buildBinModel(k, request.params);
+    model.warnings.push(
+      `The label is not shown: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return model;
+  }
+  return buildBinModel(k, request.params, label, assets);
+};
+
 self.onmessage = async (event: MessageEvent<BuildRequest>) => {
   const request = event.data;
   const { id } = request;
@@ -37,14 +67,22 @@ self.onmessage = async (event: MessageEvent<BuildRequest>) => {
       request.part === "baseplate"
         ? buildBaseplateModel(await kernel, request.params, request.maxTile)
         : request.part === "bin"
-          ? buildBinModel(await kernel, request.params)
-          : buildModel(
-              await kernel,
-              request.params,
-              await prepareAssets(request.params, loaders, request.svg),
-            );
+          ? await buildBinWithLabel(await kernel, request)
+          : request.part === "label"
+            ? buildLabelModel(
+                await kernel,
+                request.bin,
+                request.params,
+                await prepareAssets(labelAsLid(request.params), loaders, request.svg),
+              )
+            : buildModel(
+                await kernel,
+                request.params,
+                await prepareAssets(request.params, loaders, request.svg),
+              );
     for (const part of [
       ...model.parts,
+      ...(model.extras ?? []),
       ...(model.tiles ?? []).flatMap((t) => t.parts),
     ]) {
       transfer.push(part.positions.buffer, part.indices.buffer);

@@ -6,7 +6,6 @@
     offsetLimit,
     type LimitedKey,
   } from "../model/lidParams";
-  import DrawerHeight from "./DrawerHeight.svelte";
   import Field from "./Field.svelte";
   import Icon from "./Icon.svelte";
   import NumberField from "./NumberField.svelte";
@@ -128,7 +127,6 @@
   <ParamGroup name="Size" summary={sizeSummary}>
     {@render num("units_x", "Width", "cells")}
     {@render num("units_y", "Depth", "cells")}
-    <DrawerHeight />
   </ParamGroup>
 
   <ParamGroup name="Shape" summary={shapeSummary}>
@@ -189,8 +187,8 @@
         "Total height",
         "× 7 mm",
         "",
-        editor.drawerHeight > 0
-          ? lidMaxUnits(p, editor.drawerHeight)
+        editor.drawer.on
+          ? lidMaxUnits(p, editor.drawer.lidAvailable)
           : LID_LIMITS.height_units_auto.max,
       )}
       <p class="t-caption">Auto makes the total height a multiple of 7 mm.</p>
@@ -200,8 +198,8 @@
         "Plate",
         "mm",
         "2.25 mm is what is left of the first 7 mm layer",
-        editor.drawerHeight > 0
-          ? lidMaxPlate(p, editor.drawerHeight)
+        editor.drawer.on
+          ? lidMaxPlate(p, editor.drawer.lidAvailable)
           : LID_LIMITS.plate_thickness.max,
       )}
     {/if}

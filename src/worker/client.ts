@@ -4,6 +4,7 @@ import type { ModelMesh } from "../geometry/model";
 import type { SvgShapes } from "../geometry/svg";
 import type { BaseplateParams } from "../model/baseplateParams";
 import type { BinParams } from "../model/binParams";
+import type { LabelParams } from "../model/labelParams";
 import type { LidParams } from "../model/lidParams";
 import type { BuildRequest, BuildResponse } from "./protocol";
 
@@ -52,8 +53,20 @@ export class GeometryClient {
     return this.send((id) => ({ id, part: "baseplate", params, maxTile }));
   }
 
-  buildBin(params: BinParams): { id: number; result: Promise<ModelMesh> } {
-    return this.send((id) => ({ id, part: "bin", params }));
+  buildBin(
+    params: BinParams,
+    label?: LabelParams,
+    labelSvg?: SvgShapes,
+  ): { id: number; result: Promise<ModelMesh> } {
+    return this.send((id) => ({ id, part: "bin", params, label, labelSvg }));
+  }
+
+  buildLabel(
+    bin: BinParams,
+    params: LabelParams,
+    svg?: SvgShapes,
+  ): { id: number; result: Promise<ModelMesh> } {
+    return this.send((id) => ({ id, part: "label", bin, params, svg }));
   }
 
   private send(request: (id: number) => BuildRequest): {

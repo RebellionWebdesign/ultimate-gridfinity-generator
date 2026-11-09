@@ -247,9 +247,9 @@ const outsideMargin = (
   scope: Scope,
   shape: CrossSection,
   centre: Point,
+  r: number,
 ): boolean => {
   const [w, h] = [2 * centre[0], 2 * centre[1]];
-  const r = LID_CORNER_RADIUS;
   const outline = scope.add(
     scope
       .add(kernel.CrossSection.square([w - 2 * r, h - 2 * r], true))
@@ -299,6 +299,7 @@ interface Element {
 /**
  * Text and symbol solids for a lid whose plate top is at `plateTop` and whose centre
  * is at (cx, cy). `assets` must hold the font, icons or SVG that the parameters need.
+ * `radius` is the corner radius of the plate outline for the edge margin (a lid: 3.75).
  */
 export const buildLabel = (
   kernel: Kernel,
@@ -307,6 +308,7 @@ export const buildLabel = (
   assets: LabelAssets,
   plateTop: number,
   centre: Point,
+  radius = LID_CORNER_RADIUS,
 ): LabelBodies => {
   const result: LabelBodies = {
     cuts: [],
@@ -353,7 +355,7 @@ export const buildLabel = (
         textAt,
       );
       elements.push({ name: "text", element: { mode: p.text_mode, shape } });
-      if (outsideMargin(kernel, scope, shape, centre)) {
+      if (outsideMargin(kernel, scope, shape, centre, radius)) {
         result.warnings.push(textEdgeWarning(p.text_mode === "engraved"));
       }
     }
@@ -388,7 +390,7 @@ export const buildLabel = (
   const symbolElement = elements.find((e) => e.name === "symbol");
   if (
     symbolElement &&
-    outsideMargin(kernel, scope, symbolElement.element.shape, centre)
+    outsideMargin(kernel, scope, symbolElement.element.shape, centre, radius)
   ) {
     result.warnings.push(SYMBOL_EDGE_WARNING);
   }

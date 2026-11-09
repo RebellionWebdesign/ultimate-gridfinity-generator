@@ -187,13 +187,17 @@
       });
     }
     if (!model) return;
-    for (const part of model.parts) {
+    for (const part of [...model.parts, ...(model.extras ?? [])]) {
       const geometry = new BufferGeometry();
       geometry.setAttribute("position", new BufferAttribute(part.positions, 3));
       geometry.setIndex(new BufferAttribute(part.indices, 1));
       const flat = geometry.toNonIndexed();
       flat.computeVertexNormals();
-      const colour = showColours ? colours[part.name] : "#9da39a";
+      const colour = showColours
+        ? (part.colour ?? colours[part.name])
+        : part.colour
+          ? "#c9cfc5"
+          : "#9da39a";
       const mesh = new Mesh(
         flat,
         new MeshStandardMaterial({

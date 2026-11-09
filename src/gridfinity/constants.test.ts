@@ -42,6 +42,15 @@ describe("Gridfinity constants match the spec", () => {
     // bin scoop, the owner's drawing of 9 November 2026 (not from the standard)
     ["scoopRadius", 16.875],
     ["scoopLength", 15.84],
+    // bin label, the owner's drawing of 9 November 2026 (not from the standard)
+    ["labelThickness", 1],
+    ["labelDepth", 14],
+    ["labelEdgeInset", 2],
+    ["labelLugLength", 0.6],
+    ["labelLugWidth", 7],
+    ["labelLugOffset", 4.33],
+    ["labelLugChamfer", 0.3],
+    ["labelLugClearance", 0.05],
   ];
 
   it.each(table)("%s = %d", (name, value) => {

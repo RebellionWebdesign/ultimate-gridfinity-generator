@@ -14,7 +14,6 @@
     type Divider,
   } from "../model/binParams";
   import { SvelteSet } from "svelte/reactivity";
-  import DrawerHeight from "./DrawerHeight.svelte";
   import Field from "./Field.svelte";
   import Icon from "./Icon.svelte";
   import NumberField from "./NumberField.svelte";
@@ -39,8 +38,8 @@
             ),
           )
         : BIN_LIMITS.height_units.max,
-      editor.drawerHeight > 0
-        ? binMaxUnits(p, editor.drawerHeight)
+      editor.drawer.on
+        ? binMaxUnits(p, editor.drawer.binAvailable)
         : BIN_LIMITS.height_units.max,
     ),
   );
@@ -160,13 +159,12 @@
       step={1}
       def={DEFAULT_BIN.height_units}
       unit="× 7 mm"
-      why={editor.drawerHeight > 0
-        ? `The drawer (${editor.drawerHeight} mm) is the limit`
+      why={editor.drawer.on
+        ? `The drawer (${editor.drawerHeight} mm) is the limit: base, bin and lid together, with 1 mm of room above`
         : editor.bedCheck
           ? `The build height of ${editor.printer} (${editor.printerInfo.bed[2]} mm) is the limit`
           : BIN_LIMITS.height_units.why}
     />
-    <DrawerHeight />
     <p class="t-caption">The stacking lip is extra and does not count in the height.</p>
   </ParamGroup>
 
@@ -328,6 +326,42 @@
         <button type="button" onclick={placeEvenly}>Place evenly</button>
       </div>
     </div>
+  </ParamGroup>
+
+  <ParamGroup
+    name="Label slots"
+    summary={p.label_slot === "none" ? "none" : p.label_slot}
+  >
+    <Segmented
+      label="Slots for a label"
+      bind:value={p.label_slot}
+      options={[
+        { value: "none", label: "None" },
+        { value: "back", label: "Back" },
+        { value: "front", label: "Front" },
+      ]}
+    />
+    <p class="t-caption">
+      Two small slots in the side walls under the stacking lip, for the lugs of a label
+      plate. Make the label in the Label tab; it takes its size from this bin. The slots
+      need the stacking lip.
+    </p>
+    <button
+      type="button"
+      class="show"
+      aria-pressed={editor.showLabel}
+      onclick={() => {
+        editor.showLabel = !editor.showLabel;
+        if (editor.showLabel && p.label_slot === "none") p.label_slot = "back";
+      }}
+    >
+      <Icon name={editor.showLabel ? "check" : "plus"} size={16} />
+      {editor.showLabel ? "Hide label" : "Show label"}
+    </button>
+    <p class="t-caption">
+      Shows the label in its place in the bin. Only for looking: it is not part of the
+      bin's file.
+    </p>
   </ParamGroup>
 
   <ParamGroup name="Magnets and foot" summary={magnetSummary}>
@@ -492,6 +526,22 @@
   .add button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+  .show {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    min-height: var(--size-control);
+    padding: 0 var(--space-3);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-control);
+    background: var(--surface);
+    cursor: pointer;
+  }
+  .show[aria-pressed="true"] {
+    background: var(--accent-soft);
+    border-color: var(--accent);
   }
   .problem {
     color: var(--error);

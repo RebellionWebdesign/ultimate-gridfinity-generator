@@ -6,6 +6,7 @@
   import OutputPanel from "./lib/OutputPanel.svelte";
   import BaseplatePanel from "./lib/BaseplatePanel.svelte";
   import BinPanel from "./lib/BinPanel.svelte";
+  import LabelPanel from "./lib/LabelPanel.svelte";
   import ParamsPanel from "./lib/ParamsPanel.svelte";
   import PreviewStage from "./lib/PreviewStage.svelte";
   import Segmented from "./lib/Segmented.svelte";
@@ -18,6 +19,13 @@
     document.documentElement.dataset.theme = theme.value;
   });
 
+  // The editor fills the window and scrolls inside its panels: the page itself must not
+  // move (no scrolling, no rubber band). The landing page scrolls as usual.
+  $effect(() => {
+    document.documentElement.classList.add("editor");
+    return () => document.documentElement.classList.remove("editor");
+  });
+
   let exportDialog: HTMLDialogElement;
   let openInput: HTMLInputElement;
   let dragging = $state(false);
@@ -27,9 +35,14 @@
   // every change goes to the worker; the name follows the lid until it is renamed
   let touched = false;
   $effect(() => {
-    JSON.stringify([editor.part, editor.active, editor.maxTile, editor.drawerHeight]);
+    JSON.stringify([
+      editor.part,
+      editor.active,
+      editor.maxTile,
+      editor.drawerHeight,
+      editor.showLabel,
+    ]);
     untrack(() => {
-      editor.lockHeights();
       editor.syncName();
       editor.requestBuild();
       if (touched) editor.autosave();
@@ -50,7 +63,9 @@
     editor.model?.tiles
       ? `${editor.model.tiles.length} baseplates · up to ${formatSize(editor.model.size)} mm each`
       : editor.model
-        ? `${editor.units[0]} × ${editor.units[1]} ${editor.noun} · ${formatSize(editor.model.size)} mm`
+        ? editor.part === "label"
+          ? `Label for the ${editor.units[0]} × ${editor.units[1]} bin · ${formatSize(editor.model.size)} mm`
+          : `${editor.units[0]} × ${editor.units[1]} ${editor.noun} · ${formatSize(editor.model.size)} mm`
         : PART_NAME[editor.part],
   );
 
@@ -153,6 +168,7 @@
         options={[
           { value: "baseplate", label: PART_NAME.baseplate },
           { value: "bin", label: PART_NAME.bin },
+          { value: "label", label: PART_NAME.label },
           { value: "lid", label: "Lid" },
         ]}
       />
@@ -205,6 +221,8 @@
           <BaseplatePanel />
         {:else if editor.part === "bin"}
           <BinPanel />
+        {:else if editor.part === "label"}
+          <LabelPanel />
         {:else}
           <ParamsPanel />
         {/if}
@@ -270,13 +288,19 @@
         <div class="alert top" role="alert">
           <Icon name="triangle-alert" />
           <div>
-            <p>
-              This {editor.noun} does not fit the {editor.printer} bed. It is
-              {formatSize(editor.model.size)} mm, the printable area
-              {editor.bed.join(" × ")} mm{editor.printerInfo.exclude
-                ? `, with ${editor.printerInfo.exclude.join(" × ")} mm at the front left reserved`
-                : ""}, also when turned 90°.
-            </p>
+            {#if !editor.bedResult.footprintFits}
+              <p>
+                This {editor.noun} does not fit {editor.printer}. It is
+                {formatSize(editor.model.size.slice(0, 2))} mm wide and deep, the printable
+                area is {editor.bed[0]} × {editor.bed[1]} mm, also when turned 90°.
+              </p>
+            {/if}
+            {#if !editor.bedResult.heightFits}
+              <p>
+                Z check: this {editor.noun} is {formatSize([editor.model.size[2]])} mm tall,
+                {editor.printer} is only {editor.bed[2]} mm high. It does not fit like this.
+              </p>
+            {/if}
             <div class="fixes">
               {#if editor.part === "baseplate" && !editor.baseplate.split_to_bed}
                 <button
@@ -321,6 +345,15 @@
           <Icon name="triangle-alert" />
           <div>
             {#each editor.warnings as warning (warning)}<p>{warning}</p>{/each}
+            {#if editor.drawer.on && !editor.drawer.fits && ((editor.part === "bin" && editor.drawer.binFitsAtAll) || (editor.part === "lid" && editor.drawer.lidFitsAtAll))}
+              <div class="fixes">
+                <button type="button" onclick={() => editor.fitHeightToDrawer()}>
+                  {editor.part === "bin"
+                    ? `Set Height to ${editor.drawer.binUnitsFit}`
+                    : "Lower the lid to fit"}
+                </button>
+              </div>
+            {/if}
           </div>
         </div>
       {/if}
@@ -355,6 +388,7 @@
 
 <style>
   .app {
+    overflow: hidden;
     display: grid;
     grid-template-rows: var(--size-header) minmax(0, 1fr);
     height: 100dvh;
@@ -437,6 +471,7 @@
   }
   .params,
   .output {
+    overscroll-behavior: contain;
     overflow-x: hidden;
     overflow-y: auto;
     background: var(--surface);

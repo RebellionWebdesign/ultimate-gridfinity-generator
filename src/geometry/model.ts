@@ -6,6 +6,8 @@ import { validateBin, type BinParams } from "../model/binParams";
 import { validateLid, type LidParams } from "../model/lidParams";
 import { buildBaseplate, tileRegions } from "./baseplate";
 import { buildBin } from "./bin";
+import { buildBinLabel, placeInBin } from "./binLabel";
+import { validateLabel, type LabelParams } from "../model/labelParams";
 import type { LabelAssets } from "./label";
 import { buildLid, type LabelArea } from "./lid";
 import { Scope, type Kernel } from "./kernel";
@@ -14,6 +16,8 @@ export type PartName = "plate" | "lip" | "text" | "symbol";
 
 export interface PartMesh {
   name: PartName;
+  /** a colour of its own, for parts that are only shown (the label in the bin) */
+  colour?: string;
   /** x, y, z per vertex */
   positions: Float32Array;
   /** three vertex indices per triangle */
@@ -36,6 +40,8 @@ export interface ModelMesh {
   size: [number, number, number];
   /** hints for the user (for example engraved text that is too wide), not errors */
   warnings: string[];
+  /** only shown in the preview, never exported: the label placed in the bin */
+  extras?: PartMesh[];
   /** the plate area labels may use, only when a text or symbol is shown */
   labelArea?: LabelArea;
 }
@@ -161,7 +167,38 @@ export const buildBaseplateModel = (
   }
 };
 
-export const buildBinModel = (kernel: Kernel, params: BinParams): ModelMesh => {
+/** The label of a bin (E-09): plate and text as separate parts. */
+export const buildLabelModel = (
+  kernel: Kernel,
+  bin: BinParams,
+  label: LabelParams,
+  assets: LabelAssets = {},
+): ModelMesh => {
+  const errors = validateLabel(bin, label);
+  if (errors.length > 0) throw new Error(errors.join(" "));
+
+  const scope = new Scope();
+  try {
+    const parts = buildBinLabel(kernel, scope, bin, label, assets);
+    const named: [PartName, Manifold][] = [["plate", parts.plate]];
+    if (parts.text) named.push(["text", parts.text]);
+    if (parts.symbol) named.push(["symbol", parts.symbol]);
+    return toModelMesh(kernel, scope, named, parts.warnings);
+  } finally {
+    scope.dispose();
+  }
+};
+
+/**
+ * The bin. With `label`, the label is also shown in its place in the bin (preview only: it
+ * is not part of the bin's file and does not count in its size).
+ */
+export const buildBinModel = (
+  kernel: Kernel,
+  params: BinParams,
+  label?: LabelParams,
+  assets: LabelAssets = {},
+): ModelMesh => {
   const errors = validateBin(params);
   if (errors.length > 0) throw new Error(errors.join(" "));
 
@@ -170,7 +207,35 @@ export const buildBinModel = (kernel: Kernel, params: BinParams): ModelMesh => {
     const { body, lip } = buildBin(kernel, scope, params);
     const named: [PartName, Manifold][] = [["plate", body]];
     if (lip) named.push(["lip", lip]);
-    return toModelMesh(kernel, scope, named, []);
+    const model = toModelMesh(kernel, scope, named, []);
+    if (label && params.label_slot !== "none") {
+      const problems = validateLabel(params, label);
+      if (problems.length > 0) {
+        model.warnings.push(`The label is not shown: ${problems.join(" ")}`);
+      } else {
+        let parts;
+        try {
+          parts = buildBinLabel(kernel, scope, params, label, assets);
+        } catch (error) {
+          model.warnings.push(
+            `The label is not shown: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          return model;
+        }
+        const placed = placeInBin(scope, params, parts);
+        model.extras = [
+          { ...toPartMesh("plate", placed.plate), colour: label.plate_color },
+          ...(placed.text
+            ? [{ ...toPartMesh("text", placed.text), colour: label.text_color }]
+            : []),
+          ...(placed.symbol
+            ? [{ ...toPartMesh("symbol", placed.symbol), colour: label.symbol_color }]
+            : []),
+        ];
+        model.warnings.push(...parts.warnings);
+      }
+    }
+    return model;
   } finally {
     scope.dispose();
   }

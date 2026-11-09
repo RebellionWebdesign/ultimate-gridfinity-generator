@@ -7,12 +7,13 @@ import {
   validateBin,
   type BinParams,
 } from "../model/binParams";
-import { lockBin, lockLid } from "../geometry/drawer";
+import { drawerCheck, drawerMessage, lidMaxPlate } from "../geometry/drawer";
 import {
   DEFAULT_BASEPLATE,
   validateBaseplate,
   type BaseplateParams,
 } from "../model/baseplateParams";
+import { DEFAULT_LABEL, validateLabel, type LabelParams } from "../model/labelParams";
 import { DEFAULT_LID, validateLid, type LidParams } from "../model/lidParams";
 import {
   parseModel,
@@ -25,14 +26,12 @@ import { GeometryClient, InputBuildError } from "../worker/client";
 import { readConsent, writeConsent, type Consent } from "./consent";
 import { disableOffline, enableOffline } from "./offline";
 import { theme } from "./theme.svelte";
-import { mmText, type PartType } from "./parts";
+import type { PartType } from "./parts";
 import {
-  CUSTOM_LIMITS,
-  CUSTOM_PRINTER,
-  PRINTERS,
+  DEFAULT_BED,
   LID_TOLERANCE,
+  bedPrinter,
   checkBed,
-  customPrinter,
   maxCells,
   type Printer,
 } from "./printers";
@@ -74,6 +73,10 @@ class Editor {
   params = $state<LidParams>({ ...DEFAULT_LID });
   baseplate = $state<BaseplateParams>({ ...DEFAULT_BASEPLATE });
   bin = $state<BinParams>(newBin());
+  /** the label of the bin (E-09): its size follows the bin, so it always belongs to this bin */
+  label = $state<LabelParams>({ ...DEFAULT_LABEL });
+  /** the bin view also shows the label in its place (a view setting, not saved) */
+  showLabel = $state(false);
   /** the height of the drawer in mm: bins and lids are kept lower than it (0 = off) */
   drawerHeight = $state(0);
   name = $state("Lid 1 × 1");
@@ -82,7 +85,10 @@ class Editor {
   message = $state("");
   svgName = $state("");
   svgError = $state("");
-  printer = $state(PRINTERS[0]?.name ?? "");
+  labelSvgName = $state("");
+  labelSvgError = $state("");
+  /** how the bed is called in sentences */
+  readonly printer = "your print bed";
   /** null: the bed check is switched off */
   bedCheck = $state(true);
   startedAt = $state(0);
@@ -102,6 +108,7 @@ class Editor {
 
   private client: GeometryClient | undefined;
   private svgShapes: SvgShapes | undefined;
+  private labelSvgShapes: SvgShapes | undefined;
   private latest = 0;
   private slowTimer: ReturnType<typeof setTimeout> | undefined;
   private timer: ReturnType<typeof setTimeout> | undefined;
@@ -121,6 +128,12 @@ class Editor {
     baseplate: {
       name: "Base 1 × 1",
       fileName: "base-1x1",
+      renamed: false,
+      modelId: crypto.randomUUID(),
+    },
+    label: {
+      name: "Label 1 × 1",
+      fileName: "label-1x1",
       renamed: false,
       modelId: crypto.randomUUID(),
     },
@@ -145,17 +158,22 @@ class Editor {
     this.current = next;
     Object.assign(this, saved);
     this.message = "";
+    // making a label means the bin gets the slots for its lugs
+    if (next === "label" && this.bin.label_slot === "none")
+      this.bin.label_slot = "back";
   }
 
   /** The values of the part being edited. */
-  get active(): LidParams | BaseplateParams | BinParams {
+  get active(): LidParams | BaseplateParams | BinParams | LabelParams {
+    if (this.current === "label") return this.label;
     if (this.current === "baseplate") return this.baseplate;
     return this.current === "bin" ? this.bin : this.params;
   }
 
   /** Width and depth in cells of the part being edited. */
   get units(): [number, number] {
-    const p = this.active;
+    const p = this.current === "label" ? this.bin : this.active;
+    if (!("units_x" in p)) return [1, 1];
     return [p.units_x, p.units_y];
   }
 
@@ -189,29 +207,43 @@ class Editor {
       b.units_y = Math.max(1, Math.floor(b.plate_min_y_mm / 42));
   }
 
-  /** Lowers the lid and the bin to the drawer height where they are taller. */
-  lockHeights(): void {
-    const drawer = this.drawerHeight;
-    if (drawer <= 0) return;
-    const lid = lockLid($state.snapshot(this.params) as LidParams, drawer);
-    this.params.height_units_auto = lid.height_units_auto;
-    this.params.plate_thickness = lid.plate_thickness;
-    const bin = lockBin($state.snapshot(this.bin) as BinParams, drawer);
-    this.bin.height_units = bin.height_units;
+  /** Brings the bin (or the lid, on its tab) to the height that fits the drawer. */
+  fitHeightToDrawer(): void {
+    const d = this.drawer;
+    if (!d.on) return;
+    if (this.current === "bin" && d.binFitsAtAll) this.bin.height_units = d.binUnitsFit;
+    if (this.current === "lid" && d.lidFitsAtAll) {
+      if (this.params.plate_thickness_mode === "auto") {
+        this.params.height_units_auto = d.lidUnitsFit;
+      } else {
+        this.params.plate_thickness = lidMaxPlate(
+          $state.snapshot(this.params) as LidParams,
+          d.lidAvailable,
+        );
+      }
+    }
   }
 
+  /** Base, bin and lid against the drawer height (an option of the baseplate; 0 = off). */
+  drawer = $derived(
+    drawerCheck(this.drawerHeight, this.baseplate, this.bin, this.params),
+  );
+
   setUnits(axis: "x" | "y", cells: number): void {
-    const p = this.active;
+    const p = this.current === "label" ? this.bin : this.active;
+    if (!("units_x" in p)) return;
     if (axis === "x") p.units_x = cells;
     else p.units_y = cells;
   }
 
   errors = $derived(
-    this.current === "baseplate"
-      ? validateBaseplate(this.baseplate)
-      : this.current === "bin"
-        ? validateBin(this.bin)
-        : validateLid(this.params),
+    this.current === "label"
+      ? validateLabel(this.bin, this.label)
+      : this.current === "baseplate"
+        ? validateBaseplate(this.baseplate)
+        : this.current === "bin"
+          ? validateBin(this.bin)
+          : validateLid(this.params),
   );
 
   /** hints about the current model (not errors), shown while it is ready */
@@ -221,50 +253,51 @@ class Editor {
       : [],
   );
 
-  /** The part is taller than the drawer (only when it cannot be lowered any further). */
+  /** Base, bin and lid together are taller than the drawer allows, with the way out. */
   private get drawerWarning(): string[] {
-    const height = this.model?.size[2] ?? 0;
-    return this.drawerHeight > 0 && height > this.drawerHeight + 1e-6
-      ? [
-          `This ${this.current} is ${mmText(height)} mm tall, the drawer is ${mmText(this.drawerHeight)} mm high.`,
-        ]
-      : [];
+    if (this.current === "label") return [];
+    const message = drawerMessage(this.drawer, this.drawerHeight);
+    return message ? [message] : [];
   }
 
-  /** a bed the user typed in: a square with rounded corners, plus the build height */
-  customSize = $state<number>(CUSTOM_LIMITS.size.def);
-  customHeight = $state<number>(CUSTOM_LIMITS.height.def);
+  /** the print bed, typed in by the user: width, depth and build height in mm (default 256 x 256 x 256) */
+  bedX = $state<number>(DEFAULT_BED[0]);
+  bedY = $state<number>(DEFAULT_BED[1]);
+  bedZ = $state<number>(DEFAULT_BED[2]);
 
-  printerInfo: Printer = $derived(
-    this.printer === CUSTOM_PRINTER
-      ? customPrinter(this.customSize, this.customHeight)
-      : (PRINTERS.find((p) => p.name === this.printer) ?? (PRINTERS[0] as Printer)),
-  );
+  printerInfo: Printer = $derived(bedPrinter(this.bedX, this.bedY, this.bedZ));
 
   bed = $derived(this.printerInfo.bed);
 
   /** colours of the parts for the preview and the 3MF; a baseplate has only its plate */
   colours = $derived(
-    this.current === "bin"
+    this.current === "label"
       ? {
-          plate: this.bin.plate_color,
-          lip: this.bin.lip_color,
-          text: this.bin.plate_color,
-          symbol: this.bin.plate_color,
+          plate: this.label.plate_color,
+          lip: this.label.plate_color,
+          text: this.label.text_color,
+          symbol: this.label.symbol_color,
         }
-      : this.current === "baseplate"
+      : this.current === "bin"
         ? {
-            plate: this.baseplate.plate_color,
-            lip: this.baseplate.plate_color,
-            text: this.baseplate.plate_color,
-            symbol: this.baseplate.plate_color,
+            plate: this.bin.plate_color,
+            lip: this.bin.lip_color,
+            text: this.bin.plate_color,
+            symbol: this.bin.plate_color,
           }
-        : {
-            plate: this.params.plate_color,
-            lip: this.params.lip_color,
-            text: this.params.text_color,
-            symbol: this.params.symbol_color,
-          },
+        : this.current === "baseplate"
+          ? {
+              plate: this.baseplate.plate_color,
+              lip: this.baseplate.plate_color,
+              text: this.baseplate.plate_color,
+              symbol: this.baseplate.plate_color,
+            }
+          : {
+              plate: this.params.plate_color,
+              lip: this.params.lip_color,
+              text: this.params.text_color,
+              symbol: this.params.symbol_color,
+            },
   );
 
   /** What the part is called in sentences: "lid" or "baseplate". */
@@ -277,7 +310,7 @@ class Editor {
    * changing that axis alone does not help), for the buttons of the bed-check alert.
    */
   bedFixes = $derived.by(() => {
-    if (!this.model) return { x: 0, y: 0, height: 0 };
+    if (!this.model || this.current === "label") return { x: 0, y: 0, height: 0 };
     const units = this.units;
     const height = this.model.size[2];
     const fix = (axis: "x" | "y") => {
@@ -327,6 +360,28 @@ class Editor {
     if (this.params.svg) this.setSvg(this.params.svg, fileName || "symbol.svg");
   }
 
+  /** Reads an uploaded SVG for the label (E-09), like `setSvg` for the lid. */
+  setLabelSvg(text: string, fileName: string): void {
+    try {
+      this.labelSvgShapes = parseSvg(text, fileName);
+      this.labelSvgError = "";
+      this.labelSvgName = fileName;
+      this.label.svg = text;
+    } catch (error) {
+      this.labelSvgShapes = undefined;
+      this.labelSvgError = error instanceof SvgError ? error.message : String(error);
+    }
+    this.requestBuild();
+  }
+
+  /** Re-reads the label's SVG stored in its parameters (after opening a saved model). */
+  restoreLabelSvg(): void {
+    this.labelSvgShapes = undefined;
+    this.labelSvgError = "";
+    if (this.label.svg)
+      this.setLabelSvg(this.label.svg, this.labelSvgName || "symbol.svg");
+  }
+
   requestBuild(): void {
     clearTimeout(this.timer);
     this.timer = setTimeout(() => this.build(), 60);
@@ -337,12 +392,15 @@ class Editor {
     const params = $state.snapshot(this.params) as LidParams;
     const plate = $state.snapshot(this.baseplate) as BaseplateParams;
     const bin = $state.snapshot(this.bin) as BinParams;
+    const label = $state.snapshot(this.label) as LabelParams;
     const errors =
-      this.current === "baseplate"
-        ? validateBaseplate(plate)
-        : this.current === "bin"
-          ? validateBin(bin)
-          : validateLid(params);
+      this.current === "label"
+        ? validateLabel(bin, label)
+        : this.current === "baseplate"
+          ? validateBaseplate(plate)
+          : this.current === "bin"
+            ? validateBin(bin)
+            : validateLid(params);
     if (errors.length > 0) {
       this.status = "needs-fix";
       this.message = errors.join(" ");
@@ -360,6 +418,18 @@ class Editor {
         "Upload an SVG file for the symbol, or choose a built-in icon.";
       return;
     }
+    if (
+      this.current === "label" &&
+      label.symbol_mode !== "none" &&
+      label.symbol_source === "upload" &&
+      !this.labelSvgShapes
+    ) {
+      this.status = "needs-fix";
+      this.message =
+        this.labelSvgError ||
+        "Upload an SVG file for the symbol, or choose a built-in icon.";
+      return;
+    }
     this.client ??= new GeometryClient();
     this.status = "computing";
     this.startedAt = Date.now();
@@ -369,11 +439,17 @@ class Editor {
       if (this.status === "computing") this.slow = true;
     }, 150);
     const { id, result } =
-      this.current === "baseplate"
-        ? this.client.buildBaseplate(plate, this.maxTile ?? undefined)
-        : this.current === "bin"
-          ? this.client.buildBin(bin)
-          : this.client.build(params, this.svgShapes);
+      this.current === "label"
+        ? this.client.buildLabel(bin, label, this.labelSvgShapes)
+        : this.current === "baseplate"
+          ? this.client.buildBaseplate(plate, this.maxTile ?? undefined)
+          : this.current === "bin"
+            ? this.client.buildBin(
+                bin,
+                this.showLabel ? label : undefined,
+                this.labelSvgShapes,
+              )
+            : this.client.build(params, this.svgShapes);
     this.latest = id;
     result.then(
       (model) => {
@@ -396,6 +472,11 @@ class Editor {
 
   /** Name for the model and the file, from what the lid is. */
   describe(): string {
+    if (this.current === "label") {
+      const text = this.label.text_string.trim();
+      const shown = this.label.text_mode !== "none" && text ? ` · ${text}` : "";
+      return `Label ${this.bin.units_x} × ${this.bin.units_y}${shown}`;
+    }
     if (this.current === "bin") {
       const b = this.bin;
       return `Bin ${b.units_x} × ${b.units_y} × ${b.height_units}`;
@@ -424,14 +505,16 @@ class Editor {
   autosave(): void {
     if (this.consent !== "yes") return;
     const json = this.toFileText();
+    // a label is saved with its bin: one entry, the bin's
+    const asLabel = this.current === "label";
     const entry: StoredModel = {
-      id: this.modelId,
-      part: this.current,
-      name: this.name,
+      id: asLabel ? this.parked.bin.modelId : this.modelId,
+      part: asLabel ? "bin" : this.current,
+      name: asLabel ? this.parked.bin.name : this.name,
       savedAt: new Date().toISOString(),
       json,
     };
-    const list = [entry, ...this.stored.filter((m) => m.id !== this.modelId)].slice(
+    const list = [entry, ...this.stored.filter((m) => m.id !== entry.id)].slice(
       0,
       MAX_STORED,
     );
@@ -480,11 +563,12 @@ class Editor {
 
   /** The model as a file's text, for "Save file". */
   toFileText(): string {
-    if (this.current === "bin") {
+    if (this.current === "bin" || this.current === "label") {
       return serializeBin(
-        this.name,
+        this.current === "label" ? this.parked.bin.name : this.name,
         $state.snapshot(this.bin) as BinParams,
         this.drawerHeight,
+        $state.snapshot(this.label) as LabelParams,
       );
     }
     if (this.current === "baseplate") {
@@ -515,8 +599,13 @@ class Editor {
     this.part = file.type;
     this.drawerHeight = file.drawerHeight;
     if (file.type === "baseplate") Object.assign(this.baseplate, file.params);
-    else if (file.type === "bin") Object.assign(this.bin, file.params);
-    else Object.assign(this.params, file.params);
+    else if (file.type === "bin") {
+      Object.assign(this.bin, file.params);
+      if (file.label) {
+        Object.assign(this.label, file.label);
+        this.restoreLabelSvg();
+      }
+    } else Object.assign(this.params, file.params);
     this.name = file.name;
     this.modelId = id ?? crypto.randomUUID();
     this.svgName = file.svgName;
