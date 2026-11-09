@@ -119,7 +119,7 @@
     <Switch
       label="Scoop"
       bind:checked={p.scoop}
-      hint="A curved ramp along the front wall, across the whole width, so small parts slide out. It rises to the lower edge of the step under the stacking lip. In a tall bin only the piece along the wall grows; in a low bin the ramp is cut at the top."
+      hint="A curved ramp along the front wall, across the whole width, so small parts slide out. It rises to the lower edge of the step under the stacking lip. It ends flush with the step. In a tall bin only the piece along the wall grows."
     />
     <p class="t-caption">
       Arc diameter 33.75 mm, meeting the floor 15.84 mm from the front wall.

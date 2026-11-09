@@ -121,10 +121,12 @@ const SCOOP_OVERLAP = 0.3;
 /**
  * Section of the scoop (E-08) in (u, v): u from the inner face of the front wall into the
  * cavity, v up from the cavity floor, in mm. The arc has the owner's radius and meets the
- * floor `scoopLength` from the wall. It stands upright against the wall at the distance of
- * the tip of the 45 degree chamfer under the stacking lip (`lipDepth - wall`; at the wall
- * itself without a lip) and goes up to the tip, the lower edge of the lip step. In a tall bin only the straight piece along the wall grows; in a low bin
- * the arc is cut at the top and a flat face is left. Undefined when there is no room.
+ * floor `scoopLength` from the wall. At the top it ends flush with the step under the stacking
+ * lip: at the tip of the 45 degree chamfer, `lipDepth - wall` from the wall (at the wall itself
+ * without a lip), at the lower edge of the step. The arc runs through those two points, so
+ * nothing sticks out. In a tall bin the arc would need a bigger circle; then it stays as it is,
+ * stands upright against the wall at the tip, and only the straight piece along the wall grows.
+ * Undefined when there is no room.
  */
 export const scoopOutline = (
   p: BinParams,
@@ -137,20 +139,30 @@ export const scoopOutline = (
   // up to the tip of the chamfer, the lower edge of the step; without a lip to the body top
   const height = layout.bodyHeight - (lip ? c("lipStepHeight") : 0) - layout.floor;
   if (height <= 0) return undefined;
-  // centre of the circle: r from the upright end, so that the arc passes through the floor point
-  const cu = tip + r;
-  const cv = Math.sqrt(r * r - (length - cu) ** 2);
-  const bottom = Math.atan2(-cv, length - cu) + 2 * Math.PI;
-  const top = Math.PI + (height >= cv ? 0 : Math.asin((cv - height) / r));
+  // the circle that stands upright at the tip and passes through the floor point: the tallest arc
+  const upright = Math.sqrt(r * r - (length - tip - r) ** 2);
+  // the circle of the arc: through the floor point and the tip (or its upright end), centre above
+  const top: [number, number] = [tip, Math.min(height, upright)];
+  const chord = Math.hypot(top[0] - length, top[1]);
+  const lift = Math.sqrt(r * r - (chord * chord) / 4);
+  const cu = (length + top[0]) / 2 + (top[1] / chord) * lift;
+  const cv = top[1] / 2 + ((length - top[0]) / chord) * lift;
+  const first = Math.atan2(0 - cv, length - cu);
+  let sweep = Math.atan2(top[1] - cv, top[0] - cu) - first;
+  while (sweep > Math.PI) sweep -= 2 * Math.PI;
+  while (sweep < -Math.PI) sweep += 2 * Math.PI;
   const points: [number, number][] = [
     [-SCOOP_OVERLAP, -SCOOP_OVERLAP],
     [length, -SCOOP_OVERLAP],
   ];
   for (let i = 0; i <= SCOOP_SEGMENTS; i++) {
-    const a = bottom + ((top - bottom) * i) / SCOOP_SEGMENTS;
+    const a = first + (sweep * i) / SCOOP_SEGMENTS;
     points.push([cu + r * Math.cos(a), cv + r * Math.sin(a)]);
   }
-  if (height > cv) points.push([tip, height]);
+  // the points of the arc are exactly the floor point and the top, whatever the rounding
+  points[2] = [length, 0];
+  points[points.length - 1] = top;
+  if (height > top[1]) points.push([tip, height]);
   points.push([-SCOOP_OVERLAP, height]);
   return points;
 };

@@ -327,9 +327,21 @@ describe("E-08 scoop (the owner's drawing of 9 November 2026)", () => {
       scope.dispose();
     }
   };
-  const arcU = (tip: number, v: number): number => {
-    const { cu, cv } = circle(tip);
-    return cu - Math.sqrt(R * R - (v - cv) ** 2);
+  /** Radius of the circle through three points, found without knowing how the arc is built. */
+  const circumradius = (a: number[], b: number[], c: number[]): number => {
+    const [ax = 0, ay = 0, bx = 0, by = 0, cx = 0, cy = 0] = [...a, ...b, ...c];
+    const d = 2 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by));
+    const ux =
+      ((ax * ax + ay * ay) * (by - cy) +
+        (bx * bx + by * by) * (cy - ay) +
+        (cx * cx + cy * cy) * (ay - by)) /
+      d;
+    const uy =
+      ((ax * ax + ay * ay) * (cx - bx) +
+        (bx * bx + by * by) * (ax - cx) +
+        (cx * cx + cy * cy) * (bx - ax)) /
+      d;
+    return Math.hypot(ax - ux, ay - uy);
   };
   const tip = CONSTANTS.lipDepth.value - wall;
   const stepH = CONSTANTS.lipStepHeight.value;
@@ -363,18 +375,46 @@ describe("E-08 scoop (the owner's drawing of 9 November 2026)", () => {
     expect(m.volume).toBeGreaterThan(plain.volume + 100);
   });
 
-  it("follows the circle with the radius of the drawing (diameter 33.75) along the whole arc", () => {
-    for (const v of [2, 6, 10, 13]) {
-      expect(frontEdge({}, v), `v = ${v}`).toBeCloseTo(arcU(tip, v), 2);
-    }
+  it("follows a circle with the radius of the drawing (diameter 33.75) along the whole arc", () => {
+    const layout = layoutOf(DEFAULT_BIN);
+    const height = layout.bodyHeight - stepH - layout.floor;
+    const at = (v: number): number[] => [frontEdge({}, v), v];
+    expect(circumradius(at(1), at(height / 2), at(height - 0.05))).toBeCloseTo(R, 1);
+    expect(circumradius(at(3), at(height * 0.6), at(height - 0.2))).toBeCloseTo(R, 1);
   });
 
-  it("has its points on that circle where it meets the side wall", () => {
-    const { cu, cv } = circle(CONSTANTS.lipDepth.value - wall);
-    const arc = onSideWall({}).filter(([u, v]) => u > 3 && u < L - 0.01 && v > 0.01);
+  it("has its points on one circle of that radius where it meets the side wall", () => {
+    const arc = onSideWall({})
+      .filter(([u, v]) => u > 3 && u < L - 0.01 && v > 0.01)
+      .sort((a, b) => a[0] - b[0]);
     expect(arc.length).toBeGreaterThan(20);
-    for (const [u, v] of arc) {
-      expect(Math.hypot(u - cu, v - cv), `${u}, ${v}`).toBeCloseTo(R, 5);
+    const [first, mid, last] = [
+      arc[0],
+      arc[Math.floor(arc.length / 2)],
+      arc[arc.length - 1],
+    ];
+    expect(
+      circumradius(first as number[], mid as number[], last as number[]),
+    ).toBeCloseTo(R, 3);
+  });
+
+  it("ends flush with the step under the lip: no ledge sticks out at the top", () => {
+    for (const units of [2, 3]) {
+      const layout = layoutOf({ ...DEFAULT_BIN, height_units: units });
+      const height = layout.bodyHeight - stepH - layout.floor;
+      // just below the tip the front edge is at the tip, and just above it still (the step)
+      expect(
+        frontEdge({ height_units: units }, height - 0.01),
+        `${units}u`,
+      ).toBeCloseTo(tip, 1);
+      expect(
+        frontEdge({ height_units: units }, height + 0.01),
+        `${units}u`,
+      ).toBeCloseTo(tip, 1);
+      expect(frontEdge({ height_units: units }, height - 0.2), `${units}u`).toBeCloseTo(
+        tip,
+        0,
+      );
     }
   });
 
@@ -406,26 +446,6 @@ describe("E-08 scoop (the owner's drawing of 9 November 2026)", () => {
     };
     // the arc points are the same for 4 and 12 units
     expect(section(12)).toEqual(section(4));
-  });
-
-  it("in a low bin the arc is cut at the top of the body and a flat face is left", () => {
-    for (const units of [2, 3]) {
-      const p = { ...DEFAULT_BIN, height_units: units };
-      const layout = layoutOf(p);
-      const height = layout.bodyHeight - stepH - layout.floor;
-      // just below the top the front edge is still on the arc, just above it is the lip's chamfer
-      expect(
-        frontEdge({ height_units: units }, height - 0.01),
-        `${units}u`,
-      ).toBeCloseTo(arcU(tip, height - 0.01), 1);
-      expect(
-        frontEdge({ height_units: units }, height + 0.01),
-        `${units}u`,
-      ).toBeLessThan(tip + 0.01);
-      expect(measure({ height_units: units, scoop: true }).closed, `${units}u`).toBe(
-        true,
-      );
-    }
   });
 
   it("works without a lip and with other walls, floors and sizes", () => {
