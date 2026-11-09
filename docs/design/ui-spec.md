@@ -78,7 +78,7 @@ No badge or label marks parameters outside the Gridfinity spec (owner, 2 Novembe
 
 ## 5. Export and save
 Output column (or phone sheet), three sections separated by hairlines, each padded 20 px with 12 px between elements:
-1. Size: readout W × D × H in mm (label included), printer select for the bed check (from the script's printer list), status "Fits the bed" or "Too big for this bed, also turned 90°".
+1. Size: readout W × D × H in mm (label included), the print bed for the bed check as three number fields (width, depth, build height; default 256 × 256 × 256 mm), status "Fits the bed" or "Too big for this bed, also turned 90°".
 2. Export: format STL / 3MF (segmented), note for the chosen format (3MF: plate, text and symbol stay separate objects with colours; STL: geometry only), file name field with fixed extension, primary button.
    - With `showSaveFilePicker` (Chrome, Edge): "Save 3MF…", the browser asks for the folder.
    - Without (Firefox, Safari): "Download 3MF" via `<a download>`, note "This browser saves straight to your Downloads folder; it cannot ask where. Chrome and Edge can."
@@ -114,7 +114,7 @@ The images in `docs/design/mockups/` predate these changes; where they differ, t
 - No screw holes on lids. No tag for parameters outside the spec. No `flush_gap` and no Advanced group on the lid.
 - Parameter groups are closed by default.
 - Font "Other": the user uploads a font file (.ttf, .otf, .woff, up to 2 MB); it is stored in the model file.
-- Printer list and bed check from the official Bambu Studio machine profiles (including the keep-out zone where a printer has one); the alert offers "Set Width to N", "Set Depth to N" and "Turn the bed check off".
+- Bed check against a print bed that the user types in (owner, 9 November 2026: the printer list with the Bambu presets and the dropdown were removed; the default is 256 × 256 × 256 mm, drawn as a plain rounded rectangle; Z check with its own warning when a part is taller than the build height; the whole bed counts, no keep-out zone); the alert offers "Set Width to N", "Set Depth to N" and "Turn the bed check off".
 - Status pill: only "Computing…" (after 150 ms, the preview dims at the same time) and "Needs a fix".
 - "In this browser": button "Download as ZIP and clear".
 - Colour picker names the part ("Lid", "Bin", "Base"); header says "Base" instead of "Baseplate".
