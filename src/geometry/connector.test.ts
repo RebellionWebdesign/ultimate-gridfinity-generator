@@ -105,7 +105,99 @@ describe("baseplate with slots for connectors", () => {
       scope.dispose();
     }
   };
-  const slotVolume = area(EDGE_SLOT.slot) * EDGE_SLOT.slotLength;
+  const BASE = DEFAULT_BASEPLATE.baseplate_base;
+  const H = 4.65;
+  /** The frame of a plate at its edge (u inward from the edge, z up) on a floor of `level`. */
+  const frameOf = (scope: Scope, level: number) =>
+    scope.add(
+      new kernel.CrossSection([
+        [
+          [0, level],
+          [2.85, level],
+          [2.15, level + 0.7],
+          [2.15, level + 2.5],
+          [0, level + H],
+        ],
+      ]),
+    );
+  /** What stays of the frame at a cut: the mushroom, and what lies beyond the cut. */
+  const platesOf = (scope: Scope, level: number) => {
+    const mushroom = scope.add(
+      new kernel.CrossSection([
+        EDGE_SLOT.slot.map(([u, z]): [number, number] => [u, level + z]),
+      ]),
+    );
+    const flange = 0.7;
+    const gone = scope.add(
+      kernel.CrossSection.difference(
+        scope.add(
+          new kernel.CrossSection([
+            [
+              [0, level + flange],
+              [2.3, level + flange],
+              [2.3, level + H],
+              [0, level + H],
+            ],
+          ]),
+        ),
+        mushroom,
+      ),
+    );
+    return {
+      gone,
+      kept: scope.add(kernel.CrossSection.difference(frameOf(scope, level), gone)),
+    };
+  };
+  /** The frame material one cut takes, times its length. */
+  const slotVolume = () => {
+    const scope = new Scope();
+    try {
+      const { gone } = platesOf(scope, BASE);
+      return (
+        kernel.CrossSection.intersection(frameOf(scope, BASE), gone).area() *
+        EDGE_SLOT.slotLength
+      );
+    } finally {
+      scope.dispose();
+    }
+  };
+
+  it("what goes is the frame above the flange and around the mushroom (owner's section: green stays, red goes)", () => {
+    expect(slotVolume()).toBeGreaterThan(40);
+    const scope = new Scope();
+    try {
+      const { kept } = platesOf(scope, 0);
+      const mushroom = scope.add(new kernel.CrossSection([EDGE_SLOT.slot]));
+      // what stays is the mushroom, nothing else (the frame of this model has no more under the flange)
+      expect(kept.area()).toBeCloseTo(mushroom.area(), 6);
+    } finally {
+      scope.dispose();
+    }
+  });
+
+  it("the connector hangs over two mushrooms and does not overlap them, roof up, on the flange", () => {
+    const scope = new Scope();
+    try {
+      const { kept } = platesOf(scope, 0);
+      const plates = scope.add(
+        kernel.CrossSection.union(scope.add(kept.mirror([1, 0])), kept),
+      );
+      const pin = scope.add(
+        new kernel.CrossSection([EDGE_SLOT.connector]).translate(0, 0.7),
+      );
+      expect(kernel.CrossSection.intersection(pin, plates).area()).toBeLessThan(0.001);
+      // and it lies wholly in what was cut away: it does not stick out of the plates
+      const gone = scope.add(
+        kernel.CrossSection.union(
+          scope.add(platesOf(scope, 0).gone.mirror([1, 0])),
+          platesOf(scope, 0).gone,
+        ),
+      );
+      expect(kernel.CrossSection.difference(pin, gone).area()).toBeLessThan(0.001);
+    } finally {
+      scope.dispose();
+    }
+  });
 
   it("is off by default, and the plate is as before", () => {
     expect(DEFAULT_BASEPLATE.connectable).toBe("none");
@@ -119,14 +211,14 @@ describe("baseplate with slots for connectors", () => {
     const slotted = measure({ connectable: "edge_slot" });
     expect(slotted.closed).toBe(true);
     expect(slotted.size).toEqual(plain.size);
-    expect(plain.volume - slotted.volume).toBeCloseTo(4 * slotVolume, 1);
+    expect(plain.volume - slotted.volume).toBeCloseTo(4 * slotVolume(), 1);
   });
 
   it("one slot per cell along every edge: 2 x 1 cells make 2 + 2 + 1 + 1 slots", () => {
     const plain = measure({ units_x: 2 });
     const slotted = measure({ units_x: 2, connectable: "edge_slot" });
     expect(slotted.closed).toBe(true);
-    expect(plain.volume - slotted.volume).toBeCloseTo(6 * slotVolume, 1);
+    expect(plain.volume - slotted.volume).toBeCloseTo(6 * slotVolume(), 1);
   });
 
   it("a piece of a split plate has slots in its cut edges too", () => {
@@ -148,7 +240,7 @@ describe("baseplate with slots for connectors", () => {
       const cells = Math.round((tile.x1 - tile.x0) / 42);
       // one slot on each of the two cut or outer sides along x, and one per cell top and bottom
       expect(plain.volume - slotted.volume).toBeCloseTo(
-        (2 + 2 * cells) * slotVolume,
+        (2 + 2 * cells) * slotVolume(),
         1,
       );
     }

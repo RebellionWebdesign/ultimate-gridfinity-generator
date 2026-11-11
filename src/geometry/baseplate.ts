@@ -231,10 +231,13 @@ export const tileRegions = (p: BaseplateParams, max: [number, number]): Tile[] =
 const SLOT_OVERSHOOT = 0.2;
 
 /**
- * The slots for connectors (owner, 11 November 2026): one in every edge of the piece for
- * every row or column of cells that reaches it, in the middle of that cell's edge. The slot
- * of one plate and that of its neighbour are mirror images: together they hold a connector.
- * Coordinates in mm from the plate corner.
+ * The cuts for connectors (owner, 11 November 2026, his section of half a 1 x 1 plate): at every
+ * edge of the piece, for every row or column of cells that reaches it, in the middle of that
+ * cell's edge, 20 long. Of the frame only the mushroom (the slot profile of the STEP file, at
+ * the underside) stays; the frame above the flange and around the mushroom goes. The cut of
+ * one plate and that of its neighbour are mirror images: the connector, the shape of what
+ * was cut away, hangs over the two mushrooms and holds them. Coordinates in mm from the
+ * plate corner.
  */
 const slotCutters = (
   kernel: Kernel,
@@ -243,20 +246,36 @@ const slotCutters = (
   edges: { x0: number; y0: number; x1: number; y1: number },
   rows: number[],
   cols: number[],
+  level: number,
+  height: number,
 ): Manifold[] => {
   const variant = variantOf(p.connectable);
   if (!variant) return [];
   const length = variant.slotLength;
-  // profile (u inward from the edge, z up), the edge side pushed out a little
-  const profile = variant.slot.map(([u, z]): [number, number] => [
-    u === 0 ? -SLOT_OVERSHOOT : u,
-    z,
-  ]);
-  const prism = scope.add(
-    scope.add(new kernel.CrossSection([profile])).extrude(length),
+  // profile (u inward from the edge, z up), the edge side pushed out a little: the frame from
+  // the top of the flange up (and a little beyond the top), minus the mushroom
+  const flange = Math.min(
+    ...variant.slot.filter(([u, z]) => u > 0 && z > 0).map(([, z]) => z),
   );
-  // (u, z, along) -> (x = u, y = -along, z): a quarter turn about x; then the slot runs
-  // along y, centred on 0, its inward side towards +x (the left edge)
+  const box: [number, number][] = [
+    [-SLOT_OVERSHOOT, level + flange],
+    [variant.frameWidth, level + flange],
+    [variant.frameWidth, level + height + SLOT_OVERSHOOT],
+    [-SLOT_OVERSHOOT, level + height + SLOT_OVERSHOOT],
+  ];
+  const mushroom = variant.slot.map(([u, z]): [number, number] => [
+    u === 0 ? -SLOT_OVERSHOOT : u,
+    level + z,
+  ]);
+  const section = scope.add(
+    kernel.CrossSection.difference(
+      scope.add(new kernel.CrossSection([box])),
+      scope.add(new kernel.CrossSection([mushroom])),
+    ),
+  );
+  const prism = scope.add(section.extrude(length));
+  // (u, z, along) -> (x = u, y = -along, z): a quarter turn about x; then the cut runs along
+  // y, centred on 0, its inward side towards +x (the left edge)
   const upright = scope.add(
     prism.transform([1, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1]),
   );
@@ -374,7 +393,7 @@ export const buildBaseplate = (
       }
     }
     const edges = region ?? { x0: 0, y0: 0, x1: w, y1: h };
-    cutters.push(...slotCutters(kernel, scope, p, edges, rows, cols));
+    cutters.push(...slotCutters(kernel, scope, p, edges, rows, cols, base, top - base));
   }
   const body = scope.add(kernel.Manifold.difference([block, ...cutters]));
   return move(body, -w / 2, -h / 2, 0);

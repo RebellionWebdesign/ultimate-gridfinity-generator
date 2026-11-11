@@ -16,6 +16,8 @@ export interface ConnectorVariant {
   slot: Point2[];
   /** how long the slot is along the edge (STEP: 20.0; the connector is 0.4 shorter) */
   slotLength: number;
+  /** how far the cut reaches inward from the edge: the frame of the plate is 2.15 wide (u 0 to 2.15) above the flange */
+  frameWidth: number;
   /** the connector, u from its middle */
   connector: Point2[];
   connectorLength: number;
@@ -42,6 +44,7 @@ export const EDGE_SLOT: ConnectorVariant = {
     [0, 2.0],
   ],
   slotLength: 20,
+  frameWidth: 2.3,
   // the right of the drawing: 4.3 wide, 1.65 high walls, a 45 degree roof ending in a flat top
   // 0.4242 wide at 3.5879, underneath a channel 2.1 wide at the opening (0.25 high), widening
   // by 0.4 per side over 0.533 to 2.9, up to 1.35
