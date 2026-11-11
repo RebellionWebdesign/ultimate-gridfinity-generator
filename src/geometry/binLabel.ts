@@ -60,13 +60,21 @@ export const placeInBin = (
   parts: BinLabelParts,
 ): { plate: Manifold; text?: Manifold; symbol?: Manifold } => {
   const layout = layoutOf(bin);
-  const front = bin.label_slot === "front";
-  const y =
-    (front ? -1 : 1) * (layout.depth / 2 - c("labelEdgeInset") - c("labelDepth") / 2);
+  // the plate is built for the back wall (its rounded edge towards +y); it is turned to the
+  // wall that was chosen: front 180, right -90, left 90 degrees
+  const side = bin.label_slot;
+  const alongX = side === "front" || side === "back";
+  const inset =
+    (alongX ? layout.depth : layout.width) / 2 -
+    c("labelEdgeInset") -
+    c("labelDepth") / 2;
+  const sign = side === "front" || side === "left" ? -1 : 1;
+  const angle = { back: 0, front: 180, right: -90, left: 90, none: 0 }[side];
+  const [x, y] = alongX ? [0, sign * inset] : [sign * inset, 0];
   const put = (part: Manifold | undefined) => {
     if (!part) return undefined;
-    const turned = front ? scope.add(part.rotate(0, 0, 180)) : part;
-    return scope.add(turned.translate(0, y, labelRestZ(layout)));
+    const turned = angle === 0 ? part : scope.add(part.rotate(0, 0, angle));
+    return scope.add(turned.translate(x, y, labelRestZ(layout)));
   };
   return {
     plate: put(parts.plate) as Manifold,

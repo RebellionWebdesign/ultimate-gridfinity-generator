@@ -2,7 +2,7 @@
 // the side walls of the bin, with text from the lid text generator. The size of the plate
 // comes from the bin (its width), so a label always belongs to the current bin.
 import { CONSTANTS } from "../gridfinity/constants";
-import { labelWidthOf, type BinParams } from "./binParams";
+import { labelWidthOf, type BinParams, type LabelBin } from "./binParams";
 import {
   BLACK,
   DEFAULT_LID,
@@ -99,16 +99,14 @@ export const DEFAULT_LABEL: LabelParams = {
 export const labelAsLid = (l: LabelParams): LidParams => ({ ...DEFAULT_LID, ...l });
 
 /** Size of the plate in mm: width follows the bin, depth is fixed. */
-export const labelSize = (bin: Pick<BinParams, "units_x">): [number, number] => [
+export const labelSize = (bin: LabelBin): [number, number] => [
   labelWidthOf(bin),
   CONSTANTS.labelDepth.value,
 ];
 
 /** Offsets of the text: plus or minus half the plate. */
-export const labelOffsetLimit = (
-  bin: Pick<BinParams, "units_x">,
-  axis: "x" | "y",
-): number => labelSize(bin)[axis === "x" ? 0 : 1] / 2;
+export const labelOffsetLimit = (bin: LabelBin, axis: "x" | "y"): number =>
+  labelSize(bin)[axis === "x" ? 0 : 1] / 2;
 
 const MIN_PLATE_UNDER_TEXT = 0.4;
 

@@ -7,8 +7,12 @@ import { STONE, type NumberLimit } from "./lidParams";
 /** with_lip: stacking lip (+4.4 mm). flat_same_height: no lip, same total height. flat_lower: no lip, 4.4 mm lower. */
 export type FootHollow = "none" | "open";
 
-/** Where a label sits in the bin (E-09): slots for its lugs in the two side walls, at the front or the back. */
-export type LabelSlot = "none" | "front" | "back";
+/**
+ * Where a label sits in the bin (E-09): at which wall, with slots for its lugs in the two
+ * walls next to it. Version 1.1 (owner, 11 November 2026): any of the four walls, so a bin
+ * that is not square can take the label on its long or its short side.
+ */
+export type LabelSlot = "none" | "front" | "back" | "left" | "right";
 
 export type LipStyle = "with_lip" | "flat_same_height" | "flat_lower";
 
@@ -203,9 +207,50 @@ export const scoopHeightOf = (p: BinParams): number =>
   (p.lip_style === "with_lip" ? CONSTANTS.lipStepHeight.value : 0) -
   floorZOf(p);
 
-/** Width of the label plate: from edge to edge of the first slope of the lip, 37.5 on a 1 x 1 bin. */
-export const labelWidthOf = (p: Pick<BinParams, "units_x">): number =>
-  outerSize(p.units_x) - 2 * CONSTANTS.labelEdgeInset.value;
+/** What the size of the label plate depends on: the bin and the wall the label sits at. */
+export type LabelBin = Pick<BinParams, "units_x"> &
+  Partial<Pick<BinParams, "units_y" | "label_slot">>;
+
+/** Whether the label sits at a wall along y (left or right): its plate then runs along the depth. */
+export const labelOnSideWall = (p: Pick<LabelBin, "label_slot">): boolean =>
+  p.label_slot === "left" || p.label_slot === "right";
+
+/**
+ * Width of the label plate: from edge to edge of the first slope of the lip along its wall,
+ * 37.5 on a 1 x 1 bin. At the left or right wall it follows the depth of the bin.
+ */
+export const labelWidthOf = (p: LabelBin): number =>
+  outerSize(labelOnSideWall(p) ? (p.units_y ?? p.units_x) : p.units_x) -
+  2 * CONSTANTS.labelEdgeInset.value;
+
+/** The walls a label can sit at, named for the user: "Back (long side)" on a bin that is not square. */
+export const labelWallOptions = (
+  p: Pick<BinParams, "units_x" | "units_y" | "scoop">,
+): { value: LabelSlot; label: string; disabled?: boolean; title?: string }[] => {
+  const kind = (alongX: boolean): string =>
+    p.units_x === p.units_y
+      ? ""
+      : alongX === p.units_x > p.units_y
+        ? " (long)"
+        : " (short)";
+  const wall = (value: LabelSlot, name: string, alongX: boolean) => ({
+    value,
+    label: `${name}${kind(alongX)}`,
+    // with a scoop the label sits at the wall opposite it: the scoop is at the front
+    disabled: p.scoop && value !== "back",
+    title:
+      p.scoop && value !== "back"
+        ? "With a scoop the label sits opposite it"
+        : undefined,
+  });
+  return [
+    { value: "none", label: "None" },
+    wall("back", "Back", true),
+    wall("front", "Front", true),
+    wall("left", "Left", false),
+    wall("right", "Right", false),
+  ];
+};
 
 /** Highest a divider can be: the lower edge of the step under the stacking lip, as for the scoop. */
 export const dividerHeightMax = (p: BinParams): number => scoopHeightOf(p);

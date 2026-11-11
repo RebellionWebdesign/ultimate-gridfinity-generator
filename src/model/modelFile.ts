@@ -54,7 +54,7 @@ export class ModelFileError extends Error {}
 const ENUMS: Partial<Record<string, readonly string[]>> = {
   baseplate_style: ["solid", "skeleton"],
   connectable: ["none", "edge_slot"],
-  label_slot: ["none", "front", "back"],
+  label_slot: ["none", "front", "back", "left", "right"],
   lip_style: ["with_lip", "flat_same_height", "flat_lower"],
   variant: ["dust_cover", "stackable"],
   lip_mode: ["full", "corners_only"],

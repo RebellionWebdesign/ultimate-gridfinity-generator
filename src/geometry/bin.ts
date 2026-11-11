@@ -247,27 +247,26 @@ export const labelRestZ = (layout: BinLayout): number =>
   layout.bodyHeight + (c("lipDepth") - c("labelEdgeInset"));
 
 /**
- * Where the lugs of the label plate sit along the depth of the bin, as [from, to] in the
- * coordinates of the bin: 4.33 mm from the edge of the plate on the side of the wall, the
- * plate itself resting 2.0 mm in from that wall.
+ * Where the lugs of the label plate sit across the bin, as [from, to] in the frame of the
+ * wall (the wall at the far end, `depth` across): 4.33 mm from the edge of the plate on the
+ * side of the wall, the plate itself resting 2.0 mm in from that wall. `near` puts the wall
+ * at the other end (y = 0).
  */
-export const labelLugSpan = (
-  p: BinParams,
-  layout: BinLayout,
-): [number, number] | undefined => {
-  if (p.label_slot === "none") return undefined;
+const labelLugSpan = (depth: number, near: boolean): [number, number] => {
   const e = c("labelEdgeInset");
-  const near = c("labelLugOffset");
+  const offset = c("labelLugOffset");
   const wide = c("labelLugWidth");
-  return p.label_slot === "back"
-    ? [layout.depth - e - near - wide, layout.depth - e - near]
-    : [e + near, e + near + wide];
+  return near
+    ? [e + offset, e + offset + wide]
+    : [depth - e - offset - wide, depth - e - offset];
 };
 
 /**
- * The two slots (E-09) for the lugs of the label plate, cut into the side walls: every
- * dimension of the lug plus 0.05 mm, so the plate clicks in cleanly. They reach a little into
- * the cavity so that the cut opens cleanly.
+ * The two slots (E-09) for the lugs of the label plate, cut into the two walls next to the
+ * wall the label sits at: every dimension of the lug plus 0.05 mm, so the plate clicks in
+ * cleanly. They reach a little into the cavity so that the cut opens cleanly. The label can
+ * sit at any of the four walls (version 1.1): the slots are made for a wall at the back and
+ * turned to the wall that was chosen.
  */
 const labelSlots = (
   kernel: Kernel,
@@ -275,12 +274,16 @@ const labelSlots = (
   p: BinParams,
   layout: BinLayout,
 ): Manifold[] => {
-  const span = labelLugSpan(p, layout);
-  if (!span || p.lip_style !== "with_lip") return [];
+  if (p.label_slot === "none" || p.lip_style !== "with_lip") return [];
+  const side = p.label_slot;
+  const alongX = side === "front" || side === "back";
+  // the frame of the wall: `length` along it, `across` from the wall to the opposite one
+  const length = alongX ? layout.width : layout.depth;
+  const across = alongX ? layout.depth : layout.width;
   const e = c("labelEdgeInset");
   const grow = c("labelLugClearance");
   const lug = c("labelLugLength");
-  const [y0, y1] = span;
+  const [y0, y1] = labelLugSpan(across, side === "front");
   const z0 = labelRestZ(layout) - grow / 2;
   const height = c("labelThickness") + grow;
   const reach = 0.1; // into the cavity, which is empty there
@@ -290,10 +293,23 @@ const labelSlots = (
         .add(kernel.Manifold.cube([x1 - x0, y1 - y0 + grow, height]))
         .translate(x0, y0 - grow / 2, z0),
     );
-  return [
+  const slots = [
     cut(e - lug - grow, e + reach),
-    cut(layout.width - e - reach, layout.width - e + lug + grow),
+    cut(length - e - reach, length - e + lug + grow),
   ];
+  if (side === "right") {
+    // the wall at x = width: (x, y) -> (y, length - x)
+    return slots.map((s) =>
+      scope.add(scope.add(s.rotate(0, 0, -90)).translate(0, length, 0)),
+    );
+  }
+  if (side === "left") {
+    // the wall at x = 0: (x, y) -> (across - y, x)
+    return slots.map((s) =>
+      scope.add(scope.add(s.rotate(0, 0, 90)).translate(across, 0, 0)),
+    );
+  }
+  return slots;
 };
 
 /** Cells that carry a centre magnet: the corner cells of the bin (spec section 3.1). */

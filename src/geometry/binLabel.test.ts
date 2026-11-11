@@ -12,7 +12,7 @@ import {
 import type { BundledFont } from "../model/lidParams";
 import { prepareAssets, type AssetLoaders } from "./assets";
 import { buildBin, labelRestZ, layoutOf } from "./bin";
-import { buildBinLabel, labelCornerRadius } from "./binLabel";
+import { buildBinLabel, labelCornerRadius, placeInBin } from "./binLabel";
 import { modelXml } from "../export/threeMf";
 import { textEdgeWarning } from "./label";
 import type { SvgShapes } from "./svg";
@@ -201,14 +201,9 @@ describe("E-09 label plate (the owner's drawing of 9 November 2026)", () => {
 const labelInBin = async (b: BinParams, l: LabelParams) => {
   const scope = new Scope();
   try {
-    const layout = layoutOf(b);
     const { body } = buildBin(kernel, scope, b);
     const parts = buildBinLabel(kernel, scope, b, l, {});
-    const front = b.label_slot === "front";
-    const y = (front ? -1 : 1) * (layout.depth / 2 - INSET.value - 7);
-    let plate = parts.plate;
-    if (front) plate = scope.add(plate.rotate(0, 0, 180));
-    plate = scope.add(plate.translate(0, y, labelRestZ(layout)));
+    const { plate } = placeInBin(scope, b, parts);
     const touching = scope.add(kernel.Manifold.intersection(plate, body));
     return {
       overlap: touching.volume(),
@@ -220,6 +215,92 @@ const labelInBin = async (b: BinParams, l: LabelParams) => {
     scope.dispose();
   }
 };
+
+describe("E-09 label on any wall (version 1.1: the long or the short side of a bin that is not square)", () => {
+  const SIDES = ["back", "front", "left", "right"] as const;
+
+  it("the plate is as long as the side it sits at", () => {
+    const b = bin({ units_x: 3, units_y: 2 });
+    expect(labelWidthOf({ ...b, label_slot: "back" })).toBeCloseTo(3 * 42 - 0.5 - 4, 9);
+    expect(labelWidthOf({ ...b, label_slot: "front" })).toBeCloseTo(
+      3 * 42 - 0.5 - 4,
+      9,
+    );
+    expect(labelWidthOf({ ...b, label_slot: "left" })).toBeCloseTo(2 * 42 - 0.5 - 4, 9);
+    expect(labelWidthOf({ ...b, label_slot: "right" })).toBeCloseTo(
+      2 * 42 - 0.5 - 4,
+      9,
+    );
+  });
+
+  it("every wall takes the plate with its lugs in the slots: nothing touches, the mesh stays closed", async () => {
+    const plain = await labelInBin(bin({ units_x: 3, units_y: 2 }), label());
+    for (const label_slot of SIDES) {
+      const b = bin({ units_x: 3, units_y: 2, label_slot });
+      const m = await labelInBin(b, label());
+      expect(m.bodyClosed).toBe(true);
+      expect(m.bodySize).toEqual(plain.bodySize);
+      expect(m.overlap).toBeLessThan(1e-3);
+      const removed = plain.bodyVolume - m.bodyVolume;
+      expect(removed).toBeGreaterThan(2 * 0.3 * 7 * 1);
+      expect(removed).toBeLessThan(2 * 0.8 * 7.2 * 1.1);
+    }
+  });
+
+  it("the plate is built as long as the bin side, and at the left or right it runs along the depth", async () => {
+    for (const label_slot of SIDES) {
+      const b = bin({ units_x: 3, units_y: 2, label_slot });
+      const scope = new Scope();
+      try {
+        const layout = layoutOf(b);
+        const parts = buildBinLabel(kernel, scope, b, label(), {});
+        const { plate } = placeInBin(scope, b, parts);
+        const size = sizeOf(plate);
+        const sideWall = label_slot === "left" || label_slot === "right";
+        // lugs make the plate 2 x 0.6 mm wider along the wall than its width
+        expect(size[sideWall ? "y" : "x"]).toBeCloseTo(
+          labelWidthOf(b) + 2 * LUG.value,
+          4,
+        );
+        expect(size[sideWall ? "x" : "y"]).toBeCloseTo(14, 4);
+        // and it lies at the wall it belongs to
+        const box = plate.boundingBox();
+        const edge = (sideWall ? layout.width : layout.depth) / 2 - INSET.value;
+        const far = {
+          back: box.max[1],
+          front: -box.min[1],
+          right: box.max[0],
+          left: -box.min[0],
+        }[label_slot];
+        expect(far).toBeCloseTo(edge, 4);
+      } finally {
+        scope.dispose();
+      }
+    }
+  });
+
+  it("the choices: a scoop leaves only the back, a square bin names no long or short side", async () => {
+    const { labelWallOptions } = await import("../model/binParams");
+    const open = labelWallOptions({ units_x: 3, units_y: 2, scoop: false });
+    expect(open.map((o) => o.label)).toEqual([
+      "None",
+      "Back (long)",
+      "Front (long)",
+      "Left (short)",
+      "Right (short)",
+    ]);
+    expect(open.every((o) => !o.disabled)).toBe(true);
+    const scooped = labelWallOptions({ units_x: 3, units_y: 2, scoop: true });
+    expect(scooped.filter((o) => o.disabled).map((o) => o.value)).toEqual([
+      "front",
+      "left",
+      "right",
+    ]);
+    expect(
+      labelWallOptions({ units_x: 2, units_y: 2, scoop: false }).map((o) => o.label),
+    ).toEqual(["None", "Back", "Front", "Left", "Right"]);
+  });
+});
 
 describe("E-09 slots in the bin for the label", () => {
   it("a bin has no slots by default and the label slot needs the stacking lip", () => {

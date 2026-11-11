@@ -7,6 +7,7 @@
     labelSize,
     type LabelLimitedKey,
   } from "../model/labelParams";
+  import { labelWallOptions } from "../model/binParams";
   import Field from "./Field.svelte";
   import Icon from "./Icon.svelte";
   import NumberField from "./NumberField.svelte";
@@ -81,7 +82,14 @@
       ? `${p.symbol_mode} · ${p.symbol_source === "upload" ? "your SVG" : "built-in"}`
       : "none",
   );
-  const slotSummary = $derived(bin.label_slot === "front" ? "front wall" : "back wall");
+  const slotSummary = $derived(
+    `${bin.label_slot === "none" ? "back" : bin.label_slot} wall`,
+  );
+  // with a scoop the label sits at the wall opposite it: the scoop is at the front, so at the back
+  $effect(() => {
+    if (bin.scoop && bin.label_slot !== "none" && bin.label_slot !== "back")
+      bin.label_slot = "back";
+  });
 </script>
 
 {#snippet num(key: LabelLimitedKey, label: string, unit: string)}
@@ -130,15 +138,13 @@
     <Segmented
       label="Wall"
       bind:value={bin.label_slot}
-      options={[
-        { value: "back", label: "Back" },
-        { value: "front", label: "Front" },
-      ]}
+      options={labelWallOptions(bin).filter((o) => o.value !== "none")}
     />
     <p class="t-caption">
-      The bin gets two slots in its side walls at this wall, every dimension 0.05 mm
-      larger than the lug so that it clicks in cleanly. Put it at the wall opposite the
-      scoop. Back is the wall at the far side in the preview of the bin.
+      The bin gets two slots in the walls next to this wall, every dimension 0.05 mm
+      larger than the lug so that it clicks in cleanly. With a scoop the label sits at
+      the wall opposite it. Back is the wall at the far side in the preview of the bin.
+      The plate is as long as the side it sits at.
     </p>
     {#if bin.lip_style !== "with_lip"}
       <p class="t-caption error" role="alert">

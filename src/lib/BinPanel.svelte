@@ -9,6 +9,7 @@
     evenDividers,
     withoutCollisions,
     floorZOf,
+    labelWallOptions,
     maxHeightUnits,
     type BinLimitedKey,
     type Divider,
@@ -125,6 +126,12 @@
     removedNote = "";
     p.dividers = even.dividers;
   };
+
+  // with a scoop the label sits at the wall opposite it: the scoop is at the front, so at the back
+  $effect(() => {
+    if (p.scoop && p.label_slot !== "none" && p.label_slot !== "back")
+      p.label_slot = "back";
+  });
 
   // a lower bin lowers the dividers with it
   $effect(() => {
@@ -335,16 +342,16 @@
     <Segmented
       label="Slots for a label"
       bind:value={p.label_slot}
-      options={[
-        { value: "none", label: "None" },
-        { value: "back", label: "Back" },
-        { value: "front", label: "Front" },
-      ]}
+      options={labelWallOptions(p)}
     />
     <p class="t-caption">
-      Two small slots in the side walls under the stacking lip, for the lugs of a label
-      plate. Make the label in the Label tab; it takes its size from this bin. The slots
-      need the stacking lip.
+      Two small slots in the walls next to the chosen wall, under the stacking lip, for
+      the lugs of a label plate. On a bin that is not square the label can sit on the
+      long or the short side; its length follows that side. Make the label in the Label
+      tab. The slots need the stacking lip.
+      {#if p.scoop}
+        With a scoop the label sits at the wall opposite it.
+      {/if}
     </p>
     <button
       type="button"
