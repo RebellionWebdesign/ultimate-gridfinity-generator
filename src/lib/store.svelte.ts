@@ -18,6 +18,7 @@ import { DEFAULT_LABEL, validateLabel, type LabelParams } from "../model/labelPa
 import {
   DEFAULT_CONNECTOR,
   validateConnector,
+  copiesOf,
   type ConnectorParams,
 } from "../model/connectorParams";
 import { DEFAULT_LID, validateLid, type LidParams } from "../model/lidParams";
@@ -83,6 +84,11 @@ class Editor {
   label = $state<LabelParams>({ ...DEFAULT_LABEL });
   /** the connector of the baseplates (owner, 11 November 2026) */
   connector = $state<ConnectorParams>({ ...DEFAULT_CONNECTOR });
+
+  /** how many connectors the Connector tab makes: one for every edge cell of the baseplate, or as set */
+  get connectorCopies(): number {
+    return copiesOf(this.connector, this.baseplate.units_x, this.baseplate.units_y);
+  }
   /** the bin view also shows the label in its place (a view setting, not saved) */
   showLabel = $state(false);
   /** the height of the drawer in mm: bins and lids are kept lower than it (0 = off) */
@@ -473,7 +479,11 @@ class Editor {
     }, 150);
     const { id, result } =
       this.current === "connector"
-        ? this.client.buildConnector(this.connector.variant)
+        ? this.client.buildConnector(
+            this.connector.variant,
+            this.connectorCopies,
+            this.bedX,
+          )
         : this.current === "label"
           ? this.client.buildLabel(bin, label, this.labelSvgShapes)
           : this.current === "baseplate"

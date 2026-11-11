@@ -62,8 +62,12 @@ export class GeometryClient {
     return this.send((id) => ({ id, part: "bin", params, label, labelSvg }));
   }
 
-  buildConnector(variant: Connectable): { id: number; result: Promise<ModelMesh> } {
-    return this.send((id) => ({ id, part: "connector", variant }));
+  buildConnector(
+    variant: Connectable,
+    copies: number,
+    maxWidth: number,
+  ): { id: number; result: Promise<ModelMesh> } {
+    return this.send((id) => ({ id, part: "connector", variant, copies, maxWidth }));
   }
 
   buildLabel(

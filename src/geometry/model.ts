@@ -7,7 +7,7 @@ import { validateLid, type LidParams } from "../model/lidParams";
 import { buildBaseplate, tileRegions } from "./baseplate";
 import { buildBin } from "./bin";
 import { buildBinLabel, placeInBin } from "./binLabel";
-import { buildConnector } from "./connector";
+import { buildConnectors } from "./connector";
 import { variantOf, type Connectable } from "../gridfinity/connector";
 import { validateLabel, type LabelParams } from "../model/labelParams";
 import type { LabelAssets } from "./label";
@@ -173,6 +173,8 @@ export const buildBaseplateModel = (
 export const buildConnectorModel = (
   kernel: Kernel,
   variant: Connectable,
+  copies = 1,
+  maxWidth = 256,
 ): ModelMesh => {
   const v = variantOf(variant);
   if (!v) throw new Error("Choose a connector variant.");
@@ -181,7 +183,7 @@ export const buildConnectorModel = (
     return toModelMesh(
       kernel,
       scope,
-      [["plate", buildConnector(kernel, scope, v)]],
+      [["plate", buildConnectors(kernel, scope, v, copies, maxWidth)]],
       [],
     );
   } finally {

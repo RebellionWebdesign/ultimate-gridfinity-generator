@@ -30,7 +30,13 @@ export type BuildRequest =
       labelSvg?: SvgShapes;
     }
   /** the label of a bin: its size follows the bin */
-  | { id: number; part: "connector"; variant: Connectable }
+  | {
+      id: number;
+      part: "connector";
+      variant: Connectable;
+      copies: number;
+      maxWidth: number;
+    }
   | { id: number; part: "label"; bin: BinParams; params: LabelParams; svg?: SvgShapes };
 
 export type BuildResponse =

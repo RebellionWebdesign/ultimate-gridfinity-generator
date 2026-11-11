@@ -305,8 +305,13 @@
   // The print bed is always dark, in light and dark mode (owner, 2 November 2026): the dark
   // theme's surface, line and grid values.
   const BED_FILL = "#222320";
-  /** the dark theme's accent: the bed outline and the 42 mm grid (owner, 11 November 2026) */
-  const BED_ACCENT = "#C2DB57";
+  /**
+   * The accent colour of the dark theme (#C2DB57), paler: about 45 % of it over the bed, for
+   * the bed outline and the 42 mm grid (owner, 11 November 2026: they were too loud).
+   */
+  const BED_ACCENT = "#6B773A";
+  /** the 42 mm lines stay this far from the bed edge, so they do not run next to its outline */
+  const BED_LINE_MARGIN = 8;
   /** the fine division in the dark grey: 7 mm, the height unit; 42 mm is six of them */
   const BED_GRID = "#393A35";
   const BED_STEP = 7;
@@ -386,10 +391,14 @@
       const span = Math.max(nx, ny) + 3;
       const [reachX, reachY] = bed ? [bed.x / 2, bed.y / 2] : [span * 42, span * 42];
       const points: number[] = [];
+      // on a bed the lines close to its edge are left out: they ran just inside the outline
+      const margin = bed ? BED_LINE_MARGIN : 0;
       for (let k = -Math.floor(reachX / 42); k <= Math.floor(reachX / 42); k++) {
+        if (Math.abs(42 * k) > reachX - margin) continue;
         points.push(...flat(42 * k, -reachY, 42 * k, reachY, -0.05));
       }
       for (let k = -Math.floor(reachY / 42); k <= Math.floor(reachY / 42); k++) {
+        if (Math.abs(42 * k) > reachY - margin) continue;
         points.push(...flat(-reachX, 42 * k, reachX, 42 * k, -0.05));
       }
       if (bed) {

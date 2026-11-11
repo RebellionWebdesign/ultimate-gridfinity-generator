@@ -164,3 +164,39 @@ describe("baseplate with slots for connectors", () => {
     }
   });
 });
+
+describe("several connectors (owner, 11 November 2026: one per edge cell on every side)", () => {
+  it("counts the edge cells of a plate on every side", async () => {
+    const { edgeCells, copiesOf, DEFAULT_CONNECTOR } =
+      await import("../model/connectorParams");
+    expect(edgeCells(1, 1)).toBe(4);
+    expect(edgeCells(2, 2)).toBe(8);
+    expect(edgeCells(3, 2)).toBe(10);
+    expect(copiesOf(DEFAULT_CONNECTOR, 3, 2)).toBe(10);
+    expect(
+      copiesOf({ ...DEFAULT_CONNECTOR, copies_auto: false, copies: 7 }, 3, 2),
+    ).toBe(7);
+    expect(copiesOf(DEFAULT_CONNECTOR, 24, 24)).toBe(96);
+  });
+
+  it("makes that many closed bodies, in rows that fit the bed, not touching", async () => {
+    const { buildConnectors } = await import("./connector");
+    const scope = new Scope();
+    try {
+      const one = buildConnectors(kernel, scope, EDGE_SLOT, 1, 256);
+      for (const copies of [2, 8, 10]) {
+        const many = buildConnectors(kernel, scope, EDGE_SLOT, copies, 256);
+        expect(isClosed(many)).toBe(true);
+        expect(many.volume()).toBeCloseTo(one.volume() * copies, 2);
+        expect(many.decompose().length).toBe(copies);
+        expect(sizeOf(many).x).toBeLessThanOrEqual(256);
+      }
+      // 8 connectors in a 40 mm wide area: 4.3 + 3 per column, so 5 columns do not fit, 5 do at 37
+      const narrow = buildConnectors(kernel, scope, EDGE_SLOT, 8, 40);
+      expect(sizeOf(narrow).x).toBeLessThanOrEqual(40);
+      expect(sizeOf(narrow).y).toBeGreaterThan(40);
+    } finally {
+      scope.dispose();
+    }
+  });
+});

@@ -70,7 +70,12 @@ self.onmessage = async (event: MessageEvent<BuildRequest>) => {
         : request.part === "bin"
           ? await buildBinWithLabel(await kernel, request)
           : request.part === "connector"
-            ? buildConnectorModel(await kernel, request.variant)
+            ? buildConnectorModel(
+                await kernel,
+                request.variant,
+                request.copies,
+                request.maxWidth,
+              )
             : request.part === "label"
               ? buildLabelModel(
                   await kernel,
