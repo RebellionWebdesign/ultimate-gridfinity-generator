@@ -56,6 +56,7 @@
           editor.name,
           PART_NAME[editor.part],
           editor.fileName,
+          [editor.printerInfo.bed[0], editor.printerInfo.bed[1]],
         );
         await saveBlob(blob, `${editor.fileName}.zip`, "ZIP archive", {
           "application/zip": [".zip"],
@@ -73,6 +74,7 @@
           editor.colours,
           editor.name,
           PART_NAME[editor.part],
+          [editor.printerInfo.bed[0], editor.printerInfo.bed[1]],
         );
         await saveBlob(
           blob,
@@ -108,7 +110,7 @@
         {editor.model.tiles.length} pieces; this is the largest one. Each piece fits the printer.
       </p>
     {:else}
-      <p class="t-caption">Width × depth × height in mm, label included</p>
+      <p class="t-caption">Width × depth × height in mm, lid label included</p>
     {/if}
     <h3 class="t-label bed-title">Print bed for the bed check</h3>
     {#if editor.bedCheck}
@@ -197,7 +199,7 @@
               ? "The bin and its stacking lip stay separate parts of one object when the lip has its own colour. Your slicer may ask which filament each colour gets."
               : "Lid, text and symbol stay separate parts of one object, each with its colour. Your slicer may ask which filament each colour gets."
         : editor.part === "label"
-          ? "Geometry only: no colours. Plate and text are separate STL files in one ZIP, so the slicer can give each a filament."
+          ? "Geometry only: no colours. Plate and text are separate STL files in one ZIP, so the slicer can give each a filament. Import them together and say yes to one object with several parts; the 3MF already holds them as one object."
           : "Geometry only: no colours, all parts in one file."}
     </p>
     {#if editor.model?.tiles}
@@ -215,7 +217,9 @@
       </div>
       <p class="t-caption">
         {tileFile === "one"
-          ? "Every piece is its own object, one printer bed apart. In Bambu Studio press A (Arrange) to put them on plates."
+          ? format === "3mf"
+            ? "Every piece is its own object on its own plate: Bambu Studio puts them on the plates. OrcaSlicer loads them without plates: press Arrange there."
+            : "Every piece is its own object, one printer bed apart. In Bambu Studio press A (Arrange) to put them on plates."
           : "One file per piece in a ZIP; import them one by one."}
       </p>
     {/if}

@@ -2,6 +2,7 @@
 // so that the TypeScript output can be compared with it. The spec value is the minimum and
 // the default; the user can only raise a value, up to its limit (spec section 4).
 import { CONSTANTS } from "../gridfinity/constants";
+import type { Connectable } from "../gridfinity/connector";
 import { STONE, type NumberLimit } from "./lidParams";
 
 export type BaseplateStyle = "solid" | "skeleton";
@@ -29,6 +30,8 @@ export interface BaseplateParams {
   fit_y: number;
   /** cut the plate into pieces that each fit the printer bed (one file per piece) */
   split_to_bed: boolean;
+  /** slots in the edges for connectors that join baseplates (owner, 11 November 2026) */
+  connectable: Connectable;
   plate_color: string;
 }
 
@@ -117,6 +120,7 @@ export const DEFAULT_BASEPLATE: BaseplateParams = {
   fit_x: 0,
   fit_y: 0,
   split_to_bed: false,
+  connectable: "none",
   plate_color: STONE,
 };
 

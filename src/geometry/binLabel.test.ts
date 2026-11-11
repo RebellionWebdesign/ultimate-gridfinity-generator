@@ -13,6 +13,7 @@ import type { BundledFont } from "../model/lidParams";
 import { prepareAssets, type AssetLoaders } from "./assets";
 import { buildBin, labelRestZ, layoutOf } from "./bin";
 import { buildBinLabel, labelCornerRadius } from "./binLabel";
+import { modelXml } from "../export/threeMf";
 import { textEdgeWarning } from "./label";
 import type { SvgShapes } from "./svg";
 import { initKernel, Scope, type Kernel } from "./kernel";
@@ -58,6 +59,10 @@ const build = async (b: BinParams, l: LabelParams) => {
       warnings: parts.warnings,
       verts: vertices(parts.plate),
       hasText: !!parts.text,
+      textVolume: parts.text?.volume() ?? 0,
+      overlap: parts.text
+        ? kernel.Manifold.intersection(parts.plate, parts.text).volume()
+        : 0,
     };
   } finally {
     scope.dispose();
@@ -137,8 +142,13 @@ describe("E-09 label plate (the owner's drawing of 9 November 2026)", () => {
     );
     expect(raised.hasText).toBe(true);
     expect(raised.closed).toBe(true);
-    expect(raised.textSize?.z).toBeCloseTo(0.6, 4);
-    expect(raised.volume).toBeCloseTo(plain.volume, 3);
+    // let into a 0.4 mm pocket of the plate and 0.6 mm above it: 1.0 mm in all
+    expect(raised.textSize?.z).toBeCloseTo(1, 4);
+    // the plate is cut out for the text, the text fills the pocket: nothing overlaps
+    expect(raised.volume).toBeLessThan(plain.volume - 0.1);
+    expect(raised.overlap).toBeLessThan(1e-3);
+    // what is gone from the plate is the lower 0.4 of the 1.0 mm of text
+    expect(plain.volume - raised.volume).toBeCloseTo(raised.textVolume * 0.4, 2);
 
     const engraved = await build(
       bin(),
@@ -349,7 +359,7 @@ describe("E-09 symbols and uploaded SVG on the label", () => {
   it("puts a built-in symbol on the plate as its own body", async () => {
     const m = await buildWith(label({ symbol_mode: "raised", icon_size: 8 }));
     expect(m.symbol?.closed).toBe(true);
-    expect(m.symbol?.size.z).toBeCloseTo(0.6, 4);
+    expect(m.symbol?.size.z).toBeCloseTo(1, 4);
     expect(m.plateClosed).toBe(true);
   });
 
@@ -436,4 +446,33 @@ describe("E-09 the label sits flush in the bin: at most 0.1 mm of gap (owner, 9 
       });
     }
   }
+});
+
+describe("E-09 export: plate and text are ONE object with two parts", () => {
+  it("the 3MF has one build item made of two components, with their colours", async () => {
+    const { buildLabelModel } = await import("./model");
+    const l = label({ text_mode: "raised", text_string: "M3", text_color: "#112233" });
+    const model = buildLabelModel(
+      kernel,
+      bin(),
+      l,
+      await prepareAssets(labelAsLid(l), loaders),
+    );
+    expect(model.parts.map((p) => p.name)).toEqual(["plate", "text"]);
+    const xml = modelXml(
+      model.parts,
+      {
+        plate: l.plate_color,
+        lip: l.plate_color,
+        text: l.text_color,
+        symbol: l.symbol_color,
+      },
+      "Label",
+      "Label",
+    );
+    expect(xml.match(/<item /g)).toHaveLength(1);
+    expect(xml.match(/<component /g)).toHaveLength(2);
+    expect(xml).toContain("#112233");
+    expect(xml).toContain("#9DA39A");
+  });
 });

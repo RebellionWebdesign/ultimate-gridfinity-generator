@@ -246,7 +246,7 @@
     {/if}
   </ParamGroup>
 
-  <ParamGroup name="Label" summary={labelSummary}>
+  <ParamGroup name="Lid label" summary={labelSummary}>
     <Segmented label="Text" bind:value={p.text_mode} options={[...modes]} />
     {#if textOn}
       <Field label="Text" kind="text" bind:value={p.text_string} maxlength={40} />

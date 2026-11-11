@@ -4,6 +4,7 @@ import type { ModelMesh } from "../geometry/model";
 import type { SvgShapes } from "../geometry/svg";
 import type { BaseplateParams } from "../model/baseplateParams";
 import type { BinParams } from "../model/binParams";
+import type { Connectable } from "../gridfinity/connector";
 import type { LabelParams } from "../model/labelParams";
 import type { LidParams } from "../model/lidParams";
 import type { BuildRequest, BuildResponse } from "./protocol";
@@ -59,6 +60,10 @@ export class GeometryClient {
     labelSvg?: SvgShapes,
   ): { id: number; result: Promise<ModelMesh> } {
     return this.send((id) => ({ id, part: "bin", params, label, labelSvg }));
+  }
+
+  buildConnector(variant: Connectable): { id: number; result: Promise<ModelMesh> } {
+    return this.send((id) => ({ id, part: "connector", variant }));
   }
 
   buildLabel(

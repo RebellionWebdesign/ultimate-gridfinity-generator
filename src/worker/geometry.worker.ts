@@ -6,6 +6,7 @@ import { initKernel } from "../geometry/kernel";
 import {
   buildBaseplateModel,
   buildBinModel,
+  buildConnectorModel,
   buildLabelModel,
   buildModel,
 } from "../geometry/model";
@@ -68,18 +69,20 @@ self.onmessage = async (event: MessageEvent<BuildRequest>) => {
         ? buildBaseplateModel(await kernel, request.params, request.maxTile)
         : request.part === "bin"
           ? await buildBinWithLabel(await kernel, request)
-          : request.part === "label"
-            ? buildLabelModel(
-                await kernel,
-                request.bin,
-                request.params,
-                await prepareAssets(labelAsLid(request.params), loaders, request.svg),
-              )
-            : buildModel(
-                await kernel,
-                request.params,
-                await prepareAssets(request.params, loaders, request.svg),
-              );
+          : request.part === "connector"
+            ? buildConnectorModel(await kernel, request.variant)
+            : request.part === "label"
+              ? buildLabelModel(
+                  await kernel,
+                  request.bin,
+                  request.params,
+                  await prepareAssets(labelAsLid(request.params), loaders, request.svg),
+                )
+              : buildModel(
+                  await kernel,
+                  request.params,
+                  await prepareAssets(request.params, loaders, request.svg),
+                );
     for (const part of [
       ...model.parts,
       ...(model.extras ?? []),

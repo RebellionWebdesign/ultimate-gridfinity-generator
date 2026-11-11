@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { CONNECTOR_VARIANTS, variantOf } from "../gridfinity/connector";
   import {
     BASEPLATE_LIMITS,
     DEFAULT_BASEPLATE,
@@ -122,6 +123,23 @@
     <p class="t-caption">
       Solid: a closed floor under every cell. Skeleton: only a frame, which saves
       filament; pads stay under the magnets.
+    </p>
+  </ParamGroup>
+
+  <ParamGroup name="Connectable" summary={variantOf(p.connectable)?.name ?? "off"}>
+    <Segmented
+      label="Slots for connectors"
+      bind:value={p.connectable}
+      options={[
+        { value: "none", label: "Off" },
+        ...CONNECTOR_VARIANTS.map((v) => ({ value: v.id, label: v.name })),
+      ]}
+    />
+    <p class="t-caption">
+      Cuts a slot into every edge of the plate, one for every cell along the edge, in
+      the middle of it, {variantOf("edge_slot")?.slotLength} mm long. Two plates with the
+      same variant are joined by a connector; make it in the Connector tab. A plate that is
+      cut to fit the printer bed gets the slots on its cut edges too.
     </p>
   </ParamGroup>
 

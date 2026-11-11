@@ -6,6 +6,7 @@
   import OutputPanel from "./lib/OutputPanel.svelte";
   import BaseplatePanel from "./lib/BaseplatePanel.svelte";
   import BinPanel from "./lib/BinPanel.svelte";
+  import ConnectorPanel from "./lib/ConnectorPanel.svelte";
   import LabelPanel from "./lib/LabelPanel.svelte";
   import ParamsPanel from "./lib/ParamsPanel.svelte";
   import PreviewStage from "./lib/PreviewStage.svelte";
@@ -63,9 +64,11 @@
     editor.model?.tiles
       ? `${editor.model.tiles.length} baseplates · up to ${formatSize(editor.model.size)} mm each`
       : editor.model
-        ? editor.part === "label"
-          ? `Label for the ${editor.units[0]} × ${editor.units[1]} bin · ${formatSize(editor.model.size)} mm`
-          : `${editor.units[0]} × ${editor.units[1]} ${editor.noun} · ${formatSize(editor.model.size)} mm`
+        ? editor.part === "connector"
+          ? `Connector · ${formatSize(editor.model.size)} mm`
+          : editor.part === "label"
+            ? `Label for the ${editor.units[0]} × ${editor.units[1]} bin · ${formatSize(editor.model.size)} mm`
+            : `${editor.units[0]} × ${editor.units[1]} ${editor.noun} · ${formatSize(editor.model.size)} mm`
         : PART_NAME[editor.part],
   );
 
@@ -169,6 +172,7 @@
           { value: "baseplate", label: PART_NAME.baseplate },
           { value: "bin", label: PART_NAME.bin },
           { value: "label", label: PART_NAME.label },
+          { value: "connector", label: PART_NAME.connector },
           { value: "lid", label: "Lid" },
         ]}
       />
@@ -223,6 +227,8 @@
           <BinPanel />
         {:else if editor.part === "label"}
           <LabelPanel />
+        {:else if editor.part === "connector"}
+          <ConnectorPanel />
         {:else}
           <ParamsPanel />
         {/if}

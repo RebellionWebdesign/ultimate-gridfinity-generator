@@ -300,6 +300,8 @@ interface Element {
  * Text and symbol solids for a lid whose plate top is at `plateTop` and whose centre
  * is at (cx, cy). `assets` must hold the font, icons or SVG that the parameters need.
  * `radius` is the corner radius of the plate outline for the edge margin (a lid: 3.75).
+ * `sink`: raised elements also reach this deep into the plate, and the plate is cut out for
+ * them (the label: the text is let into the plate, not only laid on it). A lid has none.
  */
 export const buildLabel = (
   kernel: Kernel,
@@ -309,6 +311,7 @@ export const buildLabel = (
   plateTop: number,
   centre: Point,
   radius = LID_CORNER_RADIUS,
+  sink = 0,
 ): LabelBodies => {
   const result: LabelBodies = {
     cuts: [],
@@ -409,8 +412,10 @@ export const buildLabel = (
       result.cuts.push(extrude(shape, plateTop - p.flush_depth, p.flush_depth + 0.01));
       result[name] = extrude(shape, plateTop - p.flush_depth, p.flush_depth);
     } else if (mode === "raised") {
-      // stands on the plate; a separate body, top at plateTop + emboss_depth
-      result[name] = extrude(shape, plateTop, p.emboss_depth);
+      // stands on the plate; a separate body, top at plateTop + emboss_depth. With `sink` it
+      // is let into a pocket of the plate of the same shape.
+      if (sink > 0) result.cuts.push(extrude(shape, plateTop - sink, sink + 0.01));
+      result[name] = extrude(shape, plateTop - sink, sink + p.emboss_depth);
     }
   }
   return result;

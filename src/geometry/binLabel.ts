@@ -136,6 +136,7 @@ export const buildBinLabel = (
     thickness,
     [width / 2, depth / 2],
     labelCornerRadius(),
+    c("labelTextSink"),
   );
   if (text.cuts.length > 0) {
     plate = scope.add(kernel.Manifold.difference([plate, ...text.cuts]));

@@ -2,6 +2,7 @@ import type { ModelMesh } from "../geometry/model";
 import type { SvgShapes } from "../geometry/svg";
 import type { BaseplateParams } from "../model/baseplateParams";
 import type { BinParams } from "../model/binParams";
+import type { Connectable } from "../gridfinity/connector";
 import type { LabelParams } from "../model/labelParams";
 import type { LidParams } from "../model/lidParams";
 
@@ -29,6 +30,7 @@ export type BuildRequest =
       labelSvg?: SvgShapes;
     }
   /** the label of a bin: its size follows the bin */
+  | { id: number; part: "connector"; variant: Connectable }
   | { id: number; part: "label"; bin: BinParams; params: LabelParams; svg?: SvgShapes };
 
 export type BuildResponse =

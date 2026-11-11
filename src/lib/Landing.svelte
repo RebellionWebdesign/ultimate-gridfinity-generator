@@ -208,7 +208,7 @@
       <div class="hero-text">
         <h1 class="t-display">Gridfinity parts, generated in your browser.</h1>
         <p class="t-lead">
-          Set the size in cells, add magnets, a label and a symbol, and download a
+          Set the size in cells, add magnets, a lid label and a symbol, and download a
           print-ready STL or 3MF. The geometry is computed on your device; no parts or
           files are uploaded.
         </p>
@@ -337,8 +337,8 @@
           <span class="num n-s">01</span>
           <h3 class="t-heading">Set</h3>
           <p>
-            Size in grid cells, then foot, lip, magnets and label. Each change shows up
-            in the preview while you type.
+            Size in grid cells, then foot, lip, magnets and lid label. Each change shows
+            up in the preview while you type.
           </p>
           <div class="well-box">
             {#if live}<PartDemo kind="base" hue="var(--accent)" {cells} />{/if}

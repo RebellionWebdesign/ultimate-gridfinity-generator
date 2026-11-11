@@ -1,6 +1,7 @@
 // Turns the built model into a file and hands it to the user.
 import { writeStl } from "../export/stl";
-import { write3mf, write3mfPieces, type PartColours } from "../export/threeMf";
+import { write3mfPlates } from "../export/slicer3mf";
+import type { PartColours } from "../export/threeMf";
 import {
   shifted,
   type ModelMesh,
@@ -38,17 +39,25 @@ export const buildFile = async (
   colours: PartColours,
   title: string,
   bodyName: string,
+  bed: [number, number] = [256, 256],
 ): Promise<Blob> => {
   const data =
     format === "stl"
       ? new Uint8Array(writeStl(model.parts))
-      : await write3mf(model.parts, colours, title, bodyName);
+      : await write3mfPlates(
+          [{ parts: model.parts, name: title }],
+          colours,
+          bed,
+          title,
+          bodyName,
+        );
   return new Blob([data as BlobPart], { type: MIME[format] });
 };
 
 /**
- * Every piece of a split baseplate in ONE file, each as its own object, in a grid with one
- * bed per piece (see `tileOffsets`). A 3MF keeps the colours; an STL holds the meshes.
+ * Every piece of a split baseplate in ONE file, each as its own object. In a 3MF every piece
+ * has its own plate, in the plate grid of the bed; an STL holds the meshes in a grid with one
+ * bed per piece (see `tileOffsets`).
  */
 export const buildTilesFile = async (
   format: Format,
@@ -58,28 +67,25 @@ export const buildTilesFile = async (
   bodyName: string,
   bed: [number, number],
 ): Promise<Blob> => {
-  const offsets = tileOffsets(
-    tiles.map((tile) => centreOf(tile.parts)),
-    bed,
-  );
   const data =
     format === "stl"
       ? new Uint8Array(
           writeStl(
-            tiles.flatMap((tile, i) =>
-              tile.parts.map((part) =>
-                shifted(part, ...(offsets[i] as [number, number])),
-              ),
+            tileOffsets(
+              tiles.map((tile) => centreOf(tile.parts)),
+              bed,
+            ).flatMap((offset, i) =>
+              (tiles[i]?.parts ?? []).map((part) => shifted(part, ...offset)),
             ),
           ),
         )
-      : await write3mfPieces(
+      : await write3mfPlates(
           tiles.map((tile, i) => ({
             parts: tile.parts,
             name: `${title} ${i + 1} of ${tiles.length}`,
-            offset: offsets[i],
           })),
           colours,
+          bed,
           title,
           bodyName,
         );
@@ -97,6 +103,7 @@ export const buildTilesZip = async (
   title: string,
   bodyName: string,
   fileName: string,
+  bed: [number, number] = [256, 256],
 ): Promise<Blob> => {
   const entries = await Promise.all(
     tiles.map(async (tile, i) => ({
@@ -104,9 +111,10 @@ export const buildTilesZip = async (
       data:
         format === "stl"
           ? new Uint8Array(writeStl(tile.parts))
-          : await write3mf(
-              tile.parts,
+          : await write3mfPlates(
+              [{ parts: tile.parts, name: `${title} ${i + 1} of ${tiles.length}` }],
               colours,
+              bed,
               `${title} ${i + 1} of ${tiles.length}`,
               bodyName,
             ),
@@ -124,12 +132,20 @@ export const buildPartsZip = async (
   parts: readonly PartMesh[],
   fileName: string,
 ): Promise<Blob> => {
-  const archive = await zip(
-    parts.map((part) => ({
+  const note = [
+    "These STL files are the parts of ONE object (they keep their place to each other).",
+    "In Bambu Studio select all of them at once when you import, and answer YES to",
+    "'Load as a single object with multiple parts', so that Arrange keeps them together.",
+    "The 3MF export holds the same parts as one object already, with their colours.",
+    "",
+  ].join(String.fromCharCode(10));
+  const archive = await zip([
+    ...parts.map((part) => ({
       name: `${fileName}-${part.name}.stl`,
       data: new Uint8Array(writeStl([part])),
     })),
-  );
+    { name: "read-me.txt", data: new TextEncoder().encode(note) },
+  ]);
   return new Blob([archive as BlobPart], { type: "application/zip" });
 };
 

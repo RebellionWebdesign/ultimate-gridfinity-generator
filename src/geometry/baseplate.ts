@@ -4,6 +4,7 @@
 // from constants.
 import type { CrossSection, Manifold } from "manifold-3d";
 import { CONSTANTS, holeOffset } from "../gridfinity/constants";
+import { variantOf } from "../gridfinity/connector";
 import { baseOf, type BaseplateParams } from "../model/baseplateParams";
 import type { Kernel, Scope } from "./kernel";
 import { loft, ringPoints, type Layer } from "./loft";
@@ -226,6 +227,49 @@ export const tileRegions = (p: BaseplateParams, max: [number, number]): Tile[] =
   return regions;
 };
 
+/** The slot of a connector reaches this far beyond the plate edge, so the cut opens cleanly. */
+const SLOT_OVERSHOOT = 0.2;
+
+/**
+ * The slots for connectors (owner, 11 November 2026): one in every edge of the piece for
+ * every row or column of cells that reaches it, in the middle of that cell's edge. The slot
+ * of one plate and that of its neighbour are mirror images: together they hold a connector.
+ * Coordinates in mm from the plate corner.
+ */
+const slotCutters = (
+  kernel: Kernel,
+  scope: Scope,
+  p: BaseplateParams,
+  edges: { x0: number; y0: number; x1: number; y1: number },
+  rows: number[],
+  cols: number[],
+): Manifold[] => {
+  const variant = variantOf(p.connectable);
+  if (!variant) return [];
+  const length = variant.slotLength;
+  // profile (u inward from the edge, z up), the edge side pushed out a little
+  const profile = variant.slot.map(([u, z]): [number, number] => [
+    u === 0 ? -SLOT_OVERSHOOT : u,
+    z,
+  ]);
+  const prism = scope.add(
+    scope.add(new kernel.CrossSection([profile])).extrude(length),
+  );
+  // (u, z, along) -> (x = u, y = -along, z): a quarter turn about x; then the slot runs
+  // along y, centred on 0, its inward side towards +x (the left edge)
+  const upright = scope.add(
+    prism.transform([1, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1]),
+  );
+  const alongY = scope.add(upright.translate(0, length / 2, 0));
+  const place = (angle: number, x: number, y: number) =>
+    scope.add(scope.add(alongY.rotate(0, 0, angle)).translate(x, y, 0));
+  const { x0, y0, x1, y1 } = edges;
+  return [
+    ...rows.flatMap((cy) => [place(0, x0, cy), place(180, x1, cy)]),
+    ...cols.flatMap((cx) => [place(90, cx, y0), place(-90, cx, y1)]),
+  ];
+};
+
 /**
  * The baseplate, or only a `region` of it, centred on the middle of the whole plate (so
  * the pieces of a split plate fit together). A region keeps the cells that lie inside it
@@ -315,6 +359,22 @@ export const buildBaseplate = (
         );
       }
     }
+  }
+  if (p.connectable !== "none") {
+    const rows: number[] = [];
+    const cols: number[] = [];
+    for (let j = 0; j < p.units_y; j++) {
+      if (Array.from({ length: p.units_x }, (_, i) => i).some((i) => inside(i, j))) {
+        rows.push(gridY + cellCentre(j));
+      }
+    }
+    for (let i = 0; i < p.units_x; i++) {
+      if (Array.from({ length: p.units_y }, (_, j) => j).some((j) => inside(i, j))) {
+        cols.push(gridX + cellCentre(i));
+      }
+    }
+    const edges = region ?? { x0: 0, y0: 0, x1: w, y1: h };
+    cutters.push(...slotCutters(kernel, scope, p, edges, rows, cols));
   }
   const body = scope.add(kernel.Manifold.difference([block, ...cutters]));
   return move(body, -w / 2, -h / 2, 0);

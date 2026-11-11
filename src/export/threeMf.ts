@@ -21,7 +21,7 @@ const escapeXml = (text: string): string =>
 /** The colour as `#RRGGBB`. */
 const colourValue = (hex: string): string => hex.toUpperCase();
 
-const partName = (name: PartName, bodyName: string): string =>
+export const partName = (name: PartName, bodyName: string): string =>
   ({ plate: bodyName, lip: "Stacking lip", text: "Text", symbol: "Symbol" })[name];
 
 /** One object of a 3MF with several: its parts, its name, and where to put it (mm). */

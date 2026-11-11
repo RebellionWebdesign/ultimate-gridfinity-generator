@@ -7,6 +7,8 @@ import { validateLid, type LidParams } from "../model/lidParams";
 import { buildBaseplate, tileRegions } from "./baseplate";
 import { buildBin } from "./bin";
 import { buildBinLabel, placeInBin } from "./binLabel";
+import { buildConnector } from "./connector";
+import { variantOf, type Connectable } from "../gridfinity/connector";
 import { validateLabel, type LabelParams } from "../model/labelParams";
 import type { LabelAssets } from "./label";
 import { buildLid, type LabelArea } from "./lid";
@@ -162,6 +164,26 @@ export const buildBaseplateModel = (
       );
     }
     return { parts: preview, tiles, size, warnings: [] };
+  } finally {
+    scope.dispose();
+  }
+};
+
+/** A connector for baseplates (variant 1: owner, 11 November 2026). */
+export const buildConnectorModel = (
+  kernel: Kernel,
+  variant: Connectable,
+): ModelMesh => {
+  const v = variantOf(variant);
+  if (!v) throw new Error("Choose a connector variant.");
+  const scope = new Scope();
+  try {
+    return toModelMesh(
+      kernel,
+      scope,
+      [["plate", buildConnector(kernel, scope, v)]],
+      [],
+    );
   } finally {
     scope.dispose();
   }

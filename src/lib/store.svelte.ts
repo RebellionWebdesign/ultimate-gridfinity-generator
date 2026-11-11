@@ -8,12 +8,18 @@ import {
   type BinParams,
 } from "../model/binParams";
 import { drawerCheck, drawerMessage, lidMaxPlate } from "../geometry/drawer";
+import { variantOf } from "../gridfinity/connector";
 import {
   DEFAULT_BASEPLATE,
   validateBaseplate,
   type BaseplateParams,
 } from "../model/baseplateParams";
 import { DEFAULT_LABEL, validateLabel, type LabelParams } from "../model/labelParams";
+import {
+  DEFAULT_CONNECTOR,
+  validateConnector,
+  type ConnectorParams,
+} from "../model/connectorParams";
 import { DEFAULT_LID, validateLid, type LidParams } from "../model/lidParams";
 import {
   parseModel,
@@ -69,17 +75,19 @@ export type Status = "computing" | "ready" | "needs-fix" | "worker-error";
 
 class Editor {
   /** the part type being edited */
-  private current = $state<PartType>("lid");
+  private current = $state<PartType>("baseplate");
   params = $state<LidParams>({ ...DEFAULT_LID });
   baseplate = $state<BaseplateParams>({ ...DEFAULT_BASEPLATE });
   bin = $state<BinParams>(newBin());
   /** the label of the bin (E-09): its size follows the bin, so it always belongs to this bin */
   label = $state<LabelParams>({ ...DEFAULT_LABEL });
+  /** the connector of the baseplates (owner, 11 November 2026) */
+  connector = $state<ConnectorParams>({ ...DEFAULT_CONNECTOR });
   /** the bin view also shows the label in its place (a view setting, not saved) */
   showLabel = $state(false);
   /** the height of the drawer in mm: bins and lids are kept lower than it (0 = off) */
   drawerHeight = $state(0);
-  name = $state("Lid 1 × 1");
+  name = $state("Base 1 × 1");
   model = $state.raw<ModelMesh | null>(null);
   status = $state<Status>("computing");
   message = $state("");
@@ -94,7 +102,7 @@ class Editor {
   startedAt = $state(0);
   /** computing for longer than 150 ms: only then the preview dims and a progress shows */
   slow = $state(false);
-  fileName = $state("lid-1x1");
+  fileName = $state("base-1x1");
   modelId: string = crypto.randomUUID();
   /** the user's choice about saving in this browser; nothing is read or written before "yes" */
   consent = $state<Consent>(readConsent());
@@ -124,7 +132,12 @@ class Editor {
       renamed: false,
       modelId: crypto.randomUUID(),
     },
-    lid: { name: "", fileName: "", renamed: false, modelId: "" },
+    lid: {
+      name: "Lid 1 × 1",
+      fileName: "lid-1x1",
+      renamed: false,
+      modelId: crypto.randomUUID(),
+    },
     baseplate: {
       name: "Base 1 × 1",
       fileName: "base-1x1",
@@ -134,6 +147,12 @@ class Editor {
     label: {
       name: "Label 1 × 1",
       fileName: "label-1x1",
+      renamed: false,
+      modelId: crypto.randomUUID(),
+    },
+    connector: {
+      name: "Connector",
+      fileName: "connector",
       renamed: false,
       modelId: crypto.randomUUID(),
     },
@@ -164,7 +183,9 @@ class Editor {
   }
 
   /** The values of the part being edited. */
-  get active(): LidParams | BaseplateParams | BinParams | LabelParams {
+  get active():
+    LidParams | BaseplateParams | BinParams | LabelParams | ConnectorParams {
+    if (this.current === "connector") return this.connector;
     if (this.current === "label") return this.label;
     if (this.current === "baseplate") return this.baseplate;
     return this.current === "bin" ? this.bin : this.params;
@@ -237,13 +258,15 @@ class Editor {
   }
 
   errors = $derived(
-    this.current === "label"
-      ? validateLabel(this.bin, this.label)
-      : this.current === "baseplate"
-        ? validateBaseplate(this.baseplate)
-        : this.current === "bin"
-          ? validateBin(this.bin)
-          : validateLid(this.params),
+    this.current === "connector"
+      ? validateConnector(this.connector)
+      : this.current === "label"
+        ? validateLabel(this.bin, this.label)
+        : this.current === "baseplate"
+          ? validateBaseplate(this.baseplate)
+          : this.current === "bin"
+            ? validateBin(this.bin)
+            : validateLid(this.params),
   );
 
   /** hints about the current model (not errors), shown while it is ready */
@@ -271,33 +294,40 @@ class Editor {
 
   /** colours of the parts for the preview and the 3MF; a baseplate has only its plate */
   colours = $derived(
-    this.current === "label"
+    this.current === "connector"
       ? {
-          plate: this.label.plate_color,
-          lip: this.label.plate_color,
-          text: this.label.text_color,
-          symbol: this.label.symbol_color,
+          plate: this.connector.plate_color,
+          lip: this.connector.plate_color,
+          text: this.connector.plate_color,
+          symbol: this.connector.plate_color,
         }
-      : this.current === "bin"
+      : this.current === "label"
         ? {
-            plate: this.bin.plate_color,
-            lip: this.bin.lip_color,
-            text: this.bin.plate_color,
-            symbol: this.bin.plate_color,
+            plate: this.label.plate_color,
+            lip: this.label.plate_color,
+            text: this.label.text_color,
+            symbol: this.label.symbol_color,
           }
-        : this.current === "baseplate"
+        : this.current === "bin"
           ? {
-              plate: this.baseplate.plate_color,
-              lip: this.baseplate.plate_color,
-              text: this.baseplate.plate_color,
-              symbol: this.baseplate.plate_color,
+              plate: this.bin.plate_color,
+              lip: this.bin.lip_color,
+              text: this.bin.plate_color,
+              symbol: this.bin.plate_color,
             }
-          : {
-              plate: this.params.plate_color,
-              lip: this.params.lip_color,
-              text: this.params.text_color,
-              symbol: this.params.symbol_color,
-            },
+          : this.current === "baseplate"
+            ? {
+                plate: this.baseplate.plate_color,
+                lip: this.baseplate.plate_color,
+                text: this.baseplate.plate_color,
+                symbol: this.baseplate.plate_color,
+              }
+            : {
+                plate: this.params.plate_color,
+                lip: this.params.lip_color,
+                text: this.params.text_color,
+                symbol: this.params.symbol_color,
+              },
   );
 
   /** What the part is called in sentences: "lid" or "baseplate". */
@@ -310,7 +340,8 @@ class Editor {
    * changing that axis alone does not help), for the buttons of the bed-check alert.
    */
   bedFixes = $derived.by(() => {
-    if (!this.model || this.current === "label") return { x: 0, y: 0, height: 0 };
+    if (!this.model || this.current === "label" || this.current === "connector")
+      return { x: 0, y: 0, height: 0 };
     const units = this.units;
     const height = this.model.size[2];
     const fix = (axis: "x" | "y") => {
@@ -394,13 +425,15 @@ class Editor {
     const bin = $state.snapshot(this.bin) as BinParams;
     const label = $state.snapshot(this.label) as LabelParams;
     const errors =
-      this.current === "label"
-        ? validateLabel(bin, label)
-        : this.current === "baseplate"
-          ? validateBaseplate(plate)
-          : this.current === "bin"
-            ? validateBin(bin)
-            : validateLid(params);
+      this.current === "connector"
+        ? validateConnector(this.connector)
+        : this.current === "label"
+          ? validateLabel(bin, label)
+          : this.current === "baseplate"
+            ? validateBaseplate(plate)
+            : this.current === "bin"
+              ? validateBin(bin)
+              : validateLid(params);
     if (errors.length > 0) {
       this.status = "needs-fix";
       this.message = errors.join(" ");
@@ -439,17 +472,19 @@ class Editor {
       if (this.status === "computing") this.slow = true;
     }, 150);
     const { id, result } =
-      this.current === "label"
-        ? this.client.buildLabel(bin, label, this.labelSvgShapes)
-        : this.current === "baseplate"
-          ? this.client.buildBaseplate(plate, this.maxTile ?? undefined)
-          : this.current === "bin"
-            ? this.client.buildBin(
-                bin,
-                this.showLabel ? label : undefined,
-                this.labelSvgShapes,
-              )
-            : this.client.build(params, this.svgShapes);
+      this.current === "connector"
+        ? this.client.buildConnector(this.connector.variant)
+        : this.current === "label"
+          ? this.client.buildLabel(bin, label, this.labelSvgShapes)
+          : this.current === "baseplate"
+            ? this.client.buildBaseplate(plate, this.maxTile ?? undefined)
+            : this.current === "bin"
+              ? this.client.buildBin(
+                  bin,
+                  this.showLabel ? label : undefined,
+                  this.labelSvgShapes,
+                )
+              : this.client.build(params, this.svgShapes);
     this.latest = id;
     result.then(
       (model) => {
@@ -472,6 +507,9 @@ class Editor {
 
   /** Name for the model and the file, from what the lid is. */
   describe(): string {
+    if (this.current === "connector") {
+      return `Connector ${variantOf(this.connector.variant)?.name ?? ""}`.trim();
+    }
     if (this.current === "label") {
       const text = this.label.text_string.trim();
       const shown = this.label.text_mode !== "none" && text ? ` · ${text}` : "";
@@ -505,12 +543,17 @@ class Editor {
   autosave(): void {
     if (this.consent !== "yes") return;
     const json = this.toFileText();
-    // a label is saved with its bin: one entry, the bin's
-    const asLabel = this.current === "label";
+    // a label is saved with its bin and a connector with its baseplate: one entry, the host's
+    const host =
+      this.current === "label"
+        ? "bin"
+        : this.current === "connector"
+          ? "baseplate"
+          : undefined;
     const entry: StoredModel = {
-      id: asLabel ? this.parked.bin.modelId : this.modelId,
-      part: asLabel ? "bin" : this.current,
-      name: asLabel ? this.parked.bin.name : this.name,
+      id: host ? this.parked[host].modelId : this.modelId,
+      part: host ?? this.current,
+      name: host ? this.parked[host].name : this.name,
       savedAt: new Date().toISOString(),
       json,
     };
@@ -563,19 +606,19 @@ class Editor {
 
   /** The model as a file's text, for "Save file". */
   toFileText(): string {
+    if (this.current === "baseplate" || this.current === "connector") {
+      return serializeBaseplate(
+        this.current === "connector" ? this.parked.baseplate.name : this.name,
+        $state.snapshot(this.baseplate) as BaseplateParams,
+        this.drawerHeight,
+      );
+    }
     if (this.current === "bin" || this.current === "label") {
       return serializeBin(
         this.current === "label" ? this.parked.bin.name : this.name,
         $state.snapshot(this.bin) as BinParams,
         this.drawerHeight,
         $state.snapshot(this.label) as LabelParams,
-      );
-    }
-    if (this.current === "baseplate") {
-      return serializeBaseplate(
-        this.name,
-        $state.snapshot(this.baseplate) as BaseplateParams,
-        this.drawerHeight,
       );
     }
     return serializeModel(

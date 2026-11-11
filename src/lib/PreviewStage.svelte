@@ -305,8 +305,11 @@
   // The print bed is always dark, in light and dark mode (owner, 2 November 2026): the dark
   // theme's surface, line and grid values.
   const BED_FILL = "#222320";
-  const BED_EDGE = "#43453F";
-  const BED_GRID = "#2C2D2A";
+  /** the dark theme's accent: the bed outline and the 42 mm grid (owner, 11 November 2026) */
+  const BED_ACCENT = "#C2DB57";
+  /** the fine division in the dark grey: 7 mm, the height unit; 42 mm is six of them */
+  const BED_GRID = "#393A35";
+  const BED_STEP = 7;
   /** width of the red band around the bed when the part does not fit (mm) */
   const BED_BAND = 6;
 
@@ -356,7 +359,7 @@
       gridGroup.add(
         new LineSegments(
           lineGeometry(edge),
-          new LineBasicMaterial({ color: new Color(BED_EDGE) }),
+          new LineBasicMaterial({ color: new Color(BED_ACCENT) }),
         ),
       );
     }
@@ -389,12 +392,37 @@
       for (let k = -Math.floor(reachY / 42); k <= Math.floor(reachY / 42); k++) {
         points.push(...flat(-reachX, 42 * k, reachX, 42 * k, -0.05));
       }
+      if (bed) {
+        // on a bed: the fine division in the dark grey below, the 42 mm cells in the accent colour
+        const fine: number[] = [];
+        for (
+          let k = -Math.floor(reachX / BED_STEP);
+          k <= Math.floor(reachX / BED_STEP);
+          k++
+        ) {
+          if (k % 6 !== 0)
+            fine.push(...flat(BED_STEP * k, -reachY, BED_STEP * k, reachY, -0.06));
+        }
+        for (
+          let k = -Math.floor(reachY / BED_STEP);
+          k <= Math.floor(reachY / BED_STEP);
+          k++
+        ) {
+          if (k % 6 !== 0)
+            fine.push(...flat(-reachX, BED_STEP * k, reachX, BED_STEP * k, -0.06));
+        }
+        gridGroup.add(
+          new LineSegments(
+            lineGeometry(fine),
+            new LineBasicMaterial({ color: new Color(BED_GRID) }),
+          ),
+        );
+      }
       gridGroup.add(
         new LineSegments(
           lineGeometry(points),
           new LineBasicMaterial({
-            // on a bed the grid is dark as well; without one it follows the theme
-            color: bed ? BED_GRID : css("--stage-grid") || "#dadad3",
+            color: bed ? new Color(BED_ACCENT) : css("--stage-grid") || "#dadad3",
           }),
         ),
       );
@@ -407,7 +435,7 @@
       const material = item.material as LineBasicMaterial | MeshBasicMaterial;
       material.depthTest = false;
       material.depthWrite = false;
-      // in the order they were made: bed, outline, bars, grid
+      // in the order they were made: bed, outline, bars, fine grid, grid
       item.renderOrder = -100 + index;
     });
     draw();

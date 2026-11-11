@@ -49,6 +49,7 @@ describe("Gridfinity constants match the spec", () => {
     ["labelLugLength", 0.6],
     ["labelLugWidth", 7],
     ["labelLugOffset", 4.33],
+    ["labelTextSink", 0.4],
     ["labelLugChamfer", 0.3],
     ["labelLugClearance", 0.05],
   ];

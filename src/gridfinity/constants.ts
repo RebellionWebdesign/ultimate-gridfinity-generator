@@ -106,6 +106,11 @@ export const CONSTANTS = {
     source:
       "measured on the owner's drawing, 9 November 2026: from the rounded edge of the plate to the lug (4.33 + 7.00 + 2.67 = 14)",
   },
+  labelTextSink: {
+    value: 0.4,
+    source:
+      "owner, 9 November 2026: the text must be cut out of the plate, not only laid on it; the depth 0.4 mm (two layers, 0.6 mm of plate stay) was chosen by the agent, to be confirmed",
+  },
   labelLugChamfer: {
     value: 0.3,
     source:
