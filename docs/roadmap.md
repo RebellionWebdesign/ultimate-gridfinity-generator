@@ -24,6 +24,8 @@ Source: spec sections 2, 3, 6.2, 7 (incl. 7.3) and 9 (`docs/spec/gridfinity-gene
 | G | The MakerWorld script rebuilt from the web app: the OpenSCAD part for MakerWorld is made new on the basis of the app. MakerWorld lets users crowdfund software (owner checked on 4 November 2026; example: the Wall Art Generator) | Far future (owner, 4 November 2026) |
 | H | Tool inserts from a photo | Far future, idea only (owner, 4 November 2026) |
 
+**Version (owner, 11 November 2026): 1.0.0**, set in `package.json` (the editor shows it at the bottom left). Earlier version: 0.5.0.
+
 Postponed (spec section 2): the desktop app with Tauri or Electron, to phase F. Phases D, F and G are later; do not start them before the owner says so.
 
 ### Where we are and what comes next (8 November 2026)
