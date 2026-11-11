@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import {
     AmbientLight,
+    BoxGeometry,
     BufferAttribute,
     BufferGeometry,
     CanvasTexture,
@@ -35,7 +36,7 @@
   import { outwardOutline, plateOutline, type PlateShape } from "./plate";
   import Icon from "./Icon.svelte";
 
-  type View = "iso" | "top" | "front" | "under";
+  type View = "iso" | "top" | "front" | "under" | "right" | "back" | "left";
 
   let {
     model,
@@ -44,6 +45,7 @@
     bed,
     bedFits = true,
     units,
+    drawer = null,
     dimmed = false,
     theme,
   }: {
@@ -56,15 +58,30 @@
     /** the part fits the bed (also turned by 90 degrees); when not, a red band runs around the bed */
     bedFits?: boolean;
     units: [number, number];
+    /** the inside of the drawer in mm (width, depth, height; height 0: only the floor), drawn as a box */
+    drawer?: { x: number; y: number; z: number } | null;
     dimmed?: boolean;
     theme: string;
   } = $props();
 
   let canvas: HTMLCanvasElement;
   let host: HTMLDivElement;
-  let view = $state<View>("iso");
-  let showGrid = $state(true);
+  let view = $state<View | "custom">("iso");
+  let lastView: View | [number, number, number] = "iso";
   let showColours = $state(true);
+  /** the floor is an endless canvas in the design of the bed instead of the bed of the printer */
+  let endless = $state(false);
+  // the drawer box appears: the view changes to the endless canvas by itself (once)
+  let hadDrawer = false;
+  $effect(() => {
+    const has = drawer !== null;
+    if (has && !hadDrawer) {
+      endless = true;
+      // bring the whole box into view
+      if (camera) queueMicrotask(() => fit());
+    }
+    hadDrawer = has;
+  });
 
   let renderer: WebGLRenderer;
   let camera: PerspectiveCamera;
@@ -73,7 +90,8 @@
   const partsGroup = new Group();
   const gridGroup = new Group();
   const bandGroup = new Group();
-  scene.add(partsGroup, gridGroup, bandGroup);
+  const drawerGroup = new Group();
+  scene.add(partsGroup, gridGroup, bandGroup, drawerGroup);
 
   const css = (name: string) =>
     getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -81,7 +99,161 @@
   let frame = 0;
   const draw = () => {
     cancelAnimationFrame(frame);
-    frame = requestAnimationFrame(() => renderer?.render(scene, camera));
+    frame = requestAnimationFrame(() => {
+      renderer?.render(scene, camera);
+      turnCube();
+    });
+  };
+
+  /**
+   * The view cube: six faces, each a button that turns the camera to that side. Its faces
+   * are placed with the rotation of the camera, so the cube shows how the model is seen.
+   * `up` is the direction that is up on the face, `normal` points out of it.
+   */
+  const CUBE = 76;
+  type Direction = [number, number, number];
+  const cubeFaces: {
+    id: View;
+    label: string;
+    normal: [number, number, number];
+    up: [number, number, number];
+  }[] = [
+    { id: "front", label: "Front", normal: [0, -1, 0], up: [0, 0, 1] },
+    { id: "back", label: "Back", normal: [0, 1, 0], up: [0, 0, 1] },
+    { id: "right", label: "Right", normal: [1, 0, 0], up: [0, 0, 1] },
+    { id: "left", label: "Left", normal: [-1, 0, 0], up: [0, 0, 1] },
+    { id: "top", label: "Top", normal: [0, 0, 1], up: [0, 1, 0] },
+    { id: "under", label: "Under", normal: [0, 0, -1], up: [0, -1, 0] },
+  ];
+  const faceElements: HTMLDivElement[] = [];
+
+  /** "Front · Top" for a direction that is a face, an edge or a corner of the cube */
+  const nameOf = (d: Direction) =>
+    [
+      d[0] > 0 ? "Right" : d[0] < 0 ? "Left" : "",
+      d[1] > 0 ? "Back" : d[1] < 0 ? "Front" : "",
+      d[2] > 0 ? "Top" : d[2] < 0 ? "Under" : "",
+    ]
+      .filter(Boolean)
+      .join(" · ");
+
+  /**
+   * The 3 x 3 zones of a face: the middle is the face itself, the four zones along its sides
+   * are the edges (a view from between two faces), the four corners are the corner views
+   * (from between three). The same edge or corner lies on two or three faces: all of its
+   * zones share the direction, and light up together.
+   */
+  const zonesOf = (face: (typeof cubeFaces)[number]) => {
+    const normal = new Vector3(...face.normal);
+    const up = new Vector3(...face.up);
+    const right = up.clone().cross(normal);
+    const zones: { key: string; dir: Direction; centre: boolean; name: string }[] = [];
+    for (const b of [1, 0, -1]) {
+      for (const a of [-1, 0, 1]) {
+        const d = normal
+          .clone()
+          .add(right.clone().multiplyScalar(a))
+          .add(up.clone().multiplyScalar(b));
+        const dir: Direction = [d.x, d.y, d.z];
+        zones.push({
+          key: dir.join(","),
+          dir,
+          centre: a === 0 && b === 0,
+          name: nameOf(dir),
+        });
+      }
+    }
+    return zones;
+  };
+  const cubeZones = cubeFaces.map(zonesOf);
+  let hot = $state("");
+  let cubeDragged = false;
+
+  /** Drag on the cube turns the camera round the model, like a drag on the preview. */
+  const cubeDown = (event: PointerEvent) => {
+    if (event.button !== 0) return;
+    cubeDragged = false;
+    let x = event.clientX;
+    let y = event.clientY;
+    const move = (e: PointerEvent) => {
+      const dx = e.clientX - x;
+      const dy = e.clientY - y;
+      if (
+        !cubeDragged &&
+        Math.hypot(e.clientX - event.clientX, e.clientY - event.clientY) < 4
+      )
+        return;
+      cubeDragged = true;
+      x = e.clientX;
+      y = e.clientY;
+      cancelAnimationFrame(animation);
+      const offset = camera.position.clone().sub(controls.target);
+      const r = offset.length();
+      const theta = Math.atan2(offset.y, offset.x) - dx * 0.01;
+      const phi = Math.min(
+        Math.PI - 0.02,
+        Math.max(0.02, Math.acos(offset.z / r) - dy * 0.01),
+      );
+      camera.position.set(
+        controls.target.x + r * Math.sin(phi) * Math.cos(theta),
+        controls.target.y + r * Math.sin(phi) * Math.sin(theta),
+        controls.target.z + r * Math.cos(phi),
+      );
+      controls.update();
+      draw();
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+  const zoneClick = (
+    face: (typeof cubeFaces)[number],
+    zone: { dir: Direction; centre: boolean },
+  ) => {
+    if (cubeDragged) return;
+    setView(zone.centre ? face.id : zone.dir);
+  };
+  const turnCube = () => {
+    if (!camera) return;
+    camera.updateMatrixWorld();
+    const view = camera.matrixWorldInverse;
+    // world direction -> CSS direction of the cube (x right, y down, z towards the viewer)
+    const css = (v: Vector3): Vector3 => {
+      const c = v.clone().transformDirection(view);
+      return new Vector3(c.x, -c.y, c.z);
+    };
+    cubeFaces.forEach((face, i) => {
+      const element = faceElements[i];
+      if (!element) return;
+      const normal = new Vector3(...face.normal);
+      const up = new Vector3(...face.up);
+      const right = up.clone().cross(normal);
+      const ex = css(right);
+      const ey = css(up.clone().negate());
+      const ez = css(normal);
+      const t = ez.clone().multiplyScalar(CUBE / 2);
+      element.style.transform = `matrix3d(${[
+        ex.x,
+        ex.y,
+        ex.z,
+        0,
+        ey.x,
+        ey.y,
+        ey.z,
+        0,
+        ez.x,
+        ez.y,
+        ez.z,
+        0,
+        t.x,
+        t.y,
+        t.z,
+        1,
+      ].join(",")})`;
+    });
   };
 
   const DIRECTIONS: Record<View, [number, number, number, number]> = {
@@ -89,6 +261,9 @@
     top: [0, -0.0001, 1, 1],
     front: [0, -1, 0.0001, 1],
     under: [0, -0.0001, -1, 1],
+    right: [1, 0, 0.0001, 1],
+    back: [0, 1, 0.0001, 1],
+    left: [-1, 0, 0.0001, 1],
   };
 
   /**
@@ -105,7 +280,9 @@
         r = Math.max(r, Math.hypot(p[i] ?? 0, p[i + 1] ?? 0, (p[i + 2] ?? 0) - z0));
       }
     }
+    // the endless canvas zooms out as far as the bed does
     if (bed) r = Math.max(r, Math.hypot(bed.x / 2, bed.y / 2, z0) + 15);
+    if (drawer) r = Math.max(r, Math.hypot(drawer.x / 2, drawer.y / 2, drawer.z) + 15);
     return r;
   };
 
@@ -131,16 +308,19 @@
 
   const radius = () => {
     const [x, y, z] = model?.size ?? [41.5, 41.5, 7];
-    return Math.hypot(x, y, z) / 2;
+    const inDrawer = drawer ? Math.hypot(drawer.x, drawer.y, drawer.z) / 2 : 0;
+    return Math.max(Math.hypot(x, y, z) / 2, inDrawer);
   };
 
   const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
   let animation = 0;
 
   /** Eases the camera to a view in 240 ms; at once with reduced motion (ui-spec 3.2). */
-  const setView = (next: View, animate = true) => {
-    view = next;
-    const [dx, dy, dz] = DIRECTIONS[next];
+  const setView = (next: View | Direction, animate = true) => {
+    // a name, or a direction from the view cube (an edge or a corner)
+    lastView = next;
+    view = typeof next === "string" ? next : "custom";
+    const [dx, dy, dz] = typeof next === "string" ? DIRECTIONS[next] : next;
     const distance = (radius() / Math.sin((camera.fov * Math.PI) / 360)) * 1.15;
     const target = new Vector3(0, 0, model ? model.size[2] / 2 : 3.5);
     const direction = new Vector3(dx, dy, dz).normalize();
@@ -174,7 +354,7 @@
     animation = requestAnimationFrame(step);
   };
 
-  const fit = () => setView(view);
+  const fit = () => setView(lastView);
 
   const rebuild = () => {
     for (const child of [...partsGroup.children]) {
@@ -317,6 +497,39 @@
   const BED_STEP = 7;
   /** width of the red band around the bed when the part does not fit (mm) */
   const BED_BAND = 6;
+  /** the endless canvas: how far the grid runs from the origin in every direction (mm) */
+  const ENDLESS_REACH = 2520;
+
+  /** The inside of the drawer as a box in the dark grey of the bed grid. */
+  const rebuildDrawer = () => {
+    for (const child of [...drawerGroup.children]) {
+      drawerGroup.remove(child);
+      const item = child as Mesh | LineSegments;
+      item.geometry.dispose();
+      (item.material as MeshBasicMaterial | LineBasicMaterial).dispose();
+    }
+    if (drawer) {
+      const height = Math.max(drawer.z, 0.1);
+      const geometry = new BoxGeometry(drawer.x, drawer.y, height);
+      geometry.translate(0, 0, height / 2);
+      const faces = new Mesh(
+        geometry,
+        new MeshBasicMaterial({
+          color: new Color(BED_GRID),
+          transparent: true,
+          opacity: 0.4,
+          side: DoubleSide,
+          depthWrite: false,
+        }),
+      );
+      const edges = new LineSegments(
+        new EdgesGeometry(geometry),
+        new LineBasicMaterial({ color: new Color(BED_GRID) }),
+      );
+      drawerGroup.add(faces, edges);
+    }
+    draw();
+  };
 
   const rebuildGrid = () => {
     for (const child of [...gridGroup.children]) {
@@ -344,8 +557,13 @@
       return geometry;
     };
 
+    // the endless canvas has no bed: the grid of the bed, drawn far out in every direction
+    const shown = endless ? undefined : bed;
+    const designed = !!shown || endless;
+
     // the print bed of the chosen printer, centred on the origin (the lid centre is X0 Y0)
-    if (bed) {
+    if (shown) {
+      const bed = shown;
       const outline = plateOutline(bed.plate ?? { cornerRadius: 0 }, bed.x, bed.y).map(
         ([x, y]) => new Vector2(x, y),
       );
@@ -371,7 +589,8 @@
 
     // the part does not fit the bed: the red bars of the label margin run around the whole
     // bed, just outside its edge
-    if (bed && !bedFits) {
+    if (shown && !bedFits) {
+      const bed = shown;
       const inner = plateOutline(bed.plate ?? { cornerRadius: 0 }, bed.x, bed.y);
       const band = new Shape(
         outwardOutline(inner, BED_BAND).map(([x, y]) => new Vector2(x, y)),
@@ -385,14 +604,18 @@
       gridGroup.add(bars);
     }
 
-    if (showGrid) {
+    {
       // the 42 mm grid passes through the origin; on a bed it stays inside the bed
       const [nx, ny] = units;
       const span = Math.max(nx, ny) + 3;
-      const [reachX, reachY] = bed ? [bed.x / 2, bed.y / 2] : [span * 42, span * 42];
+      const [reachX, reachY] = shown
+        ? [shown.x / 2, shown.y / 2]
+        : endless
+          ? [ENDLESS_REACH, ENDLESS_REACH]
+          : [span * 42, span * 42];
       const points: number[] = [];
       // on a bed the lines close to its edge are left out: they ran just inside the outline
-      const margin = bed ? BED_LINE_MARGIN : 0;
+      const margin = shown ? BED_LINE_MARGIN : 0;
       for (let k = -Math.floor(reachX / 42); k <= Math.floor(reachX / 42); k++) {
         if (Math.abs(42 * k) > reachX - margin) continue;
         points.push(...flat(42 * k, -reachY, 42 * k, reachY, -0.05));
@@ -401,7 +624,7 @@
         if (Math.abs(42 * k) > reachY - margin) continue;
         points.push(...flat(-reachX, 42 * k, reachX, 42 * k, -0.05));
       }
-      if (bed) {
+      if (designed) {
         // on a bed: the fine division in the dark grey below, the 42 mm cells in the accent colour
         const fine: number[] = [];
         for (
@@ -431,7 +654,7 @@
         new LineSegments(
           lineGeometry(points),
           new LineBasicMaterial({
-            color: bed ? new Color(BED_ACCENT) : css("--stage-grid") || "#dadad3",
+            color: designed ? new Color(BED_ACCENT) : css("--stage-grid") || "#dadad3",
           }),
         ),
       );
@@ -476,6 +699,7 @@
     observer.observe(host);
     resize();
     setView("iso", false);
+    turnCube();
     return () => {
       observer.disconnect();
       controls.dispose();
@@ -500,12 +724,16 @@
     if (renderer && deps.length > 0) rebuildBand();
   });
   $effect(() => {
-    const deps = [model, bed];
+    const deps = [model, bed, endless, drawer];
     if (controls && deps.length > 0) updateLimits();
   });
   $effect(() => {
-    const deps = [showGrid, units[0], units[1], theme, bed, bedFits];
+    const deps = [units[0], units[1], theme, bed, bedFits, endless];
     if (renderer && deps.length > 0) rebuildGrid();
+  });
+  $effect(() => {
+    const deps = [drawer?.x, drawer?.y, drawer?.z, theme];
+    if (renderer && deps.length > 0) rebuildDrawer();
   });
 
   const views: { id: View; label: string }[] = [
@@ -525,15 +753,15 @@
       return;
     const index = Number(event.key) - 1;
     if (event.key === "f") fit();
-    else if (event.key === "g") showGrid = !showGrid;
     else if (event.key === "c") showColours = !showColours;
+    else if (event.key === "e") endless = !endless;
     else if (views[index]) setView(views[index].id);
   };
 </script>
 
 <svelte:window onkeydown={onkey} />
 
-<div class="stage" bind:this={host}>
+<div class="stage" class:endless bind:this={host}>
   <canvas
     bind:this={canvas}
     class:dimmed
@@ -544,40 +772,25 @@
     <button
       type="button"
       class="icon"
+      aria-label="Isometric view (1)"
+      title="Isometric view (1)"
+      onclick={() => setView("iso")}
+    >
+      <Icon name="box" />
+    </button>
+    <button
+      type="button"
+      class="icon"
       aria-label="Fit to view (F)"
       title="Fit to view (F)"
       onclick={fit}
     >
       <Icon name="maximize" />
     </button>
-    <span class="sep"></span>
-    {#each views as v, i (v.id)}
-      <button
-        type="button"
-        class:on={view === v.id}
-        aria-pressed={view === v.id}
-        title="{v.label} ({i + 1})"
-        onclick={() => setView(v.id)}
-      >
-        {v.label}
-      </button>
-    {/each}
-    <span class="sep"></span>
     <button
       type="button"
-      class="icon"
-      class:on={showGrid}
-      aria-pressed={showGrid}
-      aria-label="Floor grid (G)"
-      title="Floor grid (G)"
-      onclick={() => (showGrid = !showGrid)}
-    >
-      <Icon name="grid-2x2" />
-    </button>
-    <button
-      type="button"
-      class="icon"
-      class:on={showColours}
+      class="icon colours"
+      class:off={!showColours}
       aria-pressed={showColours}
       aria-label="Part colours (C)"
       title="Part colours (C)"
@@ -585,6 +798,44 @@
     >
       <Icon name="palette" />
     </button>
+    <button
+      type="button"
+      class="icon"
+      aria-pressed={endless}
+      aria-label={endless ? "Show the print bed (E)" : "Endless canvas (E)"}
+      title={endless ? "Show the print bed (E)" : "Endless canvas (E)"}
+      onclick={() => (endless = !endless)}
+    >
+      <Icon name={endless ? "rectangle-horizontal" : "infinity"} />
+    </button>
+  </div>
+  <div
+    class="cube"
+    role="group"
+    aria-label="View cube: click a face, an edge or a corner, or drag to turn the view"
+    style:--cube="{CUBE}px"
+    onpointerdown={cubeDown}
+  >
+    {#each cubeFaces as face, i (face.id)}
+      <div class="face" bind:this={faceElements[i]}>
+        {#each cubeZones[i] ?? [] as zone (zone.key)}
+          <button
+            type="button"
+            class="zone"
+            class:centre={zone.centre}
+            class:on={zone.centre && view === face.id}
+            class:hot={hot === zone.key}
+            title="{zone.name} view"
+            aria-label="{zone.name} view"
+            onpointerenter={() => (hot = zone.key)}
+            onpointerleave={() => (hot = "")}
+            onclick={() => zoneClick(face, zone)}
+          >
+            {zone.centre ? face.label : ""}
+          </button>
+        {/each}
+      </div>
+    {/each}
   </div>
   <p class="hint t-caption">Drag to orbit · Shift-drag to pan · scroll to zoom</p>
 </div>
@@ -596,6 +847,10 @@
     height: 100%;
     background: var(--stage);
     overflow: hidden;
+  }
+  /* the endless canvas is dark like the bed, in light and dark mode */
+  .stage.endless {
+    background: #222320;
   }
   canvas {
     width: 100%;
@@ -609,8 +864,7 @@
   .toolbar {
     position: absolute;
     bottom: var(--space-4);
-    left: 50%;
-    transform: translateX(-50%);
+    left: var(--space-4);
     display: flex;
     align-items: center;
     gap: var(--space-1);
@@ -633,18 +887,77 @@
   .toolbar button.icon {
     padding: 0;
   }
-  .toolbar button.on {
+  .toolbar button:hover {
     background: var(--surface-2);
   }
-  .sep {
-    width: 1px;
-    height: var(--space-5);
-    background: var(--line);
-    margin: 0 var(--space-1);
+  /* part colours off: the icon is struck through (no background change) */
+  .toolbar button.colours {
+    position: relative;
+  }
+  .toolbar button.colours.off::after {
+    content: "";
+    position: absolute;
+    width: 24px;
+    height: 2px;
+    border-radius: 1px;
+    background: currentColor;
+    transform: rotate(-45deg);
+    box-shadow: 0 0 0 2px var(--surface);
+  }
+  .cube {
+    position: absolute;
+    /* the corners of the turned cube reach beyond its box: in the first (iso) view they stand
+       16 px from the right and the bottom edge, as far as the toolbar from the left and bottom */
+    right: 32px;
+    bottom: 38px;
+    width: var(--cube);
+    height: var(--cube);
+    transform-style: preserve-3d;
+  }
+  .face {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: var(--cube);
+    height: var(--cube);
+    transform-origin: calc(var(--cube) / 2) calc(var(--cube) / 2);
+    backface-visibility: hidden;
+    display: grid;
+    grid-template-columns: 22% 1fr 22%;
+    grid-template-rows: 22% 1fr 22%;
+    border: 1px solid var(--line-strong);
+    background: var(--line-strong);
+    gap: 1px;
+    touch-action: none;
+  }
+  .zone {
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: var(--surface-2);
+    color: var(--text-2);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: grab;
+  }
+  .zone.centre {
+    background: var(--surface);
+  }
+  .zone.hot,
+  .zone.on {
+    background: var(--accent-soft);
+    color: var(--text);
+  }
+  .cube:active .zone {
+    cursor: grabbing;
   }
   .hint {
     position: absolute;
-    right: var(--space-4);
+    left: 50%;
+    transform: translateX(-50%);
     bottom: var(--space-4);
   }
   @media (max-width: 1199px) {

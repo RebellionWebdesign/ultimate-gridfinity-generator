@@ -22,7 +22,27 @@
   let busy = $state(false);
   let failure = $state("");
 
-  const sizeText = $derived(editor.model ? formatSize(editor.model.size) : "—");
+  const sizeParts = $derived(editor.model?.size.map((v) => formatSize([v])) ?? []);
+  /** The numbers that cause a warning turn red: width, depth, height. */
+  const tooBig = $derived.by((): [boolean, boolean, boolean] => {
+    const size = editor.model?.size;
+    if (!size) return [false, false, false];
+    const [w, d] = size as [number, number, number];
+    const [bx, by] = editor.bed;
+    let width = false;
+    let depth = false;
+    if (editor.bedCheck && editor.bedResult && !editor.bedResult.footprintFits) {
+      // the way round (as it is or turned by 90 degrees) with fewer numbers too large
+      const normal = [w > bx, d > by];
+      const turned = [w > by, d > bx];
+      const count = (a: boolean[]) => a.filter(Boolean).length;
+      [width, depth] = count(turned) < count(normal) ? turned : normal;
+    }
+    const height =
+      (editor.bedCheck && !!editor.bedResult && !editor.bedResult.heightFits) ||
+      (editor.drawer.on && !editor.drawer.fits);
+    return [width as boolean, depth as boolean, height];
+  });
   const picker = hasSavePicker();
 
   const save = async () => {
@@ -104,7 +124,12 @@
 <div class="output">
   <section>
     <h2 class="t-label">Size</h2>
-    <p class="n-l n" aria-live="polite">{sizeText}</p>
+    <p class="n-l n" aria-live="polite">
+      {#if sizeParts.length === 0}—{/if}
+      {#each sizeParts as part, i (i)}
+        {#if i > 0}&nbsp;×&nbsp;{/if}<span class:bad={tooBig[i]}>{part}</span>
+      {/each}
+    </p>
     {#if editor.model?.tiles}
       <p class="t-caption">
         {editor.model.tiles.length} pieces; this is the largest one. Each piece fits the printer.
@@ -235,6 +260,8 @@
     <button
       type="button"
       class="primary"
+      class:warn={editor.blocked === "Fix the size to export" ||
+        editor.warnings.length > 0}
       disabled={!!editor.blocked || busy}
       onclick={save}
     >
@@ -253,6 +280,9 @@
 </div>
 
 <style>
+  .bad {
+    color: var(--error);
+  }
   .output {
     display: flex;
     flex-direction: column;
@@ -359,5 +389,10 @@
     background: var(--surface-3);
     color: var(--text-3);
     cursor: not-allowed;
+  }
+  /* a warning is showing: the text is red, as the number in the size */
+  .primary.warn,
+  .primary.warn:disabled {
+    color: var(--error);
   }
 </style>

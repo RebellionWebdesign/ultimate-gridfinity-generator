@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount, untrack } from "svelte";
+  import { cubicOut } from "svelte/easing";
+  import { fade, fly } from "svelte/transition";
   import ConsentDialog from "./lib/ConsentDialog.svelte";
   import Icon from "./lib/Icon.svelte";
   import LicencesDialog from "./lib/LicencesDialog.svelte";
@@ -59,18 +61,38 @@
 
   onMount(() => editor.requestBuild());
 
-  const elapsed = $derived(((now - editor.startedAt) / 1000).toFixed(1));
-  const readout = $derived(
-    editor.model?.tiles
-      ? `${editor.model.tiles.length} baseplates · up to ${formatSize(editor.model.size)} mm each`
-      : editor.model
-        ? editor.part === "connector"
-          ? `Connector · ${formatSize(editor.model.size)} mm`
-          : editor.part === "label"
-            ? `Label for the ${editor.units[0]} × ${editor.units[1]} bin · ${formatSize(editor.model.size)} mm`
-            : `${editor.units[0]} × ${editor.units[1]} ${editor.noun} · ${formatSize(editor.model.size)} mm`
-        : PART_NAME[editor.part],
+  /** The drawer from "Fit a drawer": width and depth of the plate, and its height if given. */
+  const drawerBox = $derived(
+    editor.baseplate.plate_min_x_mm > 0 &&
+      editor.baseplate.plate_min_y_mm > 0 &&
+      ["baseplate", "bin", "lid"].includes(editor.part)
+      ? {
+          x: editor.baseplate.plate_min_x_mm,
+          y: editor.baseplate.plate_min_y_mm,
+          z: editor.drawerHeight,
+        }
+      : null,
   );
+
+  // Errors and warnings slide in from the right edge, straight to the left (500 ms, none
+  // with reduced motion).
+  const slideTime = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 500;
+  const slideIn = (node: Element) =>
+    fly(node, {
+      x: (node as HTMLElement).offsetWidth + 24,
+      y: 0,
+      duration: slideTime,
+      easing: cubicOut,
+      opacity: 1,
+    });
+
+  /** Only the first sentence of a warning; the numbers are in the panel, in red. */
+  const firstSentence = (text: string) => {
+    const first = text.split(/\.\s+(?=[A-Z])/)[0] ?? text;
+    return first.endsWith(".") ? first : `${first}.`;
+  };
+
+  const elapsed = $derived(((now - editor.startedAt) / 1000).toFixed(1));
 
   const onDrop = async (event: DragEvent) => {
     event.preventDefault();
@@ -121,16 +143,7 @@
             stroke-width="3"
           />
           <path d="M20 3v34M3 20h34" stroke="currentColor" stroke-width="3" />
-          <rect
-            x="20"
-            y="3"
-            width="17"
-            height="17"
-            rx="8"
-            fill="var(--accent)"
-            stroke="currentColor"
-            stroke-width="3"
-          />
+          <path d="M23 6h6a5 5 0 0 1 5 5v6H23z" fill="var(--accent)" />
         </svg>
       </a>
       <div class="name">
@@ -259,28 +272,34 @@
           : undefined}
         bedFits={!editor.bedResult || editor.bedResult.fits}
         units={editor.units}
+        drawer={drawerBox}
         dimmed={editor.slow && !!editor.model}
         theme={theme.value}
       />
-      <p class="pill readout n-s">{readout}</p>
       <div class="live" aria-live="polite">
         {#if editor.slow}
           <p class="pill status n-s">
             <Icon name="loader-circle" size={16} /> Computing… {elapsed} s
           </p>
-        {:else if editor.status === "needs-fix" || editor.status === "worker-error"}
-          <p class="pill status n-s">
-            <Icon name="triangle-alert" size={16} /> Needs a fix
-          </p>
         {/if}
       </div>
       {#if editor.status === "needs-fix"}
-        <div class="alert top" role="alert">
+        <div
+          class="alert top"
+          role="alert"
+          in:slideIn
+          out:fade={{ duration: slideTime / 2 }}
+        >
           <Icon name="triangle-alert" />
-          <p>{editor.message}</p>
+          <p>{firstSentence(editor.message)}</p>
         </div>
       {:else if editor.status === "worker-error"}
-        <div class="alert centre" role="alert">
+        <div
+          class="alert centre"
+          role="alert"
+          in:slideIn
+          out:fade={{ duration: slideTime / 2 }}
+        >
           <Icon name="triangle-alert" />
           <div>
             <p>The preview stopped. {editor.message}</p>
@@ -291,20 +310,21 @@
           </div>
         </div>
       {:else if editor.bedCheck && editor.bedResult && !editor.bedResult.fits && editor.model}
-        <div class="alert top" role="alert">
+        <div
+          class="alert top"
+          role="alert"
+          in:slideIn
+          out:fade={{ duration: slideTime / 2 }}
+        >
           <Icon name="triangle-alert" />
           <div>
             {#if !editor.bedResult.footprintFits}
-              <p>
-                This {editor.noun} does not fit {editor.printer}. It is
-                {formatSize(editor.model.size.slice(0, 2))} mm wide and deep, the printable
-                area is {editor.bed[0]} × {editor.bed[1]} mm, also when turned 90°.
-              </p>
+              <p>This {editor.noun} does not fit {editor.printer}.</p>
             {/if}
             {#if !editor.bedResult.heightFits}
               <p>
                 Z check: this {editor.noun} is {formatSize([editor.model.size[2]])} mm tall,
-                {editor.printer} is only {editor.bed[2]} mm high. It does not fit like this.
+                {editor.printer} is only {editor.bed[2]} mm high.
               </p>
             {/if}
             <div class="fixes">
@@ -340,17 +360,21 @@
                   Set Depth to {editor.bedFixes.y}
                 </button>
               {/if}
-              <button type="button" onclick={() => (editor.bedCheck = false)}>
-                Turn the bed check off
-              </button>
             </div>
           </div>
         </div>
       {:else if editor.warnings.length > 0}
-        <div class="alert top warn" role="status">
+        <div
+          class="alert top warn"
+          role="status"
+          in:slideIn
+          out:fade={{ duration: slideTime / 2 }}
+        >
           <Icon name="triangle-alert" />
           <div>
-            {#each editor.warnings as warning (warning)}<p>{warning}</p>{/each}
+            {#each editor.warnings as warning (warning)}<p>
+                {firstSentence(warning)}
+              </p>{/each}
             {#if editor.drawer.on && !editor.drawer.fits && ((editor.part === "bin" && editor.drawer.binFitsAtAll) || (editor.part === "lid" && editor.drawer.lidFitsAtAll))}
               <div class="fixes">
                 <button type="button" onclick={() => editor.fitHeightToDrawer()}>
@@ -511,6 +535,8 @@
   .preview {
     position: relative;
     min-height: 0;
+    /* a message slides in from behind the panel on the right, not over it */
+    overflow: hidden;
   }
   .pill {
     position: absolute;
@@ -523,9 +549,6 @@
     border-radius: var(--radius-round);
     background: var(--surface);
     box-shadow: var(--shadow-float);
-  }
-  .readout {
-    left: var(--space-4);
   }
   .live {
     display: contents;
@@ -556,10 +579,9 @@
     color: var(--warning);
   }
   .alert.top {
-    top: var(--space-9);
-    left: 50%;
-    transform: translateX(-50%);
-    width: calc(100% - var(--space-7));
+    top: var(--space-4);
+    right: var(--space-4);
+    width: min(520px, calc(100% - var(--space-7)));
   }
   .alert.centre {
     top: 50%;

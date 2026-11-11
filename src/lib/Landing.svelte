@@ -169,16 +169,7 @@
           stroke-width="3"
         />
         <path d="M20 3v34M3 20h34" stroke="currentColor" stroke-width="3" />
-        <rect
-          x="20"
-          y="3"
-          width="17"
-          height="17"
-          rx="8"
-          fill="var(--accent)"
-          stroke="currentColor"
-          stroke-width="3"
-        />
+        <path d="M23 6h6a5 5 0 0 1 5 5v6H23z" fill="var(--accent)" />
       </svg>
       <span class="t-strong">Ultimate Gridfinity Generator</span>
     </a>
@@ -575,16 +566,7 @@
                 stroke-width="3"
               />
               <path d="M20 3v34M3 20h34" stroke="currentColor" stroke-width="3" />
-              <rect
-                x="20"
-                y="3"
-                width="17"
-                height="17"
-                rx="8"
-                fill="currentColor"
-                stroke="currentColor"
-                stroke-width="3"
-              />
+              <path d="M23 6h6a5 5 0 0 1 5 5v6H23z" fill="currentColor" />
             </svg>
           </span>
           <h3 class="t-heading">Source available</h3>

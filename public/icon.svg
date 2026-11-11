@@ -10,6 +10,6 @@
   <g fill="none" stroke-width="3">
     <rect class="line" x="3" y="3" width="34" height="34" rx="8"/>
     <path class="line" d="M20 3v34M3 20h34"/>
-    <rect class="cell" x="20" y="3" width="17" height="17" rx="8"/>
+    <path class="cell" stroke="none" d="M23 6h6a5 5 0 0 1 5 5v6H23z"/>
   </g>
 </svg>

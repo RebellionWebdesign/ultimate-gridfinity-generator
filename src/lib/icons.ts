@@ -11,7 +11,9 @@ import rotateCcw from "lucide-static/icons/rotate-ccw.svg?raw";
 import chevronRight from "lucide-static/icons/chevron-right.svg?raw";
 import chevronDown from "lucide-static/icons/chevron-down.svg?raw";
 import maximize from "lucide-static/icons/maximize.svg?raw";
-import grid2x2 from "lucide-static/icons/grid-2x2.svg?raw";
+import box from "lucide-static/icons/box.svg?raw";
+import infinity from "lucide-static/icons/infinity.svg?raw";
+import rectangleHorizontal from "lucide-static/icons/rectangle-horizontal.svg?raw";
 import palette from "lucide-static/icons/palette.svg?raw";
 import triangleAlert from "lucide-static/icons/triangle-alert.svg?raw";
 import info from "lucide-static/icons/info.svg?raw";
@@ -40,7 +42,9 @@ export const icons = {
   "chevron-right": chevronRight,
   "chevron-down": chevronDown,
   maximize: maximize,
-  "grid-2x2": grid2x2,
+  box: box,
+  infinity: infinity,
+  "rectangle-horizontal": rectangleHorizontal,
   palette: palette,
   "triangle-alert": triangleAlert,
   info: info,
