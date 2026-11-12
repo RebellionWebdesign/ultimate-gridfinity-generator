@@ -15,8 +15,11 @@ const c = (name: keyof typeof CONSTANTS): number => CONSTANTS[name].value;
 const CYLINDER_SEGMENTS = 40;
 /** Corner radius of the skeleton openings (script BP_OPEN_R). */
 const OPENING_RADIUS = 3;
-/** Segments of a full circle at that radius (OpenSCAD's default for R3). */
-const OPENING_SEGMENTS = 10;
+/**
+ * Segments of a full circle at that radius. The script gets 10 from OpenSCAD's default for R3,
+ * which turns each corner into a visible bevel; 40 matches the magnet pockets and is smooth.
+ */
+const OPENING_SEGMENTS = 40;
 /** Material around the centre pocket, so a 5.2 mm pocket gives a 14 mm square (script). */
 const CENTRE_PAD_WALL = 4.4;
 const CENTRE_PAD_RADIUS = 3;
@@ -154,7 +157,29 @@ const skeletonOpening = (
     ? scope.add(kernel.CrossSection.difference(window, stays))
     : window;
   const inward = scope.add(open.offset(-OPENING_RADIUS, "Round", 2, OPENING_SEGMENTS));
-  return scope.add(inward.offset(OPENING_RADIUS, "Round", 2, OPENING_SEGMENTS));
+  const rounded = scope.add(
+    inward.offset(OPENING_RADIUS, "Round", 2, OPENING_SEGMENTS),
+  );
+  // The corners of the window itself keep the radius of the pocket floor, so the opening
+  // follows the same curve as the rim of the pocket (rounding would make them R3).
+  const half = (c("grid") - 2 * c("baseplateBottomInset")) / 2;
+  const zones = [-1, 1].flatMap((sx) =>
+    [-1, 1].map((sy) =>
+      scope.add(
+        kernel.CrossSection.square([OPENING_RADIUS, OPENING_RADIUS]).translate(
+          sx > 0 ? half - OPENING_RADIUS : -half,
+          sy > 0 ? half - OPENING_RADIUS : -half,
+        ),
+      ),
+    ),
+  );
+  const corners = scope.add(
+    kernel.CrossSection.intersection([
+      open,
+      scope.add(kernel.CrossSection.union(zones)),
+    ]),
+  );
+  return scope.add(kernel.CrossSection.union([rounded, corners]));
 };
 
 /** A part of the plate, in mm from the plate corner (the whole plate when left out). */
