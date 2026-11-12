@@ -828,15 +828,6 @@
     </button>
     <button
       type="button"
-      class="icon fit"
-      aria-label="Fit to view (F)"
-      title="Fit to view (F)"
-      onclick={fit}
-    >
-      <Icon name="maximize" />
-    </button>
-    <button
-      type="button"
       class="icon colours"
       class:off={!showColours}
       aria-pressed={showColours}
@@ -986,9 +977,6 @@
   @media (max-width: 719px) {
     .part-pick {
       display: block;
-    }
-    .toolbar button.fit {
-      display: none;
     }
   }
   .cube {
