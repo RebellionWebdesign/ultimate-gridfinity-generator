@@ -10,6 +10,7 @@ import plus from "lucide-static/icons/plus.svg?raw";
 import rotateCcw from "lucide-static/icons/rotate-ccw.svg?raw";
 import chevronRight from "lucide-static/icons/chevron-right.svg?raw";
 import chevronDown from "lucide-static/icons/chevron-down.svg?raw";
+import chevronUp from "lucide-static/icons/chevron-up.svg?raw";
 import maximize from "lucide-static/icons/maximize.svg?raw";
 import box from "lucide-static/icons/box.svg?raw";
 import infinity from "lucide-static/icons/infinity.svg?raw";
@@ -41,6 +42,7 @@ export const icons = {
   "rotate-ccw": rotateCcw,
   "chevron-right": chevronRight,
   "chevron-down": chevronDown,
+  "chevron-up": chevronUp,
   maximize: maximize,
   box: box,
   infinity: infinity,

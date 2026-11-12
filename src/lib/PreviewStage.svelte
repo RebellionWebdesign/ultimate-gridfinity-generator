@@ -35,6 +35,16 @@
   import type { ModelMesh, PartName } from "../geometry/model";
   import { outwardOutline, plateOutline, type PlateShape } from "./plate";
   import Icon from "./Icon.svelte";
+  import { PART_NAME, type PartType } from "./parts";
+  import { editor } from "./store.svelte";
+
+  // the part choice of the narrow layout (the switch in the top bar is hidden there)
+  const partChoices: PartType[] = ["baseplate", "bin", "label", "connector", "lid"];
+  let partMenu = $state(false);
+  const choosePart = (part: PartType) => {
+    editor.part = part;
+    partMenu = false;
+  };
 
   type View = "iso" | "top" | "front" | "under" | "right" | "back" | "left";
 
@@ -759,7 +769,16 @@
   };
 </script>
 
-<svelte:window onkeydown={onkey} />
+<svelte:window
+  onkeydown={(event) => {
+    if (event.key === "Escape") partMenu = false;
+    onkey(event);
+  }}
+  onpointerdown={(event) => {
+    if (partMenu && !(event.target as HTMLElement).closest(".part-pick"))
+      partMenu = false;
+  }}
+/>
 
 <div class="stage" class:endless bind:this={host}>
   <canvas
@@ -769,6 +788,35 @@
     ondblclick={fit}
   ></canvas>
   <div class="toolbar" role="toolbar" aria-label="Preview">
+    <div class="part-pick">
+      <button
+        type="button"
+        class="part-btn"
+        aria-haspopup="true"
+        aria-expanded={partMenu}
+        aria-label="Part: {PART_NAME[editor.part]}. Choose a part"
+        onclick={() => (partMenu = !partMenu)}
+      >
+        {PART_NAME[editor.part]}
+        <Icon name="chevron-up" />
+      </button>
+      {#if partMenu}
+        <ul class="part-menu" aria-label="Part type">
+          {#each partChoices as part (part)}
+            <li>
+              <button
+                type="button"
+                class:on={editor.part === part}
+                aria-current={editor.part === part}
+                onclick={() => choosePart(part)}
+              >
+                {PART_NAME[part]}
+              </button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </div>
     <button
       type="button"
       class="icon"
@@ -780,7 +828,7 @@
     </button>
     <button
       type="button"
-      class="icon"
+      class="icon fit"
       aria-label="Fit to view (F)"
       title="Fit to view (F)"
       onclick={fit}
@@ -903,6 +951,45 @@
     background: currentColor;
     transform: rotate(-45deg);
     box-shadow: 0 0 0 2px var(--surface);
+  }
+  /* the part choice: only in the narrow layout, where the top bar has no switch; it opens upwards */
+  .part-pick {
+    display: none;
+    position: relative;
+  }
+  .toolbar button.part-btn {
+    gap: var(--space-2);
+    grid-auto-flow: column;
+    font-weight: 600;
+  }
+  .part-menu {
+    position: absolute;
+    bottom: calc(100% + var(--space-2));
+    left: 0;
+    min-width: 160px;
+    margin: 0;
+    padding: var(--space-1);
+    list-style: none;
+    background: var(--surface);
+    border-radius: var(--radius-panel);
+    box-shadow: var(--shadow-float);
+  }
+  .part-menu button {
+    width: 100%;
+    justify-content: start;
+    text-align: left;
+    place-items: center start;
+  }
+  .part-menu button.on {
+    background: var(--accent-soft);
+  }
+  @media (max-width: 719px) {
+    .part-pick {
+      display: block;
+    }
+    .toolbar button.fit {
+      display: none;
+    }
   }
   .cube {
     position: absolute;
