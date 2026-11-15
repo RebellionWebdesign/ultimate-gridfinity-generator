@@ -24,7 +24,7 @@ Source: spec sections 2, 3, 6.2, 7 (incl. 7.3) and 9 (`docs/spec/gridfinity-gene
 | G | The MakerWorld script rebuilt from the web app: the OpenSCAD part for MakerWorld is made new on the basis of the app. MakerWorld lets users crowdfund software (owner checked on 4 November 2026; example: the Wall Art Generator) | Far future (owner, 4 November 2026) |
 | H | Tool inserts from a photo | Far future, idea only (owner, 4 November 2026) |
 
-**Version (owner, 11 November 2026): 1.1.0**, set in `package.json` (the editor shows it at the bottom left). 1.0.0 was the release of 11 November 2026 (earlier: 0.5.0). 1.1.0 adds the label on any wall of the bin: back, front, left or right, so a bin that is not square takes it on the long or the short side (the plate is as long as that side). With a scoop (at the front) the label is at the opposite wall automatically and the other walls are switched off; with dividers the user only decides whether there is a label.
+**Version (owner, 15 November 2026): 1.2.0**, set in `package.json` (the editor shows it at the bottom left). 1.0.0 was the release of 11 November 2026 (earlier: 0.5.0). 1.2.0 adds sets (ADR-0009): several bins on one baseplate, each with its label and lid, an assembly tab, and export as a set or loose. 1.1.0 adds the label on any wall of the bin: back, front, left or right, so a bin that is not square takes it on the long or the short side (the plate is as long as that side). With a scoop (at the front) the label is at the opposite wall automatically and the other walls are switched off; with dividers the user only decides whether there is a label.
 
 Postponed (spec section 2): the desktop app with Tauri or Electron, to phase F. Phases D, F and G are later; do not start them before the owner says so.
 
