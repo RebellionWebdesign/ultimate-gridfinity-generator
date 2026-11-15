@@ -125,8 +125,15 @@
 
 <div class="panel">
   <ParamGroup name="Size" summary={sizeSummary}>
-    {@render num("units_x", "Width", "cells")}
-    {@render num("units_y", "Depth", "cells")}
+    {#if editor.inSet}
+      <p class="t-caption">
+        This lid belongs to a bin of the plate and has its size: {editor.bin.units_x} × {editor
+          .bin.units_y} cells. Change the size in the bin's tab.
+      </p>
+    {:else}
+      {@render num("units_x", "Width", "cells")}
+      {@render num("units_y", "Depth", "cells")}
+    {/if}
   </ParamGroup>
 
   <ParamGroup name="Shape" summary={shapeSummary}>

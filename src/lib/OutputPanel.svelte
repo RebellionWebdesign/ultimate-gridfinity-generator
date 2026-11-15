@@ -19,6 +19,18 @@
   let format = $state<Format>("3mf");
   /** a split baseplate: all pieces in one file, or one file per piece in a ZIP */
   let tileFile = $state<"one" | "zip">("one");
+  /** the choice for a file of several pieces; a set says "as a set" or "loose" */
+  const pieceModes = $derived<readonly (readonly ["one" | "zip", string])[]>(
+    editor.part === "assembly"
+      ? [
+          ["one", "As a set"],
+          ["zip", "Loose"],
+        ]
+      : [
+          ["one", "One file"],
+          ["zip", "ZIP of files"],
+        ],
+  );
   let busy = $state(false);
   let failure = $state("");
 
@@ -218,18 +230,20 @@
       {format === "3mf"
         ? editor.part === "baseplate"
           ? "The baseplate is one part with its colour. Your slicer may ask which filament the colour gets."
-          : editor.part === "label"
-            ? "The label plate and its text stay separate parts of one object, each with its colour. Only the label is in this file; the bin is exported on its own."
-            : editor.part === "bin"
-              ? "The bin and its stacking lip stay separate parts of one object when the lip has its own colour. Your slicer may ask which filament each colour gets."
-              : "Lid, text and symbol stay separate parts of one object, each with its colour. Your slicer may ask which filament each colour gets."
+          : editor.part === "assembly"
+            ? "The baseplate and every bin, label and lid are objects of their own, each with its colours. Your slicer may ask which filament each colour gets."
+            : editor.part === "label"
+              ? "The label plate and its text stay separate parts of one object, each with its colour. Only the label is in this file; the bin is exported on its own."
+              : editor.part === "bin"
+                ? "The bin and its stacking lip stay separate parts of one object when the lip has its own colour. Your slicer may ask which filament each colour gets."
+                : "Lid, text and symbol stay separate parts of one object, each with its colour. Your slicer may ask which filament each colour gets."
         : editor.part === "label"
           ? "Geometry only: no colours. Plate and text are separate STL files in one ZIP, so the slicer can give each a filament. Import them together and say yes to one object with several parts; the 3MF already holds them as one object."
           : "Geometry only: no colours, all parts in one file."}
     </p>
     {#if editor.model?.tiles}
       <div class="seg" role="group" aria-label="Pieces in the file">
-        {#each [["one", "One file"], ["zip", "ZIP of files"]] as const as [value, text] (value)}
+        {#each pieceModes as [value, text] (value)}
           <button
             type="button"
             class:on={tileFile === value}
@@ -241,11 +255,13 @@
         {/each}
       </div>
       <p class="t-caption">
-        {tileFile === "one"
-          ? format === "3mf"
-            ? "Every piece is its own object on its own plate: Bambu Studio puts them on the plates. OrcaSlicer loads them without plates: press Arrange there."
-            : "Every piece is its own object, one printer bed apart. In Bambu Studio press A (Arrange) to put them on plates."
-          : "One file per piece in a ZIP; import them one by one."}
+        {editor.part === "assembly" && tileFile === "zip"
+          ? "Loose: every part (the baseplate, each bin, label and lid) is a file of its own in a ZIP; import them one by one."
+          : tileFile === "one"
+            ? format === "3mf"
+              ? "Every piece is its own object on its own plate: Bambu Studio puts them on the plates. OrcaSlicer loads them without plates: press Arrange there."
+              : "Every piece is its own object, one printer bed apart. In Bambu Studio press A (Arrange) to put them on plates."
+            : "One file per piece in a ZIP; import them one by one."}
       </p>
     {/if}
     <label class="t-label" for="file-name">File name</label>
@@ -261,6 +277,7 @@
       type="button"
       class="primary"
       class:warn={editor.blocked === "Fix the size to export" ||
+        editor.blocked === "Fix the places to export" ||
         editor.warnings.length > 0}
       disabled={!!editor.blocked || busy}
       onclick={save}

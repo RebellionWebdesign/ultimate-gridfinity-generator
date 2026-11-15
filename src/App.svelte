@@ -6,7 +6,9 @@
   import Icon from "./lib/Icon.svelte";
   import LicencesDialog from "./lib/LicencesDialog.svelte";
   import OutputPanel from "./lib/OutputPanel.svelte";
+  import AssemblyPanel from "./lib/AssemblyPanel.svelte";
   import BaseplatePanel from "./lib/BaseplatePanel.svelte";
+  import BinsBar from "./lib/BinsBar.svelte";
   import BinPanel from "./lib/BinPanel.svelte";
   import ConnectorPanel from "./lib/ConnectorPanel.svelte";
   import LabelPanel from "./lib/LabelPanel.svelte";
@@ -44,6 +46,9 @@
       editor.maxTile,
       editor.drawerHeight,
       editor.showLabel,
+      // a set: every bin, its place and its lid are part of what is built and saved
+      editor.binsNow,
+      editor.baseplate,
     ]);
     untrack(() => {
       editor.syncName();
@@ -65,7 +70,7 @@
   const drawerBox = $derived(
     editor.baseplate.plate_min_x_mm > 0 &&
       editor.baseplate.plate_min_y_mm > 0 &&
-      ["baseplate", "bin", "lid"].includes(editor.part)
+      ["baseplate", "bin", "lid", "assembly"].includes(editor.part)
       ? {
           x: editor.baseplate.plate_min_x_mm,
           y: editor.baseplate.plate_min_y_mm,
@@ -184,9 +189,12 @@
         options={[
           { value: "baseplate", label: PART_NAME.baseplate },
           { value: "bin", label: PART_NAME.bin },
-          { value: "label", label: PART_NAME.label },
-          { value: "connector", label: PART_NAME.connector },
-          { value: "lid", label: "Lid" },
+          ...(["label", "connector", "lid"] as const).map((value) => ({
+            value,
+            label: PART_NAME[value],
+            ...editor.partLock(value),
+          })),
+          { value: "assembly", label: PART_NAME.assembly },
         ]}
       />
     </div>
@@ -234,8 +242,13 @@
     <h1 class="visually-hidden">Ultimate Gridfinity Generator: {editor.noun} editor</h1>
     <aside class="params" aria-label="Parameters">
       <div class="panel-body">
+        {#if editor.part === "bin" || editor.part === "label" || editor.part === "lid"}
+          <BinsBar />
+        {/if}
         {#if editor.part === "baseplate"}
           <BaseplatePanel />
+        {:else if editor.part === "assembly"}
+          <AssemblyPanel />
         {:else if editor.part === "bin"}
           <BinPanel />
         {:else if editor.part === "label"}
@@ -425,7 +438,7 @@
   }
   .topbar {
     display: grid;
-    grid-template-columns: 1fr minmax(0, 296px) 1fr;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
     gap: var(--space-4);
     padding: 0 var(--space-4);
@@ -668,6 +681,12 @@
     }
     .export-btn {
       display: inline-flex;
+    }
+  }
+  /* six part tabs need room: below 900 px the buttons of the top bar lose their words */
+  @media (max-width: 899px) {
+    .long {
+      display: none;
     }
   }
   @media (max-width: 719px) {

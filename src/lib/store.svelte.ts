@@ -27,8 +27,19 @@ import {
   serializeBaseplate,
   serializeBin,
   serializeModel,
+  serializeSet,
   type ModelFile,
 } from "../model/modelFile";
+import {
+  allPlacementProblems,
+  binName,
+  firstFreeSpot,
+  lidOfBin,
+  newSetBin,
+  placementProblems,
+  type SetBin,
+} from "../model/setParams";
+import type { AssemblyRequestBin } from "../worker/protocol";
 import { GeometryClient, InputBuildError } from "../worker/client";
 import { readConsent, writeConsent, type Consent } from "./consent";
 import { disableOffline, enableOffline } from "./offline";
@@ -48,8 +59,8 @@ const MAX_STORED = 12;
 
 export interface StoredModel {
   id: string;
-  /** missing in entries saved before baseplates existed: those are lids */
-  part?: PartType;
+  /** missing in entries saved before baseplates existed: those are lids; "set" is a baseplate with its bins */
+  part?: PartType | "set";
   name: string;
   savedAt: string;
   json: string;
@@ -91,6 +102,21 @@ class Editor {
   }
   /** the bin view also shows the label in its place (a view setting, not saved) */
   showLabel = $state(false);
+
+  // The set (ADR-0009): one baseplate, several bins. The bin being edited lives in the working
+  // copies (`bin`, `label`, `params` for its lid, and the place below); `slots` holds all the
+  // bins, and `syncActive` writes the working copies back into their slot.
+  setId: string = crypto.randomUUID();
+  slots = $state<SetBin[]>([newSetBin()]);
+  activeBin = $state(0);
+  /** the place of the bin being edited: first column and row (0-based), and turned by 90 degrees */
+  col = $state(0);
+  row = $state(0);
+  turned = $state(false);
+  /** the bin being edited has a lid */
+  lidOn = $state(false);
+  /** why the last "add a bin" was refused; empty when it worked */
+  addNote = $state("");
   /** the height of the drawer in mm: bins and lids are kept lower than it (0 = off) */
   drawerHeight = $state(0);
   name = $state("Base 1 × 1");
@@ -132,6 +158,12 @@ class Editor {
     PartType,
     { name: string; fileName: string; renamed: boolean; modelId: string }
   > = {
+    assembly: {
+      name: "Set 1 × 1 · 1 bin",
+      fileName: "set-1x1-1-bin",
+      renamed: false,
+      modelId: crypto.randomUUID(),
+    },
     bin: {
       name: "Bin 1 × 1 × 3",
       fileName: "bin-1x1x3",
@@ -186,6 +218,157 @@ class Editor {
     // making a label means the bin gets the slots for its lugs
     if (next === "label" && this.bin.label_slot === "none")
       this.bin.label_slot = "back";
+    // in a set the lid has the size of its bin
+    if (next === "lid" && this.inSet) {
+      this.params.units_x = this.bin.units_x;
+      this.params.units_y = this.bin.units_y;
+    }
+  }
+
+  /**
+   * A tab that needs something switched on in the left panel is locked until it is: the lid,
+   * the label of the bin and the connector. `title` is the tooltip that says where. The tab
+   * being edited is never locked, so a user who switches the part off can still leave it by
+   * the tabs.
+   */
+  partLock(part: PartType): { disabled?: boolean; title?: string } {
+    if (part === this.current) return {};
+    const reason =
+      part === "lid" && !this.lidOn
+        ? "Switch on “This bin has a lid” in the left panel (Bin tab) to use a lid."
+        : part === "label" && this.bin.label_slot === "none"
+          ? "Choose a wall under “Label slots” in the left panel (Bin tab) to use a label."
+          : part === "connector" && this.baseplate.connectable === "none"
+            ? "Switch on “Connectable” in the left panel (Base tab) to use connectors."
+            : "";
+    return reason ? { disabled: true, title: reason } : {};
+  }
+
+  /** The plate holds more than one bin: the lid follows the size of its bin. */
+  get inSet(): boolean {
+    return this.slots.length > 1;
+  }
+
+  /** The cells of the plate that bins may use. */
+  get grid() {
+    return { cols: this.baseplate.units_x, rows: this.baseplate.units_y };
+  }
+
+  /** The bins as they are now: the bin being edited with its working values. */
+  binsNow = $derived.by(
+    (): SetBin[] =>
+      this.slots.map((slot, i) =>
+        i === this.activeBin
+          ? {
+              id: slot.id,
+              name: this.binNameNow(),
+              bin: $state.snapshot(this.bin) as BinParams,
+              label: $state.snapshot(this.label) as LabelParams,
+              lid: $state.snapshot(this.params) as LidParams,
+              lidOn: this.lidOn,
+              col: this.col,
+              row: this.row,
+              turned: this.turned,
+            }
+          : $state.snapshot(slot),
+      ) as SetBin[],
+  );
+
+  /** What is wrong with the places of the bins, one list per bin. */
+  placement = $derived(placementProblems(this.grid, this.binsNow));
+
+  /** Problems of the bin being edited, in words. */
+  get activeProblems(): string[] {
+    return this.placement[this.activeBin] ?? [];
+  }
+
+  /** All the bins are placed and no cell is left for another one: the plate is full. */
+  setFull = $derived(firstFreeSpot(this.grid, this.binsNow) === null);
+
+  /** The name of the bin being edited (it is kept with the bin's tab, or parked on another). */
+  private binNameNow(): string {
+    return this.current === "bin" ? this.name : this.parked.bin.name;
+  }
+
+  /** Writes the working copies back into the slot of the bin being edited. */
+  syncActive(): void {
+    const now = this.binsNow[this.activeBin];
+    if (now) this.slots[this.activeBin] = now;
+  }
+
+  /** Makes the bin in slot `i` the one being edited. */
+  private loadSlot(i: number): void {
+    const slot = this.slots[i];
+    if (!slot) return;
+    this.activeBin = i;
+    Object.assign(this.bin, $state.snapshot(slot.bin));
+    Object.assign(this.label, $state.snapshot(slot.label));
+    Object.assign(this.params, $state.snapshot(slot.lid));
+    this.lidOn = slot.lidOn;
+    this.col = slot.col;
+    this.row = slot.row;
+    this.turned = slot.turned;
+    // a name that is only the size follows the size, as before; a chosen name stays
+    const chosen = slot.name !== binName(slot.bin);
+    if (this.current === "bin") {
+      this.name = slot.name;
+      this.fileName = slug(slot.name);
+      this.renamed = chosen;
+      this.modelId = slot.id;
+    } else {
+      this.parked.bin = {
+        name: slot.name,
+        fileName: slug(slot.name),
+        renamed: chosen,
+        modelId: slot.id,
+      };
+    }
+    if (this.inSet) {
+      this.params.units_x = this.bin.units_x;
+      this.params.units_y = this.bin.units_y;
+    }
+    this.restoreLabelSvg();
+    this.restoreSvg(this.svgName);
+    this.requestBuild();
+  }
+
+  /** Edit another bin of the set. */
+  selectBin(i: number): void {
+    if (i === this.activeBin || !this.slots[i]) return;
+    this.syncActive();
+    this.loadSlot(i);
+  }
+
+  /**
+   * A new bin of one cell on the first free cell of the plate. Refused (false, and `addNote`
+   * says why) when the plate is full: full is full.
+   */
+  addBin(): boolean {
+    this.syncActive();
+    const spot = firstFreeSpot(this.grid, this.binsNow);
+    if (!spot) {
+      this.addNote = `The plate is full: all ${this.grid.cols * this.grid.rows} cells are in use. Make a bin smaller, remove one, or make the baseplate larger.`;
+      return false;
+    }
+    this.addNote = "";
+    const fresh = newSetBin(spot.col, spot.row);
+    this.slots.push(fresh);
+    this.loadSlot(this.slots.length - 1);
+    return true;
+  }
+
+  /** Removes a bin; the last one stays. */
+  removeBin(i: number): boolean {
+    if (this.slots.length <= 1 || !this.slots[i]) return false;
+    this.syncActive();
+    this.slots.splice(i, 1);
+    this.addNote = "";
+    if (i < this.activeBin) {
+      this.activeBin -= 1;
+    } else if (i === this.activeBin) {
+      this.loadSlot(Math.min(i, this.slots.length - 1));
+    }
+    return true;
   }
 
   /** The values of the part being edited. */
@@ -193,7 +376,8 @@ class Editor {
     LidParams | BaseplateParams | BinParams | LabelParams | ConnectorParams {
     if (this.current === "connector") return this.connector;
     if (this.current === "label") return this.label;
-    if (this.current === "baseplate") return this.baseplate;
+    if (this.current === "baseplate" || this.current === "assembly")
+      return this.baseplate;
     return this.current === "bin" ? this.bin : this.params;
   }
 
@@ -206,12 +390,15 @@ class Editor {
 
   /** How much smaller than its cells the part is: 0.5 mm for a lid, none for a baseplate. */
   private get tolerance(): number {
-    return this.current === "baseplate" ? 0 : LID_TOLERANCE;
+    return this.current === "baseplate" || this.current === "assembly"
+      ? 0
+      : LID_TOLERANCE;
   }
 
   /** The printable width and depth when the baseplate is cut to fit the bed, else null. */
   get maxTile(): [number, number] | null {
-    return this.current === "baseplate" && this.baseplate.split_to_bed
+    return (this.current === "baseplate" || this.current === "assembly") &&
+      this.baseplate.split_to_bed
       ? [this.printerInfo.bed[0], this.printerInfo.bed[1]]
       : null;
   }
@@ -270,17 +457,41 @@ class Editor {
         ? validateLabel(this.bin, this.label)
         : this.current === "baseplate"
           ? validateBaseplate(this.baseplate)
-          : this.current === "bin"
-            ? validateBin(this.bin)
-            : validateLid(this.params),
+          : this.current === "assembly"
+            ? this.setErrors()
+            : this.current === "bin"
+              ? validateBin(this.bin)
+              : validateLid(this.params),
   );
+
+  /** What stops the whole set from being built: the plate, every bin and every lid in use. */
+  private setErrors(): string[] {
+    const out = [...validateBaseplate(this.baseplate)];
+    for (const b of this.binsNow) {
+      out.push(...validateBin(b.bin).map((m) => `${b.name}: ${m}`));
+      if (b.lidOn)
+        out.push(
+          ...validateLid(lidOfBin(b.bin, b.lid)).map((m) => `${b.name} lid: ${m}`),
+        );
+    }
+    return out;
+  }
 
   /** hints about the current model (not errors), shown while it is ready */
   warnings = $derived(
     this.status === "ready" && this.model
-      ? [...this.model.warnings, ...this.drawerWarning]
+      ? [...this.model.warnings, ...this.drawerWarning, ...this.placementWarning]
       : [],
   );
+
+  /** The bins do not sit right on the plate: for the bin being edited, or for all in the assembly. */
+  private get placementWarning(): string[] {
+    if (this.current === "assembly")
+      return allPlacementProblems(this.grid, this.binsNow);
+    if (this.current === "bin" || this.current === "label" || this.current === "lid")
+      return this.inSet ? this.activeProblems : [];
+    return [];
+  }
 
   /** Base, bin and lid together are taller than the drawer allows, with the way out. */
   private get drawerWarning(): string[] {
@@ -321,7 +532,7 @@ class Editor {
               text: this.bin.plate_color,
               symbol: this.bin.plate_color,
             }
-          : this.current === "baseplate"
+          : this.current === "baseplate" || this.current === "assembly"
             ? {
                 plate: this.baseplate.plate_color,
                 lip: this.baseplate.plate_color,
@@ -346,7 +557,12 @@ class Editor {
    * changing that axis alone does not help), for the buttons of the bed-check alert.
    */
   bedFixes = $derived.by(() => {
-    if (!this.model || this.current === "label" || this.current === "connector")
+    if (
+      !this.model ||
+      this.current === "label" ||
+      this.current === "connector" ||
+      this.current === "assembly"
+    )
       return { x: 0, y: 0, height: 0 };
     const units = this.units;
     const height = this.model.size[2];
@@ -373,6 +589,11 @@ class Editor {
     if (this.status !== "ready") return "Fix the size to export";
     if (this.bedCheck && this.bedResult && !this.bedResult.fits)
       return "Fix the size to export";
+    if (
+      this.current === "assembly" &&
+      allPlacementProblems(this.grid, this.binsNow).length > 0
+    )
+      return "Fix the places to export";
     return "";
   });
 
@@ -430,6 +651,11 @@ class Editor {
     const plate = $state.snapshot(this.baseplate) as BaseplateParams;
     const bin = $state.snapshot(this.bin) as BinParams;
     const label = $state.snapshot(this.label) as LabelParams;
+    // in a set the lid has the size of its bin
+    if (lid && this.inSet) {
+      params.units_x = bin.units_x;
+      params.units_y = bin.units_y;
+    }
     const errors =
       this.current === "connector"
         ? validateConnector(this.connector)
@@ -437,9 +663,11 @@ class Editor {
           ? validateLabel(bin, label)
           : this.current === "baseplate"
             ? validateBaseplate(plate)
-            : this.current === "bin"
-              ? validateBin(bin)
-              : validateLid(params);
+            : this.current === "assembly"
+              ? this.setErrors()
+              : this.current === "bin"
+                ? validateBin(bin)
+                : validateLid(params);
     if (errors.length > 0) {
       this.status = "needs-fix";
       this.message = errors.join(" ");
@@ -488,13 +716,19 @@ class Editor {
           ? this.client.buildLabel(bin, label, this.labelSvgShapes)
           : this.current === "baseplate"
             ? this.client.buildBaseplate(plate, this.maxTile ?? undefined)
-            : this.current === "bin"
-              ? this.client.buildBin(
-                  bin,
-                  this.showLabel ? label : undefined,
-                  this.labelSvgShapes,
+            : this.current === "assembly"
+              ? this.client.buildAssembly(
+                  plate,
+                  this.assemblyBins(),
+                  this.maxTile ?? undefined,
                 )
-              : this.client.build(params, this.svgShapes);
+              : this.current === "bin"
+                ? this.client.buildBin(
+                    bin,
+                    this.showLabel ? label : undefined,
+                    this.labelSvgShapes,
+                  )
+                : this.client.build(params, this.svgShapes);
     this.latest = id;
     result.then(
       (model) => {
@@ -515,8 +749,50 @@ class Editor {
     );
   }
 
+  /** The bins for the worker, with the SVG files of their labels and lids read into shapes. */
+  private assemblyBins(): AssemblyRequestBin[] {
+    const shapes = (use: boolean, text: string, name: string) => {
+      if (!use || !text) return undefined;
+      try {
+        return parseSvg(text, name);
+      } catch {
+        return undefined;
+      }
+    };
+    return this.binsNow.map((b) => {
+      const lidSized = lidOfBin(b.bin, b.lid);
+      return {
+        name: b.name,
+        bin: b.bin,
+        label: b.label,
+        lidOn: b.lidOn,
+        lid: lidSized,
+        col: b.col,
+        row: b.row,
+        turned: b.turned,
+        labelSvg: shapes(
+          b.label.symbol_mode !== "none" && b.label.symbol_source === "upload",
+          b.label.svg,
+          "label symbol.svg",
+        ),
+        lidSvg: shapes(
+          b.lidOn &&
+            lidSized.symbol_mode !== "none" &&
+            lidSized.symbol_source === "upload",
+          lidSized.svg,
+          "lid symbol.svg",
+        ),
+      };
+    });
+  }
+
   /** Name for the model and the file, from what the lid is. */
   describe(): string {
+    if (this.current === "assembly") {
+      const b = this.baseplate;
+      const n = this.slots.length;
+      return `Set ${b.units_x} × ${b.units_y} · ${n} bin${n === 1 ? "" : "s"}`;
+    }
     if (this.current === "connector") {
       return `Connector ${variantOf(this.connector.variant)?.name ?? ""}`.trim();
     }
@@ -549,9 +825,37 @@ class Editor {
     this.fileName = slug(this.name);
   }
 
+  /** The name of the set as a saved model. */
+  get setName(): string {
+    const b = this.baseplate;
+    const n = this.slots.length;
+    return `Set ${b.units_x} × ${b.units_y} · ${n} bin${n === 1 ? "" : "s"}`;
+  }
+
+  /** A set of several bins is saved as one entry; a single bin is saved as before. */
+  private get savesSet(): boolean {
+    return this.inSet || this.current === "assembly";
+  }
+
   /** Keeps the current model in this browser (localStorage); the browser may clear it. */
   autosave(): void {
     if (this.consent !== "yes") return;
+    if (this.savesSet) {
+      const entry: StoredModel = {
+        id: this.setId,
+        part: "set",
+        name: this.setName,
+        savedAt: new Date().toISOString(),
+        json: this.toFileText(),
+      };
+      // the room in the browser decides how many sets there are; the limit counts single parts
+      let singles = 0;
+      const list = [entry, ...this.stored.filter((m) => m.id !== entry.id)].filter(
+        (m) => m.part === "set" || ++singles <= MAX_STORED,
+      );
+      this.keep(list);
+      return;
+    }
     const json = this.toFileText();
     // a label is saved with its bin and a connector with its baseplate: one entry, the host's
     const host =
@@ -567,10 +871,15 @@ class Editor {
       savedAt: new Date().toISOString(),
       json,
     };
-    const list = [entry, ...this.stored.filter((m) => m.id !== entry.id)].slice(
-      0,
-      MAX_STORED,
+    let singles = 0;
+    const list = [entry, ...this.stored.filter((m) => m.id !== entry.id)].filter(
+      (m) => m.part === "set" || ++singles <= MAX_STORED,
     );
+    this.keep(list);
+  }
+
+  /** Writes the list to the browser's storage; the editor says so when the browser refuses. */
+  private keep(list: StoredModel[]): void {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
       this.storageFailed = false;
@@ -616,6 +925,14 @@ class Editor {
 
   /** The model as a file's text, for "Save file". */
   toFileText(): string {
+    if (this.savesSet) {
+      return serializeSet(
+        this.setName,
+        $state.snapshot(this.baseplate) as BaseplateParams,
+        this.binsNow,
+        this.drawerHeight,
+      );
+    }
     if (this.current === "baseplate" || this.current === "connector") {
       return serializeBaseplate(
         this.current === "connector" ? this.parked.baseplate.name : this.name,
@@ -649,6 +966,21 @@ class Editor {
       return false;
     }
     this.loadError = "";
+    if (file.type === "set") {
+      this.part = "assembly";
+      this.drawerHeight = file.drawerHeight;
+      Object.assign(this.baseplate, file.baseplate);
+      this.slots = file.bins.map((b) => ({ ...b }));
+      this.setId = id ?? crypto.randomUUID();
+      this.loadSlot(0);
+      this.name = this.describe();
+      this.fileName = slug(this.name);
+      this.renamed = false;
+      this.modelId = this.setId;
+      this.addNote = "";
+      this.requestBuild();
+      return true;
+    }
     this.part = file.type;
     this.drawerHeight = file.drawerHeight;
     if (file.type === "baseplate") Object.assign(this.baseplate, file.params);

@@ -1,7 +1,8 @@
 // Part types of the editor and the short name used in labels and files.
-export type PartType = "lid" | "bin" | "baseplate" | "label" | "connector";
+export type PartType = "lid" | "bin" | "baseplate" | "label" | "connector" | "assembly";
 
 export const PART_NAME: Record<PartType, string> = {
+  assembly: "Assembly",
   lid: "Lid",
   bin: "Bin",
   baseplate: "Base",

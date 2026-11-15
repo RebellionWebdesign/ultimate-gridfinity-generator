@@ -47,10 +47,10 @@
       <button
         type="button"
         aria-pressed={value === option.value}
-        disabled={option.disabled}
+        aria-disabled={option.disabled ? "true" : undefined}
         title={option.title}
         class:on={value === option.value}
-        onclick={() => pick(option.value)}
+        onclick={() => !option.disabled && pick(option.value)}
       >
         {option.label}{#if option.note}<span class="note">{option.note}</span>{/if}
       </button>
@@ -86,9 +86,11 @@
     color: var(--text);
     box-shadow: var(--shadow-seg);
   }
-  button:disabled {
+  /* aria-disabled and not disabled: a disabled button shows no tooltip in every browser */
+  button[aria-disabled="true"] {
     cursor: not-allowed;
     color: var(--text-3);
+    opacity: 0.3;
   }
   .note {
     margin-left: var(--space-1);

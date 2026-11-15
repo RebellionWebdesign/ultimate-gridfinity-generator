@@ -39,7 +39,14 @@
   import { editor } from "./store.svelte";
 
   // the part choice of the narrow layout (the switch in the top bar is hidden there)
-  const partChoices: PartType[] = ["baseplate", "bin", "label", "connector", "lid"];
+  const partChoices: PartType[] = [
+    "baseplate",
+    "bin",
+    "label",
+    "connector",
+    "lid",
+    "assembly",
+  ];
   let partMenu = $state(false);
   const choosePart = (part: PartType) => {
     editor.part = part;
@@ -718,6 +725,8 @@
   });
 
   let first = true;
+  /** the size of the part the view was last fitted to */
+  let fittedRadius = 0;
   $effect(() => {
     // read everything the scene depends on, so the effect re-runs when it changes
     const deps = [model, showColours, colours.plate, colours.lip, colours.text];
@@ -726,7 +735,16 @@
     rebuild();
     if (first && model) {
       first = false;
+      fittedRadius = radius();
       setView("iso", false);
+    } else if (model) {
+      // a part much larger or smaller than the one the view was fitted to (another tab, the
+      // assembly of a set): bring it back into view
+      const r = radius();
+      if (r > fittedRadius * 1.6 || r < fittedRadius / 1.6) {
+        fittedRadius = r;
+        fit();
+      }
     }
   });
   $effect(() => {
@@ -803,12 +821,16 @@
       {#if partMenu}
         <ul class="part-menu" aria-label="Part type">
           {#each partChoices as part (part)}
+            {@const lock = editor.partLock(part)}
             <li>
               <button
                 type="button"
                 class:on={editor.part === part}
+                class:locked={lock.disabled}
                 aria-current={editor.part === part}
-                onclick={() => choosePart(part)}
+                aria-disabled={lock.disabled ? "true" : undefined}
+                title={lock.title}
+                onclick={() => !lock.disabled && choosePart(part)}
               >
                 {PART_NAME[part]}
               </button>
@@ -973,6 +995,11 @@
   }
   .part-menu button.on {
     background: var(--accent-soft);
+  }
+  .part-menu button.locked {
+    cursor: not-allowed;
+    color: var(--text-3);
+    opacity: 0.3;
   }
   @media (max-width: 719px) {
     .part-pick {
