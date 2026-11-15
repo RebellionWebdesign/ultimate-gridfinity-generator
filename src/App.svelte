@@ -284,6 +284,7 @@
             }
           : undefined}
         bedFits={!editor.bedResult || editor.bedResult.fits}
+        reach={{ x: editor.bed[0], y: editor.bed[1] }}
         units={editor.units}
         drawer={drawerBox}
         dimmed={editor.slow && !!editor.model}

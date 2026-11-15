@@ -61,6 +61,7 @@
     labelArea,
     bed,
     bedFits = true,
+    reach,
     units,
     drawer = null,
     dimmed = false,
@@ -74,6 +75,8 @@
     bed?: { x: number; y: number; plate?: PlateShape };
     /** the part fits the bed (also turned by 90 degrees); when not, a red band runs around the bed */
     bedFits?: boolean;
+    /** size of the bed for the zoom range alone, when the bed itself is not drawn (the assembly) */
+    reach?: { x: number; y: number };
     units: [number, number];
     /** the inside of the drawer in mm (width, depth, height; height 0: only the floor), drawn as a box */
     drawer?: { x: number; y: number; z: number } | null;
@@ -298,7 +301,8 @@
       }
     }
     // the endless canvas zooms out as far as the bed does
-    if (bed) r = Math.max(r, Math.hypot(bed.x / 2, bed.y / 2, z0) + 15);
+    const span = bed ?? reach;
+    if (span) r = Math.max(r, Math.hypot(span.x / 2, span.y / 2, z0) + 15);
     if (drawer) r = Math.max(r, Math.hypot(drawer.x / 2, drawer.y / 2, drawer.z) + 15);
     return r;
   };
@@ -752,7 +756,7 @@
     if (renderer && deps.length > 0) rebuildBand();
   });
   $effect(() => {
-    const deps = [model, bed, endless, drawer];
+    const deps = [model, bed, reach, endless, drawer];
     if (controls && deps.length > 0) updateLimits();
   });
   $effect(() => {
