@@ -54,6 +54,11 @@
   const wallSummary = $derived(
     `${mmText(p.wall_thickness)} · ${mmText(p.bottom_thickness)} mm`,
   );
+  const studSummary = $derived(
+    p.corner_studs || p.center_studs
+      ? `${[p.corner_studs ? "corners" : "", p.center_studs ? "centre" : ""].filter(Boolean).join(" + ")} · ${p.stud_hole_d} mm`
+      : "off",
+  );
   const magnetSummary = $derived(
     [
       p.foot_hollow === "open" ? "hollow foot" : "",
@@ -420,6 +425,25 @@
       <p class="t-caption">
         The floor is raised to {mmText(floorZOf(p))} mm so that 0.8 mm of material stays above
         the tallest magnet.
+      </p>
+    {/if}
+  </ParamGroup>
+
+  <ParamGroup name="Snap studs" open={false} summary={studSummary}>
+    <Switch
+      label="Corner studs"
+      bind:checked={p.corner_studs}
+      hint="At the places of the corner magnets. Instead of those magnets, not with them."
+    />
+    <Switch
+      label="Centre stud"
+      bind:checked={p.center_studs}
+      hint="At the place of the centre magnet. Instead of that magnet, not with it."
+    />
+    {#if p.corner_studs || p.center_studs}
+      {@render num("stud_hole_d", "Hole diameter", "mm")}
+      <p class="t-caption">
+        A hole 3.2 mm deep in the foot. For a stud of 3 to 8 mm use 3.1 to 8.1 mm; make it larger for a looser fit.
       </p>
     {/if}
   </ParamGroup>

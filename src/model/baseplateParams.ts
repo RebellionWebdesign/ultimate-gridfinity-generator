@@ -20,6 +20,11 @@ export interface BaseplateParams {
   center_magnet_d: number;
   center_magnet_h: number;
   magnet_clearance: number;
+  /** snap studs on the pocket floor, at the places of the magnets (E-11): corners and centre */
+  corner_studs: boolean;
+  center_studs: boolean;
+  /** exact diameter of a stud */
+  stud_d: number;
   /** skeleton style: the centre magnet's pad is held to the frame by four ribs */
   rib_width: number;
   /** fit to a drawer: the plate is at least this wide and deep (mm, 0 = off), the rest is solid */
@@ -78,6 +83,12 @@ export const BASEPLATE_LIMITS = {
     step: 0.05,
     why: "0.1 mm is the owner's smallest clearance on the baseplate; 0.6 mm is the script's limit",
   },
+  stud_d: {
+    min: 3,
+    max: 8,
+    step: 0.1,
+    why: "3 to 8 mm: the studs the owner tested (3, 5 and 8 mm); the stud is exactly this size",
+  },
   rib_width: {
     min: 2,
     max: 10,
@@ -114,6 +125,9 @@ export const DEFAULT_BASEPLATE: BaseplateParams = {
   center_magnet_d: BASEPLATE_LIMITS.center_magnet_d.min,
   center_magnet_h: BASEPLATE_LIMITS.center_magnet_h.min,
   magnet_clearance: BASEPLATE_LIMITS.magnet_clearance.min,
+  corner_studs: false,
+  center_studs: false,
+  stud_d: BASEPLATE_LIMITS.stud_d.min,
   rib_width: 4,
   plate_min_x_mm: 0,
   plate_min_y_mm: 0,
@@ -135,6 +149,23 @@ export const baseOf = (p: BaseplateParams): number =>
     p.center_magnet ? p.center_magnet_h + MIN_BASE_UNDER_MAGNET : 0,
   );
 
+/** Studs and magnets cannot share a place: the stud stands where the pocket would be. */
+export const studProblems = (p: {
+  corner_studs: boolean;
+  center_studs: boolean;
+  corner_magnets: boolean;
+  center_magnet: boolean;
+}): string[] => {
+  const errors: string[] = [];
+  if (p.corner_studs && p.corner_magnets) {
+    errors.push("Corner studs and corner magnets use the same places: switch one off.");
+  }
+  if (p.center_studs && p.center_magnet) {
+    errors.push("Centre studs and the centre magnet use the same place: switch one off.");
+  }
+  return errors;
+};
+
 /** Error messages for every value outside its limit; empty when the baseplate is valid. */
 export const validateBaseplate = (p: BaseplateParams): string[] => {
   const errors: string[] = [];
@@ -148,6 +179,7 @@ export const validateBaseplate = (p: BaseplateParams): string[] => {
   if (!/^#[0-9a-fA-F]{6}$/.test(p.plate_color)) {
     errors.push("plate_color must be a #rrggbb colour.");
   }
+  errors.push(...studProblems(p));
   return errors;
 };
 

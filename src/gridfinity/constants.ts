@@ -63,6 +63,12 @@ export const CONSTANTS = {
   magnetThickness: { value: 2, source: `${SPEC}: magnet 6 x 2` },
   magnetPocketDiameter: { value: 6.1, source: `${SPEC}: owner decision, start value` },
   magnetPocketDepth: { value: 2.1, source: `${SPEC}: owner decision, start value` },
+  // Snap studs (E-11), owner decisions of 4 and 15 November 2026. Not in the Gridfinity standard.
+  studHeight: { value: 3, source: `${SPEC}: owner decision, 15 November 2026 (stud 3 mm tall)` },
+  studFillet: { value: 0.5, source: `${SPEC}: owner test print, 4 November 2026` },
+  studHoleFillet: { value: 0.6, source: `${SPEC}: owner test print, 4 November 2026` },
+  studHoleDepth: { value: 3.2, source: `${SPEC}: owner decision, 15 November 2026 (stud height + 0.2 mm)` },
+  studHoleExtra: { value: 0.1, source: `${SPEC}: owner decision, 4 November 2026 (hole = stud + 0.1 mm)` },
   screwHoleDiameter: { value: 3.0, source: SPEC },
   holeSpacing: { value: 26, source: `${SPEC}: 26 mm hole spacing` },
   holeCentreFromFootEdge: { value: 4.8, source: `${SPEC}: derived` },

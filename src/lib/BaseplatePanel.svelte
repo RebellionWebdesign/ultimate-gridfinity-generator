@@ -31,6 +31,11 @@
   );
   const sizeSummary = $derived(`${p.units_x} × ${p.units_y} cells`);
   const styleSummary = $derived(p.baseplate_style);
+  const studSummary = $derived(
+    p.corner_studs || p.center_studs
+      ? `${[p.corner_studs ? "corners" : "", p.center_studs ? "centre" : ""].filter(Boolean).join(" + ")} · ${p.stud_d} mm`
+      : "off",
+  );
   const magnetSummary = $derived(
     [
       p.corner_magnets ? `corners ${p.corner_magnet_d} × ${p.corner_magnet_h}` : "",
@@ -176,6 +181,25 @@
         {@render num("rib_width", "Rib width", "mm")}
         <p class="t-caption">Four ribs tie the magnet's pad to the frame.</p>
       {/if}
+    {/if}
+  </ParamGroup>
+
+  <ParamGroup name="Snap studs" open={false} summary={studSummary}>
+    <Switch
+      label="Corner studs"
+      bind:checked={p.corner_studs}
+      hint="At the places of the corner magnets. Instead of those magnets, not with them."
+    />
+    <Switch
+      label="Centre stud"
+      bind:checked={p.center_studs}
+      hint="At the place of the centre magnet. Instead of that magnet, not with it."
+    />
+    {#if p.corner_studs || p.center_studs}
+      {@render num("stud_d", "Stud diameter", "mm")}
+      <p class="t-caption">
+        A round stud 3 mm tall on the floor of the pocket, exactly this wide. The bin gets a hole 0.1 mm wider or more.
+      </p>
     {/if}
   </ParamGroup>
 

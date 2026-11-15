@@ -6,6 +6,7 @@ import { CONSTANTS, holeOffset, outerSize } from "../gridfinity/constants";
 import { floorZOf, type BinParams } from "../model/binParams";
 import { cavityLayers as footCavityLayers, cellHalf, solidFoot } from "./foot";
 import type { Kernel, Scope } from "./kernel";
+import { buildStudHole } from "./studs";
 import { loft, type Layer } from "./loft";
 
 const c = (name: keyof typeof CONSTANTS): number => CONSTANTS[name].value;
@@ -357,7 +358,27 @@ const cellPockets = (p: BinParams, i: number, j: number): Pocket[] => {
       }
     }
   }
+  if (p.corner_studs) {
+    for (const sx of [-1, 1]) {
+      for (const sy of [-1, 1]) {
+        const outer =
+          (sx < 0 ? i === 0 : i === p.units_x - 1) &&
+          (sy < 0 ? j === 0 : j === p.units_y - 1);
+        if (outer) {
+          pockets.push({
+            x: sx * o,
+            y: sy * o,
+            d: p.stud_hole_d,
+            h: CONSTANTS.studHoleDepth.value,
+          });
+        }
+      }
+    }
+  }
   const corner = (i === 0 || i === p.units_x - 1) && (j === 0 || j === p.units_y - 1);
+  if (p.center_studs && corner) {
+    pockets.push({ x: 0, y: 0, d: p.stud_hole_d, h: CONSTANTS.studHoleDepth.value });
+  }
   if (p.center_magnet && corner) {
     pockets.push({
       x: 0,
@@ -457,6 +478,18 @@ export const buildBin = (kernel: Kernel, scope: Scope, p: BinParams): BinParts =
           cellCentre(j),
         ),
       );
+    }
+  }
+  // holes for snap studs, at the places of the magnets
+  if (p.corner_studs || p.center_studs) {
+    const hole = buildStudHole(kernel, scope, p.stud_hole_d);
+    if (p.corner_studs) {
+      for (const [x, y] of cornerMagnetPoints(p)) cutters.push(move(hole, x, y, 0));
+    }
+    if (p.center_studs) {
+      for (const [i, j] of cornerCells(p)) {
+        cutters.push(move(hole, cellCentre(i), cellCentre(j), 0));
+      }
     }
   }
   const hollow = scope.add(

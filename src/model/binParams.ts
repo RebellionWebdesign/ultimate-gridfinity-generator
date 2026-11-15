@@ -3,6 +3,7 @@
 // its limit (spec section 4, ui-spec section 8).
 import { CONSTANTS, outerSize } from "../gridfinity/constants";
 import { STONE, type NumberLimit } from "./lidParams";
+import { studProblems } from "./baseplateParams";
 
 /** with_lip: stacking lip (+4.4 mm). flat_same_height: no lip, same total height. flat_lower: no lip, 4.4 mm lower. */
 export type FootHollow = "none" | "open";
@@ -35,6 +36,11 @@ export interface BinParams {
   center_magnet_d: number;
   center_magnet_h: number;
   magnet_clearance: number;
+  /** holes for snap studs at the places of the magnets (E-11): corners and centre */
+  corner_studs: boolean;
+  center_studs: boolean;
+  /** diameter of the hole; a stud of 3 to 8 mm fits a hole of 3.1 to 8.1 mm */
+  stud_hole_d: number;
   plate_color: string;
   lip_color_enabled: boolean;
   lip_color: string;
@@ -136,6 +142,12 @@ export const BIN_LIMITS = {
     step: 0.05,
     why: "0.2 mm is the project's default; 0.6 mm is the script's limit",
   },
+  stud_hole_d: {
+    min: 3.1,
+    max: 8.1,
+    step: 0.1,
+    why: "3.1 to 8.1 mm: a stud of 3 to 8 mm plus 0.1 mm; the user can make the hole larger",
+  },
   divider_thickness: DIVIDER_LIMITS.thickness,
 } as const satisfies Record<string, NumberLimit>;
 
@@ -157,6 +169,9 @@ export const DEFAULT_BIN: BinParams = {
   center_magnet_d: BIN_LIMITS.center_magnet_d.min,
   center_magnet_h: BIN_LIMITS.center_magnet_h.min,
   magnet_clearance: BIN_LIMITS.magnet_clearance.min,
+  corner_studs: false,
+  center_studs: false,
+  stud_hole_d: BIN_LIMITS.stud_hole_d.min,
   plate_color: STONE,
   lip_color_enabled: false,
   lip_color: STONE,
@@ -194,6 +209,7 @@ export const floorZOf = (p: BinParams): number => {
   const pocket = Math.max(
     p.corner_magnets ? p.corner_magnet_h : 0,
     p.center_magnet ? p.center_magnet_h : 0,
+    p.corner_studs || p.center_studs ? CONSTANTS.studHoleDepth.value : 0,
   );
   return Math.max(
     CONSTANTS.footHeight.value + p.bottom_thickness,
@@ -376,6 +392,7 @@ export const validateBin = (p: BinParams): string[] => {
     );
   }
   errors.push(...dividerProblems(p));
+  errors.push(...studProblems(p));
   if (p.label_slot !== "none" && p.lip_style !== "with_lip") {
     errors.push(
       "A label needs the stacking lip: its plate rests on the lip. Choose the stacking lip, or switch the label slot off.",

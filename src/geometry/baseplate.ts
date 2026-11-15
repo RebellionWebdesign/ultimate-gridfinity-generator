@@ -8,6 +8,7 @@ import { variantOf } from "../gridfinity/connector";
 import { baseOf, type BaseplateParams } from "../model/baseplateParams";
 import type { Kernel, Scope } from "./kernel";
 import { loft, ringPoints, type Layer } from "./loft";
+import { buildStud } from "./studs";
 
 const c = (name: keyof typeof CONSTANTS): number => CONSTANTS[name].value;
 
@@ -99,16 +100,18 @@ const cornerPad = (
   sx: number,
   sy: number,
 ): CrossSection => {
-  const r = (p.corner_magnet_d + CORNER_PAD_EXTRA) / 2;
+  const r = (Math.max(p.corner_magnets ? p.corner_magnet_d : 0, p.corner_studs ? p.stud_d : 0) + CORNER_PAD_EXTRA) / 2;
   const o = holeOffset();
   const circle = scope.add(
     kernel.CrossSection.circle(r, CYLINDER_SEGMENTS).translate(sx * o, sy * o),
   );
-  const wedge = polygon(kernel, scope, [
+  const corners: [number, number][] = [
     [sx * CORNER_PAD_REACH, sy * (o - r)],
     [sx * CORNER_PAD_REACH, sy * CORNER_PAD_REACH],
     [sx * (o - r), sy * CORNER_PAD_REACH],
-  ]);
+  ];
+  // a mirrored corner turns the other way round, and a polygon that does is empty
+  const wedge = polygon(kernel, scope, sx * sy < 0 ? corners.reverse() : corners);
   return scope.add(kernel.CrossSection.hull([circle, wedge]));
 };
 
@@ -118,13 +121,17 @@ const cornerPad = (
  */
 const skeletonSolid = (kernel: Kernel, scope: Scope, p: BaseplateParams) => {
   const parts: CrossSection[] = [];
-  if (p.corner_magnets) {
+  if (p.corner_magnets || p.corner_studs) {
     for (const sx of [-1, 1]) {
       for (const sy of [-1, 1]) parts.push(cornerPad(kernel, scope, p, sx, sy));
     }
   }
-  if (p.center_magnet) {
-    const side = p.center_magnet_d + p.magnet_clearance + 2 * CENTRE_PAD_WALL;
+  if (p.center_magnet || p.center_studs) {
+    const centre = Math.max(
+      p.center_magnet ? p.center_magnet_d + p.magnet_clearance : 0,
+      p.center_studs ? p.stud_d : 0,
+    );
+    const side = centre + 2 * CENTRE_PAD_WALL;
     parts.push(roundedSquare(kernel, scope, side, CENTRE_PAD_RADIUS));
     // the ribs are not optional: without them the pad would be a loose part
     for (const angle of [45, 135, 225, 315]) {
@@ -421,5 +428,25 @@ export const buildBaseplate = (
     cutters.push(...slotCutters(kernel, scope, p, edges, rows, cols, base, top - base));
   }
   const body = scope.add(kernel.Manifold.difference([block, ...cutters]));
-  return move(body, -w / 2, -h / 2, 0);
+  // snap studs stand on the pocket floor, at the places of the magnets
+  const studs: Manifold[] = [];
+  if (p.corner_studs || p.center_studs) {
+    const stud = buildStud(kernel, scope, p.stud_d);
+    const o = holeOffset();
+    for (let i = 0; i < p.units_x; i++) {
+      for (let j = 0; j < p.units_y; j++) {
+        if (!inside(i, j)) continue;
+        const cx = gridX + cellCentre(i);
+        const cy = gridY + cellCentre(j);
+        if (p.corner_studs) {
+          for (const sx of [-1, 1]) {
+            for (const sy of [-1, 1]) studs.push(move(stud, cx + sx * o, cy + sy * o, base));
+          }
+        }
+        if (p.center_studs) studs.push(move(stud, cx, cy, base));
+      }
+    }
+  }
+  const built = studs.length ? scope.add(kernel.Manifold.union([body, ...studs])) : body;
+  return move(built, -w / 2, -h / 2, 0);
 };
