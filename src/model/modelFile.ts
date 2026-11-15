@@ -23,6 +23,7 @@ import {
   type LabelLimitedKey,
   type LabelParams,
 } from "./labelParams";
+import { binName, lidOfBin, type SetBin } from "./setParams";
 import {
   DEFAULT_LID,
   LID_LIMITS,
@@ -32,7 +33,8 @@ import {
   type LimitedKey,
 } from "./lidParams";
 
-export const SCHEMA_VERSION = 1;
+/** 2: the type "set" (a baseplate with several bins, ADR-0009); files of version 1 open as before. */
+export const SCHEMA_VERSION = 2;
 
 interface ModelFileBase {
   /** the drawer height that locks bins and lids (mm, 0 = off); files without it have 0 */
@@ -47,9 +49,14 @@ export type ModelFile =
   | (ModelFileBase & { type: "lid"; params: LidParams })
   | (ModelFileBase & { type: "baseplate"; params: BaseplateParams })
   /** a bin brings its label (text and colours) along; files from before have none */
-  | (ModelFileBase & { type: "bin"; params: BinParams; label?: LabelParams });
+  | (ModelFileBase & { type: "bin"; params: BinParams; label?: LabelParams })
+  /** a baseplate with its bins, each with its label, its lid and its place on the plate */
+  | (ModelFileBase & { type: "set"; baseplate: BaseplateParams; bins: SetBin[] });
 
 export class ModelFileError extends Error {}
+
+/** The most bins a file may carry (a guard against a damaged file; the plate holds far fewer). */
+const MAX_FILE_BINS = 500;
 
 const ENUMS: Partial<Record<string, readonly string[]>> = {
   baseplate_style: ["solid", "skeleton"],
@@ -273,9 +280,61 @@ export const serializeBaseplate = (
   return JSON.stringify(file, null, 2);
 };
 
+export const serializeSet = (
+  name: string,
+  baseplate: BaseplateParams,
+  bins: readonly SetBin[],
+  drawerHeight = 0,
+): string => {
+  const file: ModelFile = {
+    drawerHeight,
+    type: "set",
+    schemaVersion: SCHEMA_VERSION,
+    name,
+    savedAt: new Date().toISOString(),
+    svgName: "",
+    baseplate,
+    bins: [...bins],
+  };
+  return JSON.stringify(file, null, 2);
+};
+
+/** The bins of a set file: each one sanitised like a single bin; a place is kept as it is. */
+const sanitizeSetBins = (raw: unknown): SetBin[] => {
+  if (!Array.isArray(raw)) return [];
+  const out: SetBin[] = [];
+  const seen = new Set<string>();
+  for (const item of raw.slice(0, MAX_FILE_BINS)) {
+    if (typeof item !== "object" || item === null) continue;
+    const entry = item as Record<string, unknown>;
+    const bin = sanitizeBin(entry.bin);
+    const lid = sanitizeParams(entry.lid);
+    let id = typeof entry.id === "string" && entry.id ? entry.id : crypto.randomUUID();
+    if (seen.has(id)) id = crypto.randomUUID();
+    seen.add(id);
+    const whole = (v: unknown) =>
+      typeof v === "number" && Number.isFinite(v) ? Math.trunc(v) : 0;
+    out.push({
+      id,
+      name:
+        typeof entry.name === "string" && entry.name.trim()
+          ? entry.name.trim()
+          : binName(bin),
+      bin,
+      label: sanitizeLabel(entry.label),
+      lidOn: entry.lidOn === true,
+      lid: lidOfBin(bin, lid),
+      col: whole(entry.col),
+      row: whole(entry.row),
+      turned: entry.turned === true,
+    });
+  }
+  return out;
+};
+
 /** Older schema versions are migrated here, one step at a time. */
 const migrate = (file: Record<string, unknown>): Record<string, unknown> => {
-  // version 1 is the first; later versions add `if (version < n) { ... }` steps
+  // version 2 added the type "set"; a file of version 1 has no set and needs no change
   return file;
 };
 
@@ -291,10 +350,10 @@ export const parseModel = (text: string, fileName = "the file"): ModelFile => {
   const type = (data as { type?: unknown } | null)?.type;
   if (
     typeof data !== "object" ||
-    (type !== "lid" && type !== "baseplate" && type !== "bin")
+    (type !== "lid" && type !== "baseplate" && type !== "bin" && type !== "set")
   ) {
     throw new ModelFileError(
-      `${fileName} is not a lid, a baseplate or a bin. Only those can be opened in this version.`,
+      `${fileName} is not a lid, a baseplate, a bin or a set. Only those can be opened in this version.`,
     );
   }
   const file = data as Record<string, unknown>;
@@ -324,6 +383,21 @@ export const parseModel = (text: string, fileName = "the file"): ModelFile => {
     svgName: typeof migrated.svgName === "string" ? migrated.svgName : "",
   };
   const name = typeof migrated.name === "string" ? migrated.name : "";
+  if (type === "set") {
+    const bins = sanitizeSetBins(migrated.bins);
+    if (bins.length === 0) {
+      throw new ModelFileError(
+        `${fileName} is a set without any bin. It cannot be opened.`,
+      );
+    }
+    return {
+      ...base,
+      type,
+      name: name || "Set",
+      baseplate: sanitizeBaseplate(migrated.baseplate),
+      bins,
+    };
+  }
   if (type === "bin") {
     return {
       ...base,

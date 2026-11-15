@@ -12,7 +12,9 @@ import {
   serializeBaseplate,
   serializeBin,
   serializeModel,
+  serializeSet,
 } from "./modelFile";
+import { newSetBin, type SetBin } from "./setParams";
 
 describe("B-11 model file", () => {
   it("round-trips every parameter, the text, colours and the SVG string", () => {
@@ -26,7 +28,7 @@ describe("B-11 model file", () => {
       svg: '<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0h10v10z"/></svg>',
     };
     const file = parseModel(serializeModel("My lid", params, "logo.svg"));
-    expect(file.params).toEqual(params);
+    expect((file as { params?: unknown }).params).toEqual(params);
     expect(file).toMatchObject({
       type: "lid",
       schemaVersion: SCHEMA_VERSION,
@@ -87,7 +89,7 @@ describe("C-03 baseplate model file", () => {
       plate_color: "#445566",
     };
     const file = parseModel(serializeBaseplate("My base", params));
-    expect(file.params).toEqual(params);
+    expect((file as { params?: unknown }).params).toEqual(params);
     expect(file).toMatchObject({
       type: "baseplate",
       schemaVersion: SCHEMA_VERSION,
@@ -159,7 +161,7 @@ describe("C-07 bin model file", () => {
       plate_color: "#445566",
     };
     const file = parseModel(serializeBin("My bin", params));
-    expect(file.params).toEqual(params);
+    expect((file as { params?: unknown }).params).toEqual(params);
     expect(file).toMatchObject({ type: "bin", name: "My bin" });
   });
 
@@ -199,5 +201,64 @@ describe("C-13 drawer height in the model file", () => {
     expect(parseModel(old).drawerHeight).toBe(0);
     expect(parseModel(serializeBin("b", DEFAULT_BIN, 5000)).drawerHeight).toBe(1000);
     expect(parseModel(serializeBin("b", DEFAULT_BIN, -3)).drawerHeight).toBe(0);
+  });
+});
+
+describe("a set (ADR-0009)", () => {
+  const twoBins = () => {
+    const a = newSetBin(0, 0);
+    a.name = "Screws";
+    a.bin.units_x = 2;
+    a.bin.plate_color = "#aa0000";
+    a.lidOn = true;
+    a.label.text_string = "M3";
+    const b = newSetBin(2, 0);
+    b.name = "Nuts";
+    b.turned = true;
+    return [a, b];
+  };
+
+  it("keeps the plate, the bins, their places, labels and lids", () => {
+    const plate = { ...DEFAULT_BASEPLATE, units_x: 4, units_y: 2 };
+    const file = parseModel(serializeSet("A set", plate, twoBins()));
+    if (file.type !== "set") throw new Error("not a set");
+    expect(file.baseplate.units_x).toBe(4);
+    expect(file.bins.map((b) => b.name)).toEqual(["Screws", "Nuts"]);
+    expect(file.bins[0]?.bin.units_x).toBe(2);
+    expect(file.bins[0]?.bin.plate_color).toBe("#aa0000");
+    expect(file.bins[0]?.lidOn).toBe(true);
+    expect(file.bins[0]?.label.text_string).toBe("M3");
+    expect([file.bins[1]?.col, file.bins[1]?.row, file.bins[1]?.turned]).toEqual([
+      2,
+      0,
+      true,
+    ]);
+  });
+
+  it("gives the lid the size of its bin", () => {
+    const bins = twoBins();
+    (bins[0] as SetBin).lid.units_x = 9;
+    const file = parseModel(serializeSet("s", DEFAULT_BASEPLATE, bins));
+    if (file.type !== "set") throw new Error("not a set");
+    expect(file.bins[0]?.lid.units_x).toBe(2);
+  });
+
+  it("gives every bin its own id, even when a file repeats one", () => {
+    const bins = twoBins();
+    (bins[1] as SetBin).id = (bins[0] as SetBin).id;
+    const file = parseModel(serializeSet("s", DEFAULT_BASEPLATE, bins));
+    if (file.type !== "set") throw new Error("not a set");
+    expect(new Set(file.bins.map((b) => b.id)).size).toBe(2);
+  });
+
+  it("does not open a set without a bin", () => {
+    expect(() =>
+      parseModel(serializeSet("s", DEFAULT_BASEPLATE, []), "s.json"),
+    ).toThrow(ModelFileError);
+  });
+
+  it("still opens a file of version 1", () => {
+    const old = JSON.stringify({ type: "bin", schemaVersion: 1, params: {} });
+    expect(parseModel(old).type).toBe("bin");
   });
 });
