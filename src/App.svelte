@@ -31,6 +31,9 @@
     return () => document.documentElement.classList.remove("editor");
   });
 
+  // the lid and the label exist only for a bin that has them switched on
+  $effect(() => editor.leaveSwitchedOffPart());
+
   let exportDialog: HTMLDialogElement;
   let openInput: HTMLInputElement;
   let dragging = $state(false);
@@ -39,22 +42,86 @@
 
   // every change goes to the worker; the name follows the lid until it is renamed
   let touched = false;
-  $effect(() => {
+  // A colour is not geometry: the preview paints the parts with it, no rebuild is needed (the
+  // colour picker sends a change with every step of the drag). Only the set and a bin with its
+  // label carry colours in the built model; they are rebuilt once the picker rests.
+  // (the keys are skipped before they are read: reading one would make the effect depend on it)
+  const withoutColours = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(withoutColours);
+    if (value && typeof value === "object") {
+      return Object.fromEntries(
+        Object.keys(value)
+          .filter((key) => !key.endsWith("_color"))
+          .map((key) => [key, withoutColours((value as Record<string, unknown>)[key])]),
+      );
+    }
+    return value;
+  };
+  const onlyColours = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(onlyColours);
+    if (value && typeof value === "object") {
+      return Object.fromEntries(
+        Object.keys(value)
+          .filter(
+            (key) =>
+              key.endsWith("_color") ||
+              untrack(
+                () => typeof (value as Record<string, unknown>)[key] === "object",
+              ),
+          )
+          .map((key) => [key, onlyColours((value as Record<string, unknown>)[key])]),
+      );
+    }
+    return value;
+  };
+  // Strings: an effect that reads one runs again only when the text changes, not each time the
+  // objects it was made from are touched (a colour changes a bin, but not this text).
+  const geometryKey = $derived(
+    JSON.stringify(
+      withoutColours([
+        editor.part,
+        editor.active,
+        editor.maxTile,
+        editor.drawerHeight,
+        editor.showLabel,
+        // a set: every bin, its place and its lid are part of what is built and saved
+        editor.binsNow,
+        editor.baseplate,
+      ]),
+    ),
+  );
+  const colourKey = $derived(
+    JSON.stringify(onlyColours([editor.active, editor.binsNow, editor.baseplate])),
+  );
+  // a bin or the plate got another size: every bin goes where it fits
+  const sizeKey = $derived(
     JSON.stringify([
-      editor.part,
-      editor.active,
-      editor.maxTile,
-      editor.drawerHeight,
-      editor.showLabel,
-      // a set: every bin, its place and its lid are part of what is built and saved
-      editor.binsNow,
-      editor.baseplate,
-    ]);
+      editor.baseplate.units_x,
+      editor.baseplate.units_y,
+      editor.binsNow.map((b) => [b.bin.units_x, b.bin.units_y, b.turned]),
+    ]),
+  );
+  $effect(() => {
+    void geometryKey;
     untrack(() => {
       editor.syncName();
       editor.requestBuild();
       if (touched) editor.autosave();
       touched = true;
+    });
+  });
+  $effect(() => {
+    void sizeKey;
+    untrack(() => editor.settleBins());
+  });
+  let saveTimer: ReturnType<typeof setTimeout> | undefined;
+  $effect(() => {
+    void colourKey;
+    untrack(() => {
+      if (!touched) return;
+      if (editor.bakesColours) editor.requestBuild(400);
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => editor.autosave(), 500);
     });
   });
 
@@ -276,7 +343,7 @@
         model={editor.model}
         colours={editor.colours}
         labelArea={editor.model?.labelArea}
-        bed={editor.bedCheck && !editor.model?.tiles
+        bed={editor.bedCheck && (!editor.model?.tiles || editor.part === "assembly")
           ? {
               x: editor.bed[0],
               y: editor.bed[1],
@@ -284,7 +351,6 @@
             }
           : undefined}
         bedFits={!editor.bedResult || editor.bedResult.fits}
-        reach={{ x: editor.bed[0], y: editor.bed[1] }}
         units={editor.units}
         drawer={drawerBox}
         dimmed={editor.slow && !!editor.model}

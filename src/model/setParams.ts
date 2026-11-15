@@ -159,3 +159,33 @@ export const firstFreeSpot = (
 /** How many cells are free. */
 export const freeCount = (grid: PlateGrid, bins: readonly SetBin[]): number =>
   freeCells(grid, bins).flat().filter(Boolean).length;
+
+/**
+ * Places that make every bin fit: a bin that already sits inside the plate and on free cells
+ * stays where it is (in the order of the list, an earlier bin has the right of way), any other
+ * goes to the first free spot, turned by 90 degrees if that is the only way. A bin that finds
+ * no spot stays as it is (the plate is full: the warning says so).
+ */
+export const settleBins = (
+  grid: PlateGrid,
+  bins: readonly SetBin[],
+): { col: number; row: number; turned: boolean }[] => {
+  const kept: SetBin[] = [];
+  return bins.map((b) => {
+    const fits = (candidate: SetBin) =>
+      placementProblems(grid, [...kept, candidate])[kept.length]?.length === 0;
+    let at = { col: b.col, row: b.row, turned: b.turned };
+    if (!fits(b)) {
+      for (const turned of [b.turned, !b.turned]) {
+        const [w, d] = footprint(b.bin, turned);
+        const spot = firstFreeSpot(grid, kept, w, d);
+        if (spot) {
+          at = { ...spot, turned };
+          break;
+        }
+      }
+    }
+    kept.push({ ...b, ...at });
+    return at;
+  });
+};

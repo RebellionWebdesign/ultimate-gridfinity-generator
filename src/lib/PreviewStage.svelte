@@ -31,6 +31,10 @@
     WebGLRenderer,
   } from "three";
   import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+  import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+  import { GTAOPass } from "three/examples/jsm/postprocessing/GTAOPass.js";
+  import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
+  import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
   import type { LabelArea } from "../geometry/lid";
   import type { ModelMesh, PartName } from "../geometry/model";
   import { outwardOutline, plateOutline, type PlateShape } from "./plate";
@@ -61,7 +65,6 @@
     labelArea,
     bed,
     bedFits = true,
-    reach,
     units,
     drawer = null,
     dimmed = false,
@@ -75,8 +78,6 @@
     bed?: { x: number; y: number; plate?: PlateShape };
     /** the part fits the bed (also turned by 90 degrees); when not, a red band runs around the bed */
     bedFits?: boolean;
-    /** size of the bed for the zoom range alone, when the bed itself is not drawn (the assembly) */
-    reach?: { x: number; y: number };
     units: [number, number];
     /** the inside of the drawer in mm (width, depth, height; height 0: only the floor), drawn as a box */
     drawer?: { x: number; y: number; z: number } | null;
@@ -106,6 +107,9 @@
   let renderer: WebGLRenderer;
   let camera: PerspectiveCamera;
   let controls: OrbitControls;
+  /** renders the scene and darkens creases and corners (ambient occlusion), so shapes read apart */
+  let composer: EffectComposer;
+  let occlusion: GTAOPass;
   const scene = new Scene();
   const partsGroup = new Group();
   const gridGroup = new Group();
@@ -120,7 +124,7 @@
   const draw = () => {
     cancelAnimationFrame(frame);
     frame = requestAnimationFrame(() => {
-      renderer?.render(scene, camera);
+      composer?.render();
       turnCube();
     });
   };
@@ -301,8 +305,7 @@
       }
     }
     // the endless canvas zooms out as far as the bed does
-    const span = bed ?? reach;
-    if (span) r = Math.max(r, Math.hypot(span.x / 2, span.y / 2, z0) + 15);
+    if (bed) r = Math.max(r, Math.hypot(bed.x / 2, bed.y / 2, z0) + 15);
     if (drawer) r = Math.max(r, Math.hypot(drawer.x / 2, drawer.y / 2, drawer.z) + 15);
     return r;
   };
@@ -699,6 +702,13 @@
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     camera = new PerspectiveCamera(35, 1, 1, 5000);
     camera.up.set(0, 0, 1);
+    composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    occlusion = new GTAOPass(scene, camera, 512, 512);
+    // the sizes are in mm: a crease darkens within a few millimetres
+    occlusion.updateGtaoMaterial({ radius: 8, distanceExponent: 1.5, thickness: 4, scale: 2, samples: 16 });
+    composer.addPass(occlusion);
+    composer.addPass(new OutputPass());
     scene.add(new AmbientLight(0xffffff, 1.4));
     const sun = new DirectionalLight(0xffffff, 2.2);
     sun.position.set(80, -120, 200);
@@ -710,11 +720,13 @@
       const { clientWidth: w, clientHeight: h } = host;
       if (w === 0 || h === 0) return;
       renderer.setSize(w, h, false);
+      composer.setPixelRatio(renderer.getPixelRatio());
+      composer.setSize(w, h);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       updateLimits();
       // setSize clears the canvas: draw in the same frame, or the preview flashes
-      renderer.render(scene, camera);
+      composer.render();
     };
     const observer = new ResizeObserver(resize);
     observer.observe(host);
@@ -724,6 +736,7 @@
     return () => {
       observer.disconnect();
       controls.dispose();
+      composer.dispose();
       renderer.dispose();
     };
   });
@@ -756,7 +769,7 @@
     if (renderer && deps.length > 0) rebuildBand();
   });
   $effect(() => {
-    const deps = [model, bed, reach, endless, drawer];
+    const deps = [model, bed, endless, drawer];
     if (controls && deps.length > 0) updateLimits();
   });
   $effect(() => {

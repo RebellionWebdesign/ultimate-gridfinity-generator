@@ -1,7 +1,8 @@
 // The editor's state: lid parameters, the geometry worker and what it last built.
-import type { ModelMesh } from "../geometry/model";
+import type { ModelMesh, PartName } from "../geometry/model";
 import { parseSvg, SvgError, type SvgShapes } from "../geometry/svg";
 import {
+  clampBin,
   newBin,
   maxHeightUnits,
   validateBin,
@@ -37,6 +38,7 @@ import {
   lidOfBin,
   newSetBin,
   placementProblems,
+  settleBins,
   type SetBin,
 } from "../model/setParams";
 import type { AssemblyRequestBin } from "../worker/protocol";
@@ -121,6 +123,8 @@ class Editor {
   drawerHeight = $state(0);
   name = $state("Base 1 × 1");
   model = $state.raw<ModelMesh | null>(null);
+  /** the part the shown model was built for: its colours go with it while another part is computed */
+  modelPart: PartType = $state("lid");
   status = $state<Status>("computing");
   message = $state("");
   svgName = $state("");
@@ -244,6 +248,17 @@ class Editor {
     return reason ? { disabled: true, title: reason } : {};
   }
 
+  /**
+   * The lid or the label being edited belongs to a bin that has none (the user picked another
+   * bin, or switched the lid or the label off): back to the bin. Without this the lid tab
+   * would show a lid for a bin that has no lid.
+   */
+  leaveSwitchedOffPart(): void {
+    const lidGone = this.current === "lid" && !this.lidOn;
+    const labelGone = this.current === "label" && this.bin.label_slot === "none";
+    if (lidGone || labelGone) this.part = "bin";
+  }
+
   /** The plate holds more than one bin: the lid follows the size of its bin. */
   get inSet(): boolean {
     return this.slots.length > 1;
@@ -296,6 +311,34 @@ class Editor {
     if (now) this.slots[this.activeBin] = now;
   }
 
+  /** the hole sizes carried over from the baseplate so far: a bin made later starts with them */
+  private carried: Partial<
+    Record<"corner_magnet_d" | "center_magnet_d" | "stud_hole_d", number>
+  > = {};
+
+  /**
+   * The user typed a size for a magnet pocket or a stud on the baseplate: the holes of the bins
+   * start from it, plus the play (0.1 mm for the holes of the corner magnets and the studs; the
+   * centre magnet has its own clearance). Within the limits of the bin; the user can change them
+   * there afterwards. Nothing is carried over until a size has been entered.
+   */
+  carryToBins(
+    key: "corner_magnet_d" | "center_magnet_d" | "stud_d",
+    value: number,
+  ): void {
+    const play = 0.1;
+    const target = key === "stud_d" ? "stud_hole_d" : key;
+    const next = clampBin(
+      target,
+      Math.round((key === "center_magnet_d" ? value : value + play) * 100) / 100,
+    );
+    this.carried[target] = next;
+    this.bin[target] = next;
+    for (const [i, slot] of this.slots.entries()) {
+      if (i !== this.activeBin) slot.bin[target] = next;
+    }
+  }
+
   /** Makes the bin in slot `i` the one being edited. */
   private loadSlot(i: number): void {
     const slot = this.slots[i];
@@ -332,6 +375,31 @@ class Editor {
     this.requestBuild();
   }
 
+  /**
+   * Puts every bin where it fits (see `settleBins`), after the size of a bin or of the plate
+   * changed. A bin that fits stays; the others move to the first free spot.
+   */
+  settleBins(): void {
+    const spots = settleBins(this.grid, this.binsNow);
+    // nothing to move: write nothing (an effect that calls this must not trigger itself)
+    const moved = this.binsNow.some((b, i) => {
+      const at = spots[i];
+      return !!at && (at.col !== b.col || at.row !== b.row || at.turned !== b.turned);
+    });
+    if (!moved) return;
+    this.syncActive();
+    this.slots.forEach((slot, i) => {
+      const at = spots[i];
+      if (at) Object.assign(slot, at);
+    });
+    const active = this.slots[this.activeBin];
+    if (active) {
+      this.col = active.col;
+      this.row = active.row;
+      this.turned = active.turned;
+    }
+  }
+
   /** Edit another bin of the set. */
   selectBin(i: number): void {
     if (i === this.activeBin || !this.slots[i]) return;
@@ -352,6 +420,7 @@ class Editor {
     }
     this.addNote = "";
     const fresh = newSetBin(spot.col, spot.row);
+    Object.assign(fresh.bin, this.carried);
     this.slots.push(fresh);
     this.loadSlot(this.slots.length - 1);
     return true;
@@ -510,29 +579,31 @@ class Editor {
   bed = $derived(this.printerInfo.bed);
 
   /** colours of the parts for the preview and the 3MF; a baseplate has only its plate */
-  colours = $derived(
-    this.current === "connector"
+  colours = $derived(this.coloursOf(this.model ? this.modelPart : this.current));
+
+  private coloursOf(part: PartType): Record<PartName, string> {
+    return part === "connector"
       ? {
           plate: this.connector.plate_color,
           lip: this.connector.plate_color,
           text: this.connector.plate_color,
           symbol: this.connector.plate_color,
         }
-      : this.current === "label"
+      : part === "label"
         ? {
             plate: this.label.plate_color,
             lip: this.label.plate_color,
             text: this.label.text_color,
             symbol: this.label.symbol_color,
           }
-        : this.current === "bin"
+        : part === "bin"
           ? {
               plate: this.bin.plate_color,
               lip: this.bin.lip_color,
               text: this.bin.plate_color,
               symbol: this.bin.plate_color,
             }
-          : this.current === "baseplate" || this.current === "assembly"
+          : part === "baseplate" || part === "assembly"
             ? {
                 plate: this.baseplate.plate_color,
                 lip: this.baseplate.plate_color,
@@ -544,8 +615,16 @@ class Editor {
                 lip: this.params.lip_color,
                 text: this.params.text_color,
                 symbol: this.params.symbol_color,
-              },
-  );
+              };
+  }
+
+  /** The built model carries colours (the set, a bin with its label), so a colour needs a rebuild. */
+  get bakesColours(): boolean {
+    return (
+      this.current === "assembly" ||
+      (this.current === "bin" && this.showLabel && this.bin.label_slot !== "none")
+    );
+  }
 
   /** What the part is called in sentences: "lid" or "baseplate". */
   noun = $derived(this.current);
@@ -640,9 +719,9 @@ class Editor {
       this.setLabelSvg(this.label.svg, this.labelSvgName || "symbol.svg");
   }
 
-  requestBuild(): void {
+  requestBuild(wait = 60): void {
     clearTimeout(this.timer);
-    this.timer = setTimeout(() => this.build(), 60);
+    this.timer = setTimeout(() => this.build(), wait);
   }
 
   private build(): void {
@@ -730,9 +809,11 @@ class Editor {
                   )
                 : this.client.build(params, this.svgShapes);
     this.latest = id;
+    const builtFor = this.current;
     result.then(
       (model) => {
         if (id !== this.latest) return;
+        this.modelPart = builtFor;
         clearTimeout(this.slowTimer);
         this.slow = false;
         this.model = model;
@@ -991,6 +1072,8 @@ class Editor {
         this.restoreLabelSvg();
       }
     } else Object.assign(this.params, file.params);
+    // a lid file is a lid: its tab stays open
+    if (file.type === "lid") this.lidOn = true;
     this.name = file.name;
     this.modelId = id ?? crypto.randomUUID();
     this.svgName = file.svgName;

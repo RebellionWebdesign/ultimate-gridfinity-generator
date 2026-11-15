@@ -48,6 +48,9 @@
 
 {#snippet num(key: BaseplateLimitedKey, label: string, unit: string, minWhy = "")}
   <NumberField
+    onchange={key === "corner_magnet_d" || key === "center_magnet_d" || key === "stud_d"
+      ? (v) => editor.carryToBins(key, v)
+      : undefined}
     {label}
     bind:value={p[key]}
     min={BASEPLATE_LIMITS[key].min}
@@ -198,7 +201,8 @@
     {#if p.corner_studs || p.center_studs}
       {@render num("stud_d", "Stud diameter", "mm")}
       <p class="t-caption">
-        A round stud 3 mm tall on the floor of the pocket, exactly this wide. The bin gets a hole 0.1 mm wider or more.
+        A round stud 3 mm tall on the floor of the pocket, exactly this wide. The bin
+        gets a hole 0.1 mm wider or more.
       </p>
     {/if}
   </ParamGroup>

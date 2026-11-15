@@ -137,3 +137,119 @@ describe("the file of a set", () => {
     expect(JSON.parse(editor.toFileText()).type).toBe("bin");
   });
 });
+
+describe("lid and label only where switched on", () => {
+  it("leaves the lid tab when the bin has no lid", () => {
+    editor.lidOn = true;
+    editor.part = "lid";
+    editor.lidOn = false;
+    editor.leaveSwitchedOffPart();
+    expect(editor.part).toBe("bin");
+  });
+
+  it("leaves the lid tab for the bin picked next if that one has no lid", () => {
+    editor.lidOn = true;
+    editor.addBin();
+    editor.selectBin(0);
+    editor.part = "lid";
+    editor.selectBin(1);
+    editor.leaveSwitchedOffPart();
+    expect(editor.part).toBe("bin");
+  });
+
+  it("leaves the label tab when the label slot is switched off", () => {
+    editor.part = "label";
+    expect(editor.bin.label_slot).toBe("back");
+    editor.bin.label_slot = "none";
+    editor.leaveSwitchedOffPart();
+    expect(editor.part).toBe("bin");
+    editor.bin.label_slot = "none";
+  });
+
+  it("keeps the lid tab open for a bin with a lid", () => {
+    editor.lidOn = true;
+    editor.part = "lid";
+    editor.leaveSwitchedOffPart();
+    expect(editor.part).toBe("lid");
+    editor.lidOn = false;
+    editor.part = "bin";
+  });
+});
+
+describe("holes of the bins follow a size typed on the baseplate", () => {
+  it("stud hole = stud + 0.1 mm, in every bin, within the limits", () => {
+    editor.addBin();
+    editor.carryToBins("stud_d", 5);
+    expect(editor.bin.stud_hole_d).toBeCloseTo(5.1, 6);
+    editor.selectBin(0);
+    expect(editor.bin.stud_hole_d).toBeCloseTo(5.1, 6);
+    editor.carryToBins("stud_d", 8);
+    expect(editor.bin.stud_hole_d).toBeCloseTo(8.1, 6);
+  });
+
+  it("a corner magnet pocket gets 0.1 mm more, the centre magnet its own clearance", () => {
+    editor.carryToBins("corner_magnet_d", 6.5);
+    expect(editor.bin.corner_magnet_d).toBeCloseTo(6.6, 6);
+    editor.carryToBins("center_magnet_d", 7);
+    expect(editor.bin.center_magnet_d).toBeCloseTo(7, 6);
+  });
+
+  it("nothing changes until a size is typed", () => {
+    expect(editor.bin.stud_hole_d).toBeGreaterThanOrEqual(3.1);
+  });
+});
+
+describe("bins are placed so that they fit", () => {
+  it("a bin that grows onto another moves to the first free spot", () => {
+    editor.addBin(); // bin 2 at column 2
+    editor.col = 1;
+    editor.selectBin(0);
+    editor.bin.units_x = 2; // now covers columns 1 and 2: on bin 2
+    editor.settleBins();
+    expect(editor.activeProblems).toEqual([]);
+    editor.selectBin(1);
+    expect(editor.activeProblems).toEqual([]);
+  });
+
+  it("a plate made smaller takes the bins back inside", () => {
+    editor.addBin();
+    editor.col = 3;
+    editor.baseplate.units_x = 2;
+    editor.settleBins();
+    expect(editor.activeProblems).toEqual([]);
+    expect(editor.col).toBeLessThan(2);
+  });
+
+  it("a bin that fits stays where it is", () => {
+    editor.addBin();
+    editor.col = 3;
+    editor.row = 2;
+    editor.settleBins();
+    expect([editor.col, editor.row]).toEqual([3, 2]);
+  });
+
+  it("a new bin starts with the hole sizes carried over from the baseplate", () => {
+    editor.carryToBins("stud_d", 6);
+    editor.addBin();
+    expect(editor.bin.stud_hole_d).toBeCloseTo(6.1, 6);
+  });
+});
+
+describe("colours stay with the model that is shown", () => {
+  it("another part is computed: the colours of the old part stay with its model", () => {
+    editor.baseplate.plate_color = "#FF0000";
+    editor.bin.plate_color = "#00FF00";
+    editor.model = {
+      parts: [],
+      size: [1, 1, 1],
+      warnings: [],
+    } as unknown as typeof editor.model;
+    editor.modelPart = "baseplate";
+    editor.part = "bin";
+    expect(editor.colours.plate).toBe("#FF0000");
+    editor.modelPart = "bin";
+    expect(editor.colours.plate).toBe("#00FF00");
+    editor.model = null;
+    editor.part = "bin";
+  });
+});
