@@ -61,6 +61,7 @@ const MAX_FILE_BINS = 500;
 const ENUMS: Partial<Record<string, readonly string[]>> = {
   baseplate_style: ["solid", "skeleton"],
   connectable: ["none", "edge_slot"],
+  scoop_wall: ["front", "back", "left", "right"],
   label_slot: ["none", "front", "back", "left", "right"],
   lip_style: ["with_lip", "flat_same_height", "flat_lower"],
   variant: ["dust_cover", "stackable"],

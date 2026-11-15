@@ -3,7 +3,7 @@
 // its corner at the origin, then centred on x/y. Spec numbers come from constants.
 import type { Manifold } from "manifold-3d";
 import { CONSTANTS, holeOffset, outerSize } from "../gridfinity/constants";
-import { floorZOf, type BinParams } from "../model/binParams";
+import { floorZOf, scoopWallOf, type BinParams } from "../model/binParams";
 import { cavityLayers as footCavityLayers, cellHalf, solidFoot } from "./foot";
 import type { Kernel, Scope } from "./kernel";
 import { buildStudHole } from "./studs";
@@ -177,7 +177,10 @@ const scoopSolid = (
 ): Manifold | undefined => {
   const outline = scoopOutline(p, layout);
   if (!outline) return undefined;
-  const across = layout.width - 2 * p.wall_thickness + 2 * SCOOP_OVERLAP;
+  const wallAt = scoopWallOf(p);
+  // built at the front wall, as if the bin were `span` wide, then turned to its wall
+  const span = wallAt === "left" || wallAt === "right" ? layout.depth : layout.width;
+  const across = span - 2 * p.wall_thickness + 2 * SCOOP_OVERLAP;
   const prism = scope.add(
     scope.add(new kernel.CrossSection([outline])).extrude(across),
   );
@@ -188,8 +191,18 @@ const scoopSolid = (
   const moved = scope.add(
     placed.translate(p.wall_thickness - SCOOP_OVERLAP, p.wall_thickness, layout.floor),
   );
+  // front: as built. back: a half turn about the middle of the bin. left (x = 0): a quarter turn
+  // so the ramp runs along +x. right (x = width): a quarter turn the other way.
+  const turned =
+    wallAt === "back"
+      ? scope.add(scope.add(moved.rotate(0, 0, 180)).translate(layout.width, layout.depth, 0))
+      : wallAt === "left"
+        ? scope.add(scope.add(moved.rotate(0, 0, -90)).translate(0, layout.depth, 0))
+        : wallAt === "right"
+          ? scope.add(scope.add(moved.rotate(0, 0, 90)).translate(layout.width, 0, 0))
+          : moved;
   return scope.add(
-    kernel.Manifold.intersection(moved, cavityEnvelope(kernel, scope, p, layout)),
+    kernel.Manifold.intersection(turned, cavityEnvelope(kernel, scope, p, layout)),
   );
 };
 
@@ -220,7 +233,8 @@ const cavityEnvelope = (
 
 /**
  * The dividers (E-07) as solids, in the coordinates of the bin: each runs across the whole
- * width of the cavity into the side walls, from the floor up to its height.
+ * width of the cavity into the side walls (turned by 90 degrees: along the whole depth), from
+ * the floor up to its height.
  */
 const dividerSolids = (
   kernel: Kernel,
@@ -231,14 +245,21 @@ const dividerSolids = (
   if (p.dividers.length === 0) return [];
   const envelope = cavityEnvelope(kernel, scope, p, layout);
   const wall = p.wall_thickness;
-  const across = layout.width - 2 * wall + 2 * SCOOP_OVERLAP;
+  const turned = p.divider_turned;
+  const across = (turned ? layout.depth : layout.width) - 2 * wall + 2 * SCOOP_OVERLAP;
   return p.dividers.map((d) => {
     const edge = wall + d.position - p.divider_thickness / 2;
+    // across the width: a bar along x at `edge` from the front wall; turned: along y at `edge` from the left wall
+    const size: [number, number, number] = turned
+      ? [p.divider_thickness, across, d.height + SCOOP_OVERLAP]
+      : [across, p.divider_thickness, d.height + SCOOP_OVERLAP];
     const box = scope
-      .add(
-        kernel.Manifold.cube([across, p.divider_thickness, d.height + SCOOP_OVERLAP]),
-      )
-      .translate(wall - SCOOP_OVERLAP, edge, layout.floor - SCOOP_OVERLAP);
+      .add(kernel.Manifold.cube(size))
+      .translate(
+        turned ? edge : wall - SCOOP_OVERLAP,
+        turned ? wall - SCOOP_OVERLAP : edge,
+        layout.floor - SCOOP_OVERLAP,
+      );
     return scope.add(kernel.Manifold.intersection(scope.add(box), envelope));
   });
 };
@@ -283,7 +304,7 @@ const labelSlots = (
   const across = alongX ? layout.depth : layout.width;
   const e = c("labelEdgeInset");
   const grow = c("labelLugClearance");
-  const lug = c("labelLugLength");
+  const deep = c("labelSlotDepth");
   const [y0, y1] = labelLugSpan(across, side === "front");
   const z0 = labelRestZ(layout) - grow / 2;
   const height = c("labelThickness") + grow;
@@ -295,8 +316,8 @@ const labelSlots = (
         .translate(x0, y0 - grow / 2, z0),
     );
   const slots = [
-    cut(e - lug - grow, e + reach),
-    cut(length - e - reach, length - e + lug + grow),
+    cut(e - deep, e + reach),
+    cut(length - e - reach, length - e + deep),
   ];
   if (side === "right") {
     // the wall at x = width: (x, y) -> (y, length - x)

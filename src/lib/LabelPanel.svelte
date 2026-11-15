@@ -7,7 +7,7 @@
     labelSize,
     type LabelLimitedKey,
   } from "../model/labelParams";
-  import { labelWallOptions } from "../model/binParams";
+  import { labelWallForScoop, labelWallOptions } from "../model/binParams";
   import Field from "./Field.svelte";
   import Icon from "./Icon.svelte";
   import NumberField from "./NumberField.svelte";
@@ -87,8 +87,9 @@
   );
   // with a scoop the label sits at the wall opposite it: the scoop is at the front, so at the back
   $effect(() => {
-    if (bin.scoop && bin.label_slot !== "none" && bin.label_slot !== "back")
-      bin.label_slot = "back";
+    const only = labelWallForScoop(bin);
+    if (only && bin.label_slot !== "none" && bin.label_slot !== only)
+      bin.label_slot = only;
   });
 </script>
 

@@ -13,6 +13,8 @@ export type FootHollow = "none" | "open";
  * walls next to it. Version 1.1 (owner, 11 November 2026): any of the four walls, so a bin
  * that is not square can take the label on its long or its short side.
  */
+/** The wall a scoop sits at (owner, 15 November 2026): front unless the bin is larger than 1 x 1. */
+export type ScoopWall = "front" | "back" | "left" | "right";
 export type LabelSlot = "none" | "front" | "back" | "left" | "right";
 
 export type LipStyle = "with_lip" | "flat_same_height" | "flat_lower";
@@ -46,6 +48,9 @@ export interface BinParams {
   lip_color: string;
   /** a curved ramp along the front wall (E-08) */
   scoop: boolean;
+  scoop_wall: ScoopWall;
+  /** the dividers run along the depth (turned by 90 degrees) instead of across the width */
+  divider_turned: boolean;
   /** thickness of all dividers; also the least gap between two dividers and to a wall (E-07) */
   divider_thickness: number;
   /** walls across the whole cavity (E-07) */
@@ -176,6 +181,8 @@ export const DEFAULT_BIN: BinParams = {
   lip_color_enabled: false,
   lip_color: STONE,
   scoop: false,
+  scoop_wall: "front",
+  divider_turned: false,
   divider_thickness: DIVIDER_LIMITS.thickness.min,
   dividers: [],
   label_slot: "none",
@@ -217,6 +224,23 @@ export const floorZOf = (p: BinParams): number => {
   );
 };
 
+/** The wall of the scoop in use: a bin of 1 x 1 cell always has it at the front, a larger one as chosen. */
+export const scoopWallOf = (
+  p: Pick<BinParams, "units_x" | "units_y"> & Partial<Pick<BinParams, "scoop_wall">>,
+): ScoopWall => (p.units_x > 1 || p.units_y > 1 ? (p.scoop_wall ?? "front") : "front");
+
+const OPPOSITE: Record<ScoopWall, ScoopWall> = {
+  front: "back",
+  back: "front",
+  left: "right",
+  right: "left",
+};
+
+/** With a scoop the label sits at the wall opposite it; undefined without a scoop. */
+export const labelWallForScoop = (
+  p: Pick<BinParams, "scoop" | "units_x" | "units_y"> & Partial<Pick<BinParams, "scoop_wall">>,
+): ScoopWall | undefined => (p.scoop ? OPPOSITE[scoopWallOf(p)] : undefined);
+
 /** Height of the scoop: from the cavity floor to the lower edge of the lip step (the top of the body without a lip). */
 export const scoopHeightOf = (p: BinParams): number =>
   p.height_units * CONSTANTS.heightUnit.value -
@@ -239,41 +263,39 @@ export const labelWidthOf = (p: LabelBin): number =>
   outerSize(labelOnSideWall(p) ? (p.units_y ?? p.units_x) : p.units_x) -
   2 * CONSTANTS.labelEdgeInset.value;
 
-/** The walls a label can sit at, named for the user: "Back (long side)" on a bin that is not square. */
+/** The walls a label can sit at. */
 export const labelWallOptions = (
-  p: Pick<BinParams, "units_x" | "units_y" | "scoop">,
+  p: Pick<BinParams, "units_x" | "units_y" | "scoop"> & Partial<Pick<BinParams, "scoop_wall">>,
 ): { value: LabelSlot; label: string; disabled?: boolean; title?: string }[] => {
-  const kind = (alongX: boolean): string =>
-    p.units_x === p.units_y
-      ? ""
-      : alongX === p.units_x > p.units_y
-        ? " (long)"
-        : " (short)";
-  const wall = (value: LabelSlot, name: string, alongX: boolean) => ({
+  const only = labelWallForScoop(p);
+  const wall = (value: LabelSlot, name: string) => ({
     value,
-    label: `${name}${kind(alongX)}`,
-    // with a scoop the label sits at the wall opposite it: the scoop is at the front
-    disabled: p.scoop && value !== "back",
+    label: name,
+    // with a scoop the label sits at the wall opposite it
+    disabled: only !== undefined && value !== only,
     title:
-      p.scoop && value !== "back"
+      only !== undefined && value !== only
         ? "With a scoop the label sits opposite it"
         : undefined,
   });
   return [
     { value: "none", label: "None" },
-    wall("back", "Back", true),
-    wall("front", "Front", true),
-    wall("left", "Left", false),
-    wall("right", "Right", false),
+    wall("back", "Back"),
+    wall("front", "Front"),
+    wall("left", "Left"),
+    wall("right", "Right"),
   ];
 };
 
 /** Highest a divider can be: the lower edge of the step under the stacking lip, as for the scoop. */
 export const dividerHeightMax = (p: BinParams): number => scoopHeightOf(p);
 
-/** Inner length of the cavity along the depth: the room the dividers stand in. */
+/**
+ * Inner length of the cavity along the dividers' row: the room they stand in. Along the depth
+ * normally; turned by 90 degrees, along the width.
+ */
 export const dividerSpan = (p: BinParams): number =>
-  outerSize(p.units_y) - 2 * p.wall_thickness;
+  outerSize(p.divider_turned ? p.units_x : p.units_y) - 2 * p.wall_thickness;
 
 const round = (v: number): number => Math.round(v * 1000) / 1000;
 

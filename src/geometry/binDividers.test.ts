@@ -314,3 +314,40 @@ describe("E-07 dividers in a saved file", () => {
     );
   });
 });
+
+describe("dividers turned by 90 degrees (owner, 15 November 2026)", () => {
+  const base = {
+    units_x: 3,
+    units_y: 1,
+    dividers: [divider({ position: 20, height: 10 })],
+  };
+
+  it("the span follows the direction: the depth normally, the width when turned", () => {
+    expect(dividerSpan(bin({ ...base }))).toBeCloseTo(41.5 - 2 * 1.2, 6);
+    expect(dividerSpan(bin({ ...base, divider_turned: true }))).toBeCloseTo(
+      3 * 42 - 0.5 - 2 * 1.2,
+      6,
+    );
+  });
+
+  it("a turned divider fills the depth, an unturned one the width", () => {
+    const plain = measure(bin({ ...base, dividers: [] }));
+    const across = measure(bin(base));
+    const along = measure(bin({ ...base, divider_turned: true }));
+    expect(across.closed && along.closed).toBe(true);
+    const gained = (m: { volume: number }) => m.volume - plain.volume;
+    // thickness 0.8, height 10 above the floor; length: the cavity along the divider
+    expect(gained(along)).toBeGreaterThan(0.8 * 8 * (41.5 - 2 * 1.2) * 0.9);
+    expect(gained(across)).toBeGreaterThan(gained(along) * 2);
+  });
+
+  it("a position that fits the long side collides on the short one", () => {
+    const p = bin({
+      ...base,
+      divider_turned: false,
+      dividers: [divider({ position: 60 })],
+    });
+    expect(collidingDividers(bin({ ...p, divider_turned: true })).size).toBe(0);
+    expect(collidingDividers(p).size).toBe(1);
+  });
+});

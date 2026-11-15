@@ -72,7 +72,7 @@ const build = async (b: BinParams, l: LabelParams) => {
 const { labelEdgeInset: INSET, labelLugLength: LUG } = CONSTANTS;
 
 describe("E-09 label plate (the owner's drawing of 9 November 2026)", () => {
-  it("is 37.5 wide and 14 deep on a 1 x 1 bin, 1 mm thick, with a 0.6 mm lug on each side", async () => {
+  it("is 37.5 wide and 14 deep on a 1 x 1 bin, 1 mm thick, with a 1 mm lug on each side", async () => {
     const m = await build(bin(), label());
     expect(labelWidthOf(bin())).toBeCloseTo(37.5, 9);
     expect(m.size.x).toBeCloseTo(37.5 + 2 * LUG.value, 4);
@@ -99,14 +99,17 @@ describe("E-09 label plate (the owner's drawing of 9 November 2026)", () => {
     // plate centred: the rounded edge is at y = +7
     expect(Math.max(...ys)).toBeCloseTo(7 - 4.33, 4);
     expect(Math.min(...ys)).toBeCloseTo(7 - 4.33 - 7, 4);
-    expect(Math.max(...lugVerts.map(([x]) => Math.abs(x)))).toBeCloseTo(half + 0.6, 4);
+    expect(Math.max(...lugVerts.map(([x]) => Math.abs(x)))).toBeCloseTo(
+      half + LUG.value,
+      4,
+    );
   });
 
   it("has a 0.3 mm chamfer on the upper and the lower outer edge of each lug, so it goes into the slot more easily", async () => {
     const plain = await build(bin(), label());
     const half = 37.5 / 2;
     const tip = plain.verts.filter(
-      ([x]) => Math.abs(Math.abs(x) - (half + 0.6)) < 1e-4,
+      ([x]) => Math.abs(Math.abs(x) - (half + LUG.value)) < 1e-4,
     );
     // at the outer end of the lug only the part between the two chamfers is left
     expect(Math.min(...tip.map(([, , z]) => z))).toBeCloseTo(0.3, 4);
@@ -116,7 +119,10 @@ describe("E-09 label plate (the owner's drawing of 9 November 2026)", () => {
       const face = plain.verts.filter(
         ([x, , z]) => Math.abs(x) > half + 0.1 && (atTop ? z > 1 - 1e-6 : z < 1e-6),
       );
-      expect(Math.max(...face.map(([x]) => Math.abs(x)))).toBeCloseTo(half + 0.3, 4);
+      expect(Math.max(...face.map(([x]) => Math.abs(x)))).toBeCloseTo(
+        half + LUG.value - 0.3,
+        4,
+      );
     }
     expect(plain.closed).toBe(true);
   });
@@ -243,7 +249,7 @@ describe("E-09 label on any wall (version 1.1: the long or the short side of a b
       expect(m.overlap).toBeLessThan(1e-3);
       const removed = plain.bodyVolume - m.bodyVolume;
       expect(removed).toBeGreaterThan(2 * 0.3 * 7 * 1);
-      expect(removed).toBeLessThan(2 * 0.8 * 7.2 * 1.1);
+      expect(removed).toBeLessThan(2 * 1.2 * 7.2 * 1.1);
     }
   });
 
@@ -257,7 +263,7 @@ describe("E-09 label on any wall (version 1.1: the long or the short side of a b
         const { plate } = placeInBin(scope, b, parts);
         const size = sizeOf(plate);
         const sideWall = label_slot === "left" || label_slot === "right";
-        // lugs make the plate 2 x 0.6 mm wider along the wall than its width
+        // lugs make the plate 2 x 1 mm wider along the wall than its width
         expect(size[sideWall ? "y" : "x"]).toBeCloseTo(
           labelWidthOf(b) + 2 * LUG.value,
           4,
@@ -279,15 +285,15 @@ describe("E-09 label on any wall (version 1.1: the long or the short side of a b
     }
   });
 
-  it("the choices: a scoop leaves only the back, a square bin names no long or short side", async () => {
+  it("the choices: a scoop leaves only the wall opposite it", async () => {
     const { labelWallOptions } = await import("../model/binParams");
     const open = labelWallOptions({ units_x: 3, units_y: 2, scoop: false });
     expect(open.map((o) => o.label)).toEqual([
       "None",
-      "Back (long)",
-      "Front (long)",
-      "Left (short)",
-      "Right (short)",
+      "Back",
+      "Front",
+      "Left",
+      "Right",
     ]);
     expect(open.every((o) => !o.disabled)).toBe(true);
     const scooped = labelWallOptions({ units_x: 3, units_y: 2, scoop: true });
@@ -319,7 +325,7 @@ describe("E-09 slots in the bin for the label", () => {
       expect(m.bodySize).toEqual(plain.bodySize);
       const removed = plain.bodyVolume - m.bodyVolume;
       expect(removed).toBeGreaterThan(2 * 0.3 * 7 * 1);
-      expect(removed).toBeLessThan(2 * 0.8 * 7.2 * 1.1);
+      expect(removed).toBeLessThan(2 * 1.2 * 7.2 * 1.1);
     }
   });
 
@@ -339,12 +345,12 @@ describe("E-09 slots in the bin for the label", () => {
 
   it("without the slots the lugs would sit in the wall", async () => {
     const m = await labelInBin(bin({ label_slot: "none" }), label());
-    // two lugs of 0.6 x 7 x 1, less what the slope gives
+    // two lugs of 1 x 7 x 1, less what the slope gives
     expect(m.overlap).toBeGreaterThan(2);
   });
 
-  it("with the label in its slots, the lugs have 0.05 mm more room in every dimension", async () => {
-    // a plate whose lugs are 0.1 mm longer would touch the wall at the bottom of the slot
+  it("with the label in its slots, the slots are 1.1 mm deep, 0.1 mm more than the lugs", async () => {
+    // a plate whose lugs are 0.2 mm longer would touch the wall at the bottom of the slot
     const scope = new Scope();
     try {
       const b = bin({ label_slot: "back" });
@@ -352,7 +358,7 @@ describe("E-09 slots in the bin for the label", () => {
       const { body } = buildBin(kernel, scope, b);
       const parts = buildBinLabel(kernel, scope, b, label(), {});
       const wide = scope.add(
-        parts.plate.scale([(37.5 + 2 * 0.7) / (37.5 + 2 * 0.6), 1, 1]),
+        parts.plate.scale([(37.5 + 2 * 1.2) / (37.5 + 2 * 1), 1, 1]),
       );
       const y = layout.depth / 2 - INSET.value - 7;
       const placed = scope.add(wide.translate(0, y, labelRestZ(layout)));
@@ -555,5 +561,53 @@ describe("E-09 export: plate and text are ONE object with two parts", () => {
     expect(xml.match(/<component /g)).toHaveLength(2);
     expect(xml).toContain("#112233");
     expect(xml).toContain("#9DA39A");
+  });
+});
+
+describe("scoop wall (owner, 15 November 2026)", () => {
+  it("a 1 x 1 bin keeps the scoop at the front, a larger one takes the chosen wall", async () => {
+    const { scoopWallOf, labelWallOptions } = await import("../model/binParams");
+    expect(scoopWallOf({ units_x: 1, units_y: 1, scoop_wall: "left" })).toBe("front");
+    expect(scoopWallOf({ units_x: 2, units_y: 1, scoop_wall: "left" })).toBe("left");
+    const open = labelWallOptions({
+      units_x: 2,
+      units_y: 3,
+      scoop: true,
+      scoop_wall: "left",
+    });
+    expect(
+      open.filter((o) => !o.disabled && o.value !== "none").map((o) => o.value),
+    ).toEqual(["right"]);
+  });
+
+  it("the scoop of every wall adds the same material and keeps the mesh closed", () => {
+    const volumes: number[] = [];
+    const base = { units_x: 2, units_y: 2 } as const;
+    const plain = (() => {
+      const scope = new Scope();
+      try {
+        return buildBin(kernel, scope, bin(base)).body.volume();
+      } finally {
+        scope.dispose();
+      }
+    })();
+    for (const scoop_wall of ["front", "back", "left", "right"] as const) {
+      const scope = new Scope();
+      try {
+        const { body } = buildBin(
+          kernel,
+          scope,
+          bin({ ...base, scoop: true, scoop_wall }),
+        );
+        expect(isClosed(body)).toBe(true);
+        volumes.push(body.volume() - plain);
+      } finally {
+        scope.dispose();
+      }
+    }
+    for (const v of volumes) {
+      expect(v).toBeGreaterThan(100);
+      expect(v).toBeCloseTo(volumes[0]!, 0);
+    }
   });
 });

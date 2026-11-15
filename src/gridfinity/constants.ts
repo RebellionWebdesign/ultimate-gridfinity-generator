@@ -100,8 +100,13 @@ export const CONSTANTS = {
       "owner, 9 November 2026, after seeing the first version: the plate sits flush with at most 0.1 mm of gap to the vertical wall of the lip (inset 1.9), so 1.9 + 0.1; it rests with its edges on the first 45 degree slope of the lip (his drawing had 37.08 wide, inset 2.21: that left a gap of 0.31)",
   },
   labelLugLength: {
-    value: 0.6,
-    source: "owner's drawing, 9 November 2026: lug 0.60 on each side",
+    value: 1,
+    source:
+      "owner, 15 November 2026: both lugs 1 mm long (his drawing of 9 November had 0.60)",
+  },
+  labelSlotDepth: {
+    value: 1.1,
+    source: "owner, 15 November 2026: the slots are 1.1 mm deep, for lugs of 1 mm",
   },
   labelLugWidth: {
     value: 7,

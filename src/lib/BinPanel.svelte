@@ -9,12 +9,12 @@
     evenDividers,
     withoutCollisions,
     floorZOf,
+    labelWallForScoop,
     labelWallOptions,
+    scoopWallOf,
     maxHeightUnits,
     type BinLimitedKey,
-    type Divider,
   } from "../model/binParams";
-  import { SvelteSet } from "svelte/reactivity";
   import Field from "./Field.svelte";
   import Icon from "./Icon.svelte";
   import NumberField from "./NumberField.svelte";
@@ -96,8 +96,9 @@
   /** a divider needs its thickness on both sides and itself: 3 x thickness */
   const room = $derived(freeSpot.width >= 3 * p.divider_thickness - 1e-9);
 
-  /** the dividers whose fields are shown; the list stays short when they are folded */
-  const opened = new SvelteSet<Divider>();
+  /** the divider whose settings are shown below the list */
+  let selected = $state(0);
+  const current = $derived(Math.min(selected, p.dividers.length - 1));
 
   const removeAll = () => {
     removedNote = "";
@@ -109,9 +110,11 @@
       position: freeSpot.middle,
       height: Math.max(DIVIDER_LIMITS.height.min, dividerHeightMax(p)),
     });
-    const added = p.dividers.at(-1);
-    if (added) opened.add(added);
+    selected = p.dividers.length - 1;
   };
+
+  const wallName = $derived(p.divider_turned ? "left" : "front");
+  const farWall = $derived(p.divider_turned ? "right" : "back");
 
   let removedNote = $state("");
   /** A thicker divider needs more room: those that now collide are removed, with a note. */
@@ -132,10 +135,10 @@
     p.dividers = even.dividers;
   };
 
-  // with a scoop the label sits at the wall opposite it: the scoop is at the front, so at the back
+  // with a scoop the label sits at the wall opposite it
   $effect(() => {
-    if (p.scoop && p.label_slot !== "none" && p.label_slot !== "back")
-      p.label_slot = "back";
+    const only = labelWallForScoop(p);
+    if (only && p.label_slot !== "none" && p.label_slot !== only) p.label_slot = only;
   });
 
   // a lower bin lowers the dividers with it
@@ -202,14 +205,27 @@
     <p class="t-caption">The floor is measured above the 4.75 mm foot.</p>
   </ParamGroup>
 
-  <ParamGroup name="Scoop" summary={p.scoop ? "on" : "off"}>
+  <ParamGroup name="Scoop" summary={p.scoop ? scoopWallOf(p) : "off"}>
     <Switch
       label="Scoop"
       bind:checked={p.scoop}
-      hint="A curved ramp along the front wall, across the whole width, so small parts slide out. It rises to the lower edge of the step under the stacking lip. It ends flush with the step. In a tall bin only the piece along the wall grows."
+      hint="A curved ramp along a wall, across the whole width, so small parts slide out. It rises to the lower edge of the step under the stacking lip. It ends flush with the step. In a tall bin only the piece along the wall grows."
     />
+    {#if p.scoop && (p.units_x > 1 || p.units_y > 1)}
+      <Segmented
+        label="Wall of the scoop"
+        bind:value={p.scoop_wall}
+        options={[
+          { value: "front", label: "Front" },
+          { value: "back", label: "Back" },
+          { value: "left", label: "Left" },
+          { value: "right", label: "Right" },
+        ]}
+      />
+    {/if}
     <p class="t-caption">
-      Arc diameter 33.75 mm, meeting the floor 15.84 mm from the front wall.
+      Arc diameter 33.75 mm, meeting the floor 15.84 mm from the wall. A bin of one cell has
+      it at the front.
     </p>
   </ParamGroup>
 
@@ -230,45 +246,62 @@
       the thickness. Dividers that would collide with a wall or with another divider are
       removed when you raise the thickness.
     </p>
+    <Segmented
+      label="Direction"
+      value={p.divider_turned ? "along" : "across"}
+      onchange={(next) => {
+        p.divider_turned = next === "along";
+        dropColliding();
+      }}
+      options={[
+        { value: "across", label: "Across" },
+        { value: "along", label: "Along" },
+      ]}
+    />
     {#if removedNote}
       <p class="t-caption problem" role="status">{removedNote}</p>
     {/if}
 
-    {#each p.dividers as d, i (i)}
-      <div class="divider">
-        <div class="divider-head">
-          <button
-            type="button"
-            class="toggle"
-            aria-expanded={opened.has(d)}
-            onclick={() => (opened.has(d) ? opened.delete(d) : opened.add(d))}
-          >
-            <span class="chev" class:open={opened.has(d)}
-              ><Icon name="chevron-right" size={16} /></span
+    {#if p.dividers.length > 0}
+      <ul class="dlist" aria-label="Dividers">
+        {#each p.dividers as d, i (i)}
+          <li>
+            <button
+              type="button"
+              class="drow"
+              class:on={i === current}
+              aria-pressed={i === current}
+              onclick={() => (selected = i)}
             >
-            <span class="t-label name">Divider {i + 1}</span>
-            <span class="n-s info"
-              >{d.position.toFixed(1)} · {d.height.toFixed(1)} mm</span
+              <span class="t-label name">Divider {i + 1}</span>
+              <span class="n-s info">{d.position.toFixed(1)} · {d.height.toFixed(1)} mm</span>
+            </button>
+          </li>
+        {/each}
+      </ul>
+      {@const d = p.dividers[current]}
+      {#if d}
+        <div class="divider">
+          <div class="divider-head">
+            <span class="t-label name">Divider {current + 1}</span>
+            <button
+              type="button"
+              class="quiet"
+              aria-label="Remove divider {current + 1}"
+              onclick={() => p.dividers.splice(current, 1)}
+              ><Icon name="x" size={16} /></button
             >
-          </button>
-          <button
-            type="button"
-            class="quiet"
-            aria-label="Remove divider {i + 1}"
-            onclick={() => p.dividers.splice(i, 1)}><Icon name="x" size={16} /></button
-          >
-        </div>
-        {#if opened.has(d)}
+          </div>
           <NumberField
-            label="Distance from the front wall"
+            label="Distance from the {wallName} wall"
             bind:value={d.position}
             min={1.5 * p.divider_thickness}
             max={Math.max(1.5 * p.divider_thickness, positionMax)}
             step={0.1}
             noReset
             unit="mm"
-            why="The divider keeps its thickness in mm of room to the back wall"
-            minWhy="The divider keeps its thickness in mm of room to the front wall"
+            why="The divider keeps its thickness in mm of room to the {farWall} wall"
+            minWhy="The divider keeps its thickness in mm of room to the {wallName} wall"
           />
           <NumberField
             label="Height"
@@ -280,9 +313,9 @@
             unit="mm"
             why={DIVIDER_LIMITS.height.why}
           />
-        {/if}
-      </div>
-    {/each}
+        </div>
+      {/if}
+    {/if}
     {#each dividerProblems(p) as problem (problem)}
       <p class="t-caption problem" role="alert">{problem}</p>
     {/each}
@@ -302,8 +335,8 @@
       {/if}
     {/if}
     <p class="t-caption">
-      A divider runs across the whole width of the cavity and ends at the side walls. It
-      is measured from the cavity floor, up to the lower edge of the step under the
+      A divider runs across the whole width of the cavity and ends at the side walls; turned
+      by 90 degrees it runs along the whole depth. It is measured from the cavity floor, up to the lower edge of the step under the
       stacking lip at most.
     </p>
 
@@ -481,35 +514,46 @@
     justify-content: space-between;
     gap: var(--space-2);
   }
-  .toggle {
-    flex: 1;
-    min-width: 0;
+  /* a short list of all dividers: one row each, about five in view, the rest scrolls */
+  .dlist {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    max-height: calc(5 * var(--size-control-sm) + 4 * var(--space-1) + 2px);
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+  }
+  .drow {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: var(--space-2);
+    width: 100%;
     min-height: var(--size-control-sm);
-    padding: 0;
-    border: 0;
-    background: none;
+    padding: 0 var(--space-3);
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
+    background: var(--surface-2);
     cursor: pointer;
     text-align: left;
+  }
+  .drow:hover {
+    background: var(--surface-3);
+  }
+  .drow.on {
+    border-color: var(--accent);
+    background: var(--accent-soft);
   }
   .name {
     white-space: nowrap;
   }
   .info {
-    margin-left: auto;
     color: var(--text-3);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-  .chev {
-    display: inline-flex;
-    transition: transform var(--dur-press) var(--ease);
-  }
-  .chev.open {
-    transform: rotate(90deg);
   }
   .quiet {
     display: grid;
