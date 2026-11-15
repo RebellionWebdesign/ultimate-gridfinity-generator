@@ -16,11 +16,11 @@
 // The plate layout was read from files that both slicers saved, and from the open
 // repositories (BambuStudio, OrcaSlicer: Format/bbs_3mf.cpp). No code of them is used here.
 import type { PartMesh } from "../geometry/model";
-import { PLATE_GAP, centreOf } from "./tileLayout";
+import { PLATE_GAP, centreOf, packPieces, sizeOfFootprint } from "./tileLayout";
 import { modelXmlPieces, type PartColours, type Piece } from "./threeMf";
 import { zip } from "./zip";
 
-/** One object of the file: its parts, its name; every piece gets its own plate. */
+/** One object of the file: its parts and its name. */
 export interface PlatePiece {
   parts: readonly PartMesh[];
   name: string;
@@ -56,20 +56,27 @@ export const objectIdsOf = (pieces: readonly PlatePiece[]): number[] => {
   });
 };
 
-const plateSettings = (objectIds: number[]): string => {
+/** The plates of the file: `onPlate[k]` lists the ids of the objects that stand on plate k. */
+const plateSettings = (onPlate: number[][]): string => {
   const meta = (key: string, value: string) =>
     `<metadata key="${key}" value="${value}"/>`;
-  const plates = objectIds.map(
-    (id, k) =>
+  let n = 0;
+  const plates = onPlate.map(
+    (ids, k) =>
       `  <plate>\n` +
       `   ${meta("plater_id", String(k + 1))}\n` +
       `   ${meta("plater_name", "")}\n` +
       `   ${meta("locked", "false")}\n` +
-      `   <model_instance>\n` +
-      `    ${meta("object_id", String(id))}\n` +
-      `    ${meta("instance_id", "0")}\n` +
-      `    ${meta("identify_id", String(100 + k * 20))}\n` +
-      `   </model_instance>\n` +
+      ids
+        .map(
+          (id) =>
+            `   <model_instance>\n` +
+            `    ${meta("object_id", String(id))}\n` +
+            `    ${meta("instance_id", "0")}\n` +
+            `    ${meta("identify_id", String(100 + n++ * 20))}\n` +
+            `   </model_instance>\n`,
+        )
+        .join("") +
       `  </plate>`,
   );
   return `<?xml version="1.0" encoding="UTF-8"?>\n<config>\n${plates.join("\n")}\n</config>\n`;
@@ -90,8 +97,9 @@ const RELS =
 
 /**
  * The 3MF: every piece is one object (its parts stay separate parts of it, each with its
- * colour), every piece on its own plate, the plates in the grid of Bambu Studio for a bed of
- * `bed` mm, each piece in the middle of its plate.
+ * colour), laid on the plate of a bed of `bed` mm side by side with a gap, the group in the
+ * middle of the plate. A piece that fills a plate, or what does not fit, goes on the next
+ * plate; the plates sit in the grid of Bambu Studio.
  */
 export const write3mfPlates = async (
   pieces: readonly PlatePiece[],
@@ -100,23 +108,35 @@ export const write3mfPlates = async (
   title: string,
   bodyName: string,
 ): Promise<Uint8Array> => {
+  // as many pieces on a plate as fit, the group centred on it; a piece that fills a plate gets
+  // a plate of its own (owner, 15 November 2026: the pieces must hit the plate)
+  const packed = packPieces(
+    pieces.map((piece) => sizeOfFootprint(piece.parts)),
+    bed,
+  );
+  const plateCount = Math.max(1, ...packed.map((p) => p.plate + 1));
   const placed: Piece[] = pieces.map((piece, k) => {
     const [cx, cy] = centreOf(piece.parts);
-    const [px, py] = plateCentre(k, pieces.length, bed);
+    const at = packed[k] as (typeof packed)[number];
+    // the place of the plate in the grid of Bambu Studio, then the piece on that plate
+    const [px, py] = plateCentre(at.plate, plateCount, bed);
     return {
       parts: piece.parts,
       name: piece.name,
-      offset: [px - cx, py - cy],
+      offset: [px - bed[0] / 2 + at.cx - cx, py - bed[1] / 2 + at.cy - cy],
       ...(piece.colours ? { colours: piece.colours } : {}),
       ...(piece.bodyName ? { bodyName: piece.bodyName } : {}),
     };
   });
+  const ids = objectIdsOf(pieces);
+  const onPlate: number[][] = Array.from({ length: plateCount }, () => []);
+  packed.forEach((p, k) => onPlate[p.plate]?.push(ids[k] as number));
   const encoder = new TextEncoder();
   const text = (name: string, data: string) => ({ name, data: encoder.encode(data) });
   return zip([
     text("[Content_Types].xml", CONTENT_TYPES),
     text("_rels/.rels", RELS),
     text("3D/3dmodel.model", modelXmlPieces(placed, colours, title, bodyName)),
-    text("Metadata/model_settings.config", plateSettings(objectIdsOf(pieces))),
+    text("Metadata/model_settings.config", plateSettings(onPlate)),
   ]);
 };

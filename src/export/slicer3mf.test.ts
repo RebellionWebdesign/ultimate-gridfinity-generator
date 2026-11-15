@@ -9,6 +9,7 @@ import { newBin } from "../model/binParams";
 import { DEFAULT_LABEL, labelAsLid } from "../model/labelParams";
 import { buildFile, buildTilesFile, buildTilesZip } from "../lib/exporter";
 import { objectIdsOf, plateCentre, write3mfPlates } from "./slicer3mf";
+import { PACK_GAP, packPieces, sizeOfFootprint } from "./tileLayout";
 import type { PartColours } from "./threeMf";
 import { crc32 } from "./zip";
 
@@ -68,6 +69,15 @@ const unzip = (bytes: Uint8Array): Record<string, string> => {
 
 const BED: [number, number] = [256, 256];
 const piece = (name: string) => ({ parts, name });
+/** a flat piece of 250 x 250 mm: it fills a plate of the bed */
+const big = (): PartMesh => ({
+  name: "plate",
+  positions: Float32Array.from([
+    -125, -125, 0, 125, -125, 0, 125, 125, 0, -125, 125, 0,
+  ]),
+  indices: Uint32Array.from([0, 1, 2, 0, 2, 3]),
+  volume: 0,
+});
 const blobBytes = async (blob: Blob) => new Uint8Array(await blob.arrayBuffer());
 
 describe("the 3MF: colours as before, plus a plate per piece (owner, 11 November 2026)", () => {
@@ -115,14 +125,11 @@ describe("the 3MF: colours as before, plus a plate per piece (owner, 11 November
       Number(m[1]),
     );
     expect(built).toEqual(objectIdsOf(pieces));
-    expect(settings.match(/<plate>/g)).toHaveLength(3);
-    expect(
-      [...settings.matchAll(/key="plater_id" value="(\d+)"/g)].map((m) => m[1]),
-    ).toEqual(["1", "2", "3"]);
-    const plates = settings.split("<plate>").slice(1);
-    plates.forEach((plate, k) => {
-      expect(plate).toContain(`key="object_id" value="${built[k]}"`);
-    });
+    // three small pieces fit on one plate
+    expect(settings.match(/<plate>/g)).toHaveLength(1);
+    for (const id of built) {
+      expect(settings).toContain(`key="object_id" value="${id}"`);
+    }
     // the objects exist in the resources, as objects with components
     for (const id of built) {
       expect(model).toMatch(new RegExp(`<object id="${id}"[^>]*><components>`));
@@ -152,10 +159,21 @@ describe("the 3MF: colours as before, plus a plate per piece (owner, 11 November
       ),
     ];
     expect(items).toHaveLength(2);
-    // the parts are centred on x and y: the offset is the middle of the plate
-    expect(Number(items[0]?.[1])).toBeCloseTo(128, 1);
-    expect(Number(items[1]?.[1])).toBeCloseTo(435.2, 1);
-    expect(Number(items[1]?.[2])).toBeCloseTo(128, 1);
+    const [w, d] = sizeOfFootprint(parts);
+    const xs = items.map((m) => Number(m[1]));
+    const ys = items.map((m) => Number(m[2]));
+    // both stand on the first plate (0 to 256), not in another cell of the grid
+    for (const x of xs) {
+      expect(x - w / 2).toBeGreaterThanOrEqual(0);
+      expect(x + w / 2).toBeLessThanOrEqual(256);
+    }
+    for (const y of ys) {
+      expect(y - d / 2).toBeGreaterThanOrEqual(0);
+      expect(y + d / 2).toBeLessThanOrEqual(256);
+    }
+    // the group of the two is centred on the plate
+    expect((Math.min(...xs) + Math.max(...xs)) / 2).toBeCloseTo(128, 1);
+    expect((Math.min(...ys) + Math.max(...ys)) / 2).toBeCloseTo(128, 1);
   });
 
   it("the exporter makes the same file for every part; an STL stays geometry only", async () => {
@@ -172,10 +190,10 @@ describe("the 3MF: colours as before, plus a plate per piece (owner, 11 November
     expect(stl.type).toBe("model/stl");
   });
 
-  it("a split baseplate: one plate per piece, in one file and in a ZIP of files", async () => {
+  it("a split baseplate: a piece that fills the plate gets a plate of its own, in one file and in a ZIP of files", async () => {
     const tile = (): { parts: PartMesh[]; size: [number, number, number] } => ({
-      parts: [parts[0] as PartMesh],
-      size: [10, 10, 1],
+      parts: [big()],
+      size: [250, 250, 1],
     });
     const tiles = [tile(), tile()];
     const one = unzip(
@@ -190,5 +208,62 @@ describe("the 3MF: colours as before, plus a plate per piece (owner, 11 November
       ),
     );
     expect(Object.keys(archive)).toHaveLength(2);
+  });
+});
+
+describe("packing pieces onto plates (owner, 15 November 2026)", () => {
+  const sizes: [number, number][] = [
+    [100, 50],
+    [80, 40],
+    [60, 60],
+  ];
+
+  it("small pieces share one plate and stay inside it", () => {
+    const at = packPieces(sizes, [256, 256]);
+    expect(new Set(at.map((p) => p.plate))).toEqual(new Set([0]));
+    sizes.forEach(([w, d], i) => {
+      const p = at[i] as (typeof at)[number];
+      expect(p.cx - w / 2).toBeGreaterThanOrEqual(0);
+      expect(p.cx + w / 2).toBeLessThanOrEqual(256);
+      expect(p.cy - d / 2).toBeGreaterThanOrEqual(0);
+      expect(p.cy + d / 2).toBeLessThanOrEqual(256);
+    });
+  });
+
+  it("a piece that fills the plate gets one of its own; the small ones stay together", () => {
+    const at = packPieces(
+      [
+        [250, 250],
+        [40, 40],
+        [40, 40],
+      ],
+      [256, 256],
+    );
+    expect(at[0]?.plate).not.toBe(at[1]?.plate);
+    expect(at[1]?.plate).toBe(at[2]?.plate);
+    expect(at[0]?.cx).toBeCloseTo(128, 6);
+    expect(at[0]?.cy).toBeCloseTo(128, 6);
+  });
+
+  it("no two pieces on a plate overlap or come closer than the gap", () => {
+    const many: [number, number][] = [
+      [120, 80],
+      [120, 80],
+      [120, 80],
+      [60, 60],
+      [60, 60],
+      [200, 30],
+    ];
+    const at = packPieces(many, [256, 256]);
+    for (let i = 0; i < many.length; i++) {
+      for (let j = i + 1; j < many.length; j++) {
+        const [a, b] = [at[i], at[j]] as [(typeof at)[number], (typeof at)[number]];
+        if (a.plate !== b.plate) continue;
+        const [sa, sb] = [many[i], many[j]] as [[number, number], [number, number]];
+        const apartX = Math.abs(a.cx - b.cx) >= (sa[0] + sb[0]) / 2 + PACK_GAP - 1e-6;
+        const apartY = Math.abs(a.cy - b.cy) >= (sa[1] + sb[1]) / 2 + PACK_GAP - 1e-6;
+        expect(apartX || apartY, i + " and " + j).toBe(true);
+      }
+    }
   });
 });

@@ -259,7 +259,7 @@
           ? "Loose: every part (the baseplate, each bin, label and lid) is a file of its own in a ZIP; import them one by one."
           : tileFile === "one"
             ? format === "3mf"
-              ? "Every piece is its own object on its own plate: Bambu Studio puts them on the plates. OrcaSlicer loads them without plates: press Arrange there."
+              ? "Every piece is its own object. They are laid on the plate side by side, in the middle of it; what does not fit goes on the next plate. If your slicer shows them elsewhere, press Arrange there."
               : "Every piece is its own object, one printer bed apart. In Bambu Studio press A (Arrange) to put them on plates."
             : "One file per piece in a ZIP; import them one by one."}
       </p>

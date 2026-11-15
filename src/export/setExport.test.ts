@@ -82,11 +82,12 @@ describe("exporting a set (ADR-0009)", () => {
     }
     expect(xml).toContain('color="#123456"');
     expect(xml).toContain('color="#ABCDEF"');
-    // one plate for every piece in the settings of the slicer
+    // the pieces are small: they all stand on one plate, in the settings of the slicer
     const settings = unzip(await bytesOf(blob))[
       "Metadata/model_settings.config"
     ] as string;
-    expect(settings.match(/<plate>/g)).toHaveLength(4);
+    expect(settings.match(/<plate>/g)).toHaveLength(1);
+    expect(settings.match(/<model_instance>/g)).toHaveLength(4);
   });
 
   it("names the main part of a piece after what it is", async () => {
