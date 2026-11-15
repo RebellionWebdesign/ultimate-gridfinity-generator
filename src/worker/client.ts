@@ -7,7 +7,7 @@ import type { BinParams } from "../model/binParams";
 import type { Connectable } from "../gridfinity/connector";
 import type { LabelParams } from "../model/labelParams";
 import type { LidParams } from "../model/lidParams";
-import type { BuildRequest, BuildResponse } from "./protocol";
+import type { AssemblyRequestBin, BuildRequest, BuildResponse } from "./protocol";
 
 /** The user's input is wrong (a font or SVG file): a fix to show, not a crash. */
 export class InputBuildError extends Error {}
@@ -76,6 +76,14 @@ export class GeometryClient {
     svg?: SvgShapes,
   ): { id: number; result: Promise<ModelMesh> } {
     return this.send((id) => ({ id, part: "label", bin, params, svg }));
+  }
+
+  buildAssembly(
+    plate: BaseplateParams,
+    bins: AssemblyRequestBin[],
+    maxTile?: [number, number],
+  ): { id: number; result: Promise<ModelMesh> } {
+    return this.send((id) => ({ id, part: "assembly", plate, bins, maxTile }));
   }
 
   private send(request: (id: number) => BuildRequest): {

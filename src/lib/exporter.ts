@@ -13,6 +13,14 @@ import { zip } from "../export/zip";
 
 export type Format = "3mf" | "stl";
 
+/** A part's name as a file name: lower case letters and digits, dashes between. */
+export const fileSafe = (name: string): string =>
+  name
+    .toLowerCase()
+    .replace(/\s*×\s*/g, "x")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || "part";
+
 interface SaveFilePickerWindow {
   showSaveFilePicker?: (options: {
     suggestedName: string;
@@ -82,7 +90,9 @@ export const buildTilesFile = async (
       : await write3mfPlates(
           tiles.map((tile, i) => ({
             parts: tile.parts,
-            name: `${title} ${i + 1} of ${tiles.length}`,
+            name: tile.name ?? `${title} ${i + 1} of ${tiles.length}`,
+            ...(tile.colours ? { colours: tile.colours } : {}),
+            ...(tile.bodyName ? { bodyName: tile.bodyName } : {}),
           })),
           colours,
           bed,
@@ -106,19 +116,32 @@ export const buildTilesZip = async (
   bed: [number, number] = [256, 256],
 ): Promise<Blob> => {
   const entries = await Promise.all(
-    tiles.map(async (tile, i) => ({
-      name: `${fileName}-${i + 1}-of-${tiles.length}.${format}`,
-      data:
-        format === "stl"
-          ? new Uint8Array(writeStl(tile.parts))
-          : await write3mfPlates(
-              [{ parts: tile.parts, name: `${title} ${i + 1} of ${tiles.length}` }],
-              colours,
-              bed,
-              `${title} ${i + 1} of ${tiles.length}`,
-              bodyName,
-            ),
-    })),
+    tiles.map(async (tile, i) => {
+      const name = tile.name ?? `${title} ${i + 1} of ${tiles.length}`;
+      return {
+        // the pieces of a set are named; the number keeps the order and two equal names apart
+        name: tile.name
+          ? `${String(i + 1).padStart(2, "0")}-${fileSafe(tile.name)}.${format}`
+          : `${fileName}-${i + 1}-of-${tiles.length}.${format}`,
+        data:
+          format === "stl"
+            ? new Uint8Array(writeStl(tile.parts))
+            : await write3mfPlates(
+                [
+                  {
+                    parts: tile.parts,
+                    name,
+                    ...(tile.colours ? { colours: tile.colours } : {}),
+                    ...(tile.bodyName ? { bodyName: tile.bodyName } : {}),
+                  },
+                ],
+                colours,
+                bed,
+                name,
+                bodyName,
+              ),
+      };
+    }),
   );
   const archive = await zip(entries);
   return new Blob([archive as BlobPart], { type: "application/zip" });

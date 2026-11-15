@@ -37,7 +37,29 @@ export type BuildRequest =
       copies: number;
       maxWidth: number;
     }
-  | { id: number; part: "label"; bin: BinParams; params: LabelParams; svg?: SvgShapes };
+  | { id: number; part: "label"; bin: BinParams; params: LabelParams; svg?: SvgShapes }
+  /** a set (ADR-0009): the baseplate and every bin with its label and lid, placed */
+  | {
+      id: number;
+      part: "assembly";
+      plate: BaseplateParams;
+      bins: AssemblyRequestBin[];
+      maxTile?: [number, number];
+    };
+
+/** A bin of a set for the worker; the SVG files are read on the main thread (no DOM there). */
+export interface AssemblyRequestBin {
+  name: string;
+  bin: BinParams;
+  label: LabelParams;
+  lidOn: boolean;
+  lid: LidParams;
+  col: number;
+  row: number;
+  turned: boolean;
+  labelSvg?: SvgShapes;
+  lidSvg?: SvgShapes;
+}
 
 export type BuildResponse =
   | { id: number; ok: true; model: ModelMesh }

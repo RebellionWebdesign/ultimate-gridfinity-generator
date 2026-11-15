@@ -31,6 +31,10 @@ export interface PartMesh {
 export interface TileMesh {
   parts: PartMesh[];
   size: [number, number, number];
+  /** a set (ADR-0009): the piece's own name, colours and the name of its main part in a 3MF */
+  name?: string;
+  colours?: Record<PartName, string>;
+  bodyName?: string;
 }
 
 export interface ModelMesh {

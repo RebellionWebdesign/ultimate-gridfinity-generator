@@ -24,6 +24,9 @@ import { zip } from "./zip";
 export interface PlatePiece {
   parts: readonly PartMesh[];
   name: string;
+  /** a piece of a set has its own colours and the name of its main part */
+  colours?: PartColours;
+  bodyName?: string;
 }
 
 /** Where plate k (0-based) has its middle: a grid from the front left, with a gap of a fifth of the bed. */
@@ -100,7 +103,13 @@ export const write3mfPlates = async (
   const placed: Piece[] = pieces.map((piece, k) => {
     const [cx, cy] = centreOf(piece.parts);
     const [px, py] = plateCentre(k, pieces.length, bed);
-    return { parts: piece.parts, name: piece.name, offset: [px - cx, py - cy] };
+    return {
+      parts: piece.parts,
+      name: piece.name,
+      offset: [px - cx, py - cy],
+      ...(piece.colours ? { colours: piece.colours } : {}),
+      ...(piece.bodyName ? { bodyName: piece.bodyName } : {}),
+    };
   });
   const encoder = new TextEncoder();
   const text = (name: string, data: string) => ({ name, data: encoder.encode(data) });

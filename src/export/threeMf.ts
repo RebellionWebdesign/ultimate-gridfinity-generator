@@ -29,6 +29,9 @@ export interface Piece {
   parts: readonly PartMesh[];
   name: string;
   offset?: [number, number];
+  /** a piece of a set has its own colours and the name of its main part */
+  colours?: PartColours;
+  bodyName?: string;
 }
 
 /**
@@ -108,7 +111,12 @@ export const modelXmlPieces = (
 ): string => {
   let base = 0;
   const built = pieces.map((piece) => {
-    const one = pieceXml(piece, colours, bodyName, base);
+    const one = pieceXml(
+      piece,
+      piece.colours ?? colours,
+      piece.bodyName ?? bodyName,
+      base,
+    );
     base += one.used;
     return one;
   });

@@ -2,6 +2,7 @@
 // a Web Worker. The WASM file is a bundled static asset, found through `locateFile`.
 import wasmUrl from "manifold-3d/manifold.wasm?url";
 import { InputError, prepareAssets, type AssetLoaders } from "../geometry/assets";
+import { buildAssemblyModel, type AssemblyBin } from "../geometry/assembly";
 import { initKernel } from "../geometry/kernel";
 import {
   buildBaseplateModel,
@@ -58,6 +59,42 @@ const buildBinWithLabel = async (
   return buildBinModel(k, request.params, label, assets);
 };
 
+/** The set: the fonts and SVG files of every label and lid are read first; a failure leaves only that part out. */
+const buildSet = async (
+  k: Awaited<typeof kernel>,
+  request: Extract<BuildRequest, { part: "assembly" }>,
+) => {
+  const bins: AssemblyBin[] = [];
+  for (const item of request.bins) {
+    const { labelSvg, lidSvg, ...rest } = item;
+    const out: AssemblyBin = { ...rest };
+    if (item.bin.label_slot !== "none") {
+      try {
+        out.labelAssets = await prepareAssets(
+          labelAsLid(item.label),
+          loaders,
+          labelSvg,
+        );
+      } catch (error) {
+        out.labelError = error instanceof Error ? error.message : String(error);
+      }
+    }
+    if (item.lidOn) {
+      try {
+        out.lidAssets = await prepareAssets(item.lid, loaders, lidSvg);
+      } catch (error) {
+        out.lidError = error instanceof Error ? error.message : String(error);
+      }
+    }
+    bins.push(out);
+  }
+  return buildAssemblyModel(k, {
+    plate: request.plate,
+    bins,
+    maxTile: request.maxTile,
+  });
+};
+
 self.onmessage = async (event: MessageEvent<BuildRequest>) => {
   const request = event.data;
   const { id } = request;
@@ -65,29 +102,35 @@ self.onmessage = async (event: MessageEvent<BuildRequest>) => {
   const transfer: Transferable[] = [];
   try {
     const model =
-      request.part === "baseplate"
-        ? buildBaseplateModel(await kernel, request.params, request.maxTile)
-        : request.part === "bin"
-          ? await buildBinWithLabel(await kernel, request)
-          : request.part === "connector"
-            ? buildConnectorModel(
-                await kernel,
-                request.variant,
-                request.copies,
-                request.maxWidth,
-              )
-            : request.part === "label"
-              ? buildLabelModel(
+      request.part === "assembly"
+        ? await buildSet(await kernel, request)
+        : request.part === "baseplate"
+          ? buildBaseplateModel(await kernel, request.params, request.maxTile)
+          : request.part === "bin"
+            ? await buildBinWithLabel(await kernel, request)
+            : request.part === "connector"
+              ? buildConnectorModel(
                   await kernel,
-                  request.bin,
-                  request.params,
-                  await prepareAssets(labelAsLid(request.params), loaders, request.svg),
+                  request.variant,
+                  request.copies,
+                  request.maxWidth,
                 )
-              : buildModel(
-                  await kernel,
-                  request.params,
-                  await prepareAssets(request.params, loaders, request.svg),
-                );
+              : request.part === "label"
+                ? buildLabelModel(
+                    await kernel,
+                    request.bin,
+                    request.params,
+                    await prepareAssets(
+                      labelAsLid(request.params),
+                      loaders,
+                      request.svg,
+                    ),
+                  )
+                : buildModel(
+                    await kernel,
+                    request.params,
+                    await prepareAssets(request.params, loaders, request.svg),
+                  );
     for (const part of [
       ...model.parts,
       ...(model.extras ?? []),
