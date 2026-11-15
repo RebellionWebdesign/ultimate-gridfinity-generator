@@ -93,6 +93,7 @@
     gap: var(--space-2);
   }
   .picker {
+    flex: none;
     width: var(--size-control);
     height: var(--size-control);
     padding: 0;
@@ -101,11 +102,13 @@
     background: none;
     cursor: pointer;
   }
-  .hex {
+  /* two classes: the rule for text fields (100 % wide) is more specific than one */
+  .color .hex {
     width: 96px;
     flex: none;
   }
   .swatch {
+    flex: none;
     width: var(--size-icon);
     height: var(--size-icon);
     border: 1px solid var(--line-strong);
